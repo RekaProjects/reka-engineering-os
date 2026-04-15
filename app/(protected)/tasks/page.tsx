@@ -1,26 +1,281 @@
+import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { EmptyState } from '@/components/shared/EmptyState'
 import { SectionCard } from '@/components/shared/SectionCard'
-import { CheckSquare } from 'lucide-react'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { TaskStatusBadge } from '@/components/modules/tasks/TaskStatusBadge'
+import { PriorityBadge } from '@/components/shared/PriorityBadge'
+import { ProgressBar } from '@/components/shared/ProgressBar'
+import { getTasks } from '@/lib/tasks/queries'
+import type { TaskWithRelations } from '@/lib/tasks/queries'
+import { formatDate } from '@/lib/utils/formatters'
+import { CheckSquare, Plus, AlertTriangle } from 'lucide-react'
 
-export const metadata = {
-  title: 'Tasks — Engineering Agency OS',
+export const metadata = { title: 'Tasks — Engineering Agency OS' }
+
+interface PageProps {
+  searchParams: Promise<{ search?: string; status?: string; priority?: string; project_id?: string }>
 }
 
-export default function TasksPage() {
+export default async function TasksPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const tasks = await getTasks({
+    search: params.search,
+    status: params.status,
+    priority: params.priority,
+    project_id: params.project_id,
+  }).catch(() => [] as TaskWithRelations[])
+
   return (
     <div>
       <PageHeader
         title="Tasks"
         subtitle="Executable work items assigned to team members across all projects."
+        actions={
+          <Link
+            href="/tasks/new"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              backgroundColor: 'var(--color-primary)',
+              color: '#fff',
+              borderRadius: '6px',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
+              textDecoration: 'none',
+            }}
+          >
+            <Plus size={14} aria-hidden="true" />
+            New Task
+          </Link>
+        }
       />
-      <SectionCard noPadding>
-        <EmptyState
-          icon={<CheckSquare size={22} />}
-          title="Tasks module coming in Stage 04"
-          description="You will be able to view and manage tasks across all projects, update progress, track blockers, and attach working files."
+
+      {/* Filters */}
+      <form method="GET" style={{ marginBottom: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <input
+          name="search"
+          type="search"
+          defaultValue={params.search ?? ''}
+          placeholder="Search tasks…"
+          style={{
+            padding: '7px 11px',
+            border: '1px solid var(--color-border)',
+            borderRadius: '6px',
+            fontSize: '0.8125rem',
+            minWidth: '220px',
+            backgroundColor: 'var(--color-surface)',
+          }}
         />
+        <select
+          name="status"
+          defaultValue={params.status ?? ''}
+          style={{
+            padding: '7px 11px',
+            border: '1px solid var(--color-border)',
+            borderRadius: '6px',
+            fontSize: '0.8125rem',
+            backgroundColor: 'var(--color-surface)',
+          }}
+        >
+          <option value="">All Statuses</option>
+          <option value="to_do">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="review">Review</option>
+          <option value="revision">Revision</option>
+          <option value="blocked">Blocked</option>
+          <option value="done">Done</option>
+        </select>
+        <select
+          name="priority"
+          defaultValue={params.priority ?? ''}
+          style={{
+            padding: '7px 11px',
+            border: '1px solid var(--color-border)',
+            borderRadius: '6px',
+            fontSize: '0.8125rem',
+            backgroundColor: 'var(--color-surface)',
+          }}
+        >
+          <option value="">All Priorities</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+        <button
+          type="submit"
+          style={{
+            padding: '7px 14px',
+            backgroundColor: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '6px',
+            fontSize: '0.8125rem',
+            cursor: 'pointer',
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          Filter
+        </button>
+        {(params.search || params.status || params.priority || params.project_id) && (
+          <Link
+            href="/tasks"
+            style={{
+              padding: '7px 14px',
+              fontSize: '0.8125rem',
+              color: 'var(--color-text-muted)',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            Clear
+          </Link>
+        )}
+      </form>
+
+      {/* Table */}
+      <SectionCard noPadding>
+        <TasksTable tasks={tasks} />
       </SectionCard>
+    </div>
+  )
+}
+
+function TasksTable({ tasks }: { tasks: TaskWithRelations[] }) {
+  if (tasks.length === 0) {
+    return (
+      <EmptyState
+        icon={<CheckSquare size={22} />}
+        title="No tasks yet"
+        description="Create your first task to start tracking work items, assignments, and progress."
+        action={
+          <Link
+            href="/tasks/new"
+            style={{
+              padding: '8px 16px',
+              backgroundColor: 'var(--color-primary)',
+              color: '#fff',
+              borderRadius: '6px',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
+              textDecoration: 'none',
+            }}
+          >
+            Create First Task
+          </Link>
+        }
+      />
+    )
+  }
+
+  const headers = ['Task', 'Project', 'Category', 'Assigned To', 'Due Date', 'Priority', 'Status', 'Progress']
+  const today = new Date().toISOString().split('T')[0]
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+            {headers.map(h => (
+              <th
+                key={h}
+                style={{
+                  padding: '10px 14px',
+                  textAlign: 'left',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'var(--color-text-muted)',
+                  backgroundColor: 'var(--color-surface-subtle)',
+                  letterSpacing: '0.02em',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map((task, idx) => {
+            const isOverdue = task.due_date && task.due_date < today && task.status !== 'done'
+            const isBlocked = task.status === 'blocked'
+
+            return (
+              <tr
+                key={task.id}
+                style={{
+                  borderBottom: idx < tasks.length - 1 ? '1px solid var(--color-border)' : undefined,
+                  backgroundColor: isBlocked ? '#FEF2F2' : isOverdue ? '#FFFBEB' : 'var(--color-surface)',
+                  cursor: 'pointer',
+                }}
+              >
+                {/* Task title */}
+                <td style={{ padding: '10px 14px', maxWidth: '280px' }}>
+                  <Link href={`/tasks/${task.id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {isOverdue && <AlertTriangle size={13} style={{ color: '#D97706', flexShrink: 0 }} />}
+                    <span style={{
+                      fontWeight: 500,
+                      color: 'var(--color-text-primary)',
+                      fontSize: '0.8125rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {task.title}
+                    </span>
+                  </Link>
+                </td>
+                {/* Project */}
+                <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                  {task.projects ? (
+                    <Link href={`/projects/${task.projects.id}`} style={{ textDecoration: 'none', color: 'var(--color-primary)', fontWeight: 500, fontSize: '0.75rem' }}>
+                      {task.projects.project_code}
+                    </Link>
+                  ) : '—'}
+                </td>
+                {/* Category */}
+                <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
+                  {task.category?.replace(/_/g, ' ') ?? '—'}
+                </td>
+                {/* Assigned To */}
+                <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                  {task.assignee?.full_name ?? '—'}
+                </td>
+                {/* Due Date */}
+                <td style={{
+                  padding: '10px 14px',
+                  fontSize: '0.75rem',
+                  color: isOverdue ? '#D97706' : 'var(--color-text-muted)',
+                  fontWeight: isOverdue ? 600 : 400,
+                  whiteSpace: 'nowrap',
+                }}>
+                  {formatDate(task.due_date)}
+                </td>
+                {/* Priority */}
+                <td style={{ padding: '10px 14px' }}>
+                  <PriorityBadge priority={task.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'} />
+                </td>
+                {/* Status */}
+                <td style={{ padding: '10px 14px' }}>
+                  <TaskStatusBadge status={task.status} />
+                </td>
+                {/* Progress */}
+                <td style={{ padding: '10px 14px', minWidth: '90px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <ProgressBar value={task.progress_percent} height={5} />
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                      {task.progress_percent}%
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }

@@ -7,8 +7,10 @@ import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { TeamMemberList } from '@/components/modules/projects/TeamMemberList'
 import { AddTeamMemberForm } from '@/components/modules/projects/AddTeamMemberForm'
+import { TaskStatusBadge } from '@/components/modules/tasks/TaskStatusBadge'
 import { getProjectById } from '@/lib/projects/queries'
 import { getTeamByProjectId } from '@/lib/projects/team-queries'
+import { getTasksByProjectId, type TaskWithRelations } from '@/lib/tasks/queries'
 import { getUsersForSelect } from '@/lib/users/queries'
 import { formatDate } from '@/lib/utils/formatters'
 import {
@@ -20,6 +22,8 @@ import {
   FileText,
   Users,
   Activity,
+  Plus,
+  AlertTriangle,
 } from 'lucide-react'
 
 interface PageProps {
@@ -45,10 +49,14 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
   const leadName = project.lead?.full_name ?? '—'
   const reviewerName = project.reviewer?.full_name ?? null
 
-  // Fetch team data for Team tab
+  // Fetch tab-specific data
   const [teamMembers, users] = activeTab === 'team'
     ? await Promise.all([getTeamByProjectId(id), getUsersForSelect()])
     : [[], []]
+
+  const projectTasks = activeTab === 'tasks'
+    ? await getTasksByProjectId(id)
+    : []
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: <ClipboardList size={13} /> },
@@ -163,7 +171,10 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
           reviewerName={reviewerName}
         />
       )}
-      {activeTab !== 'overview' && activeTab !== 'team' && (
+      {activeTab === 'tasks' && (
+        <TasksTab projectId={project.id} tasks={projectTasks} />
+      )}
+      {activeTab !== 'overview' && activeTab !== 'team' && activeTab !== 'tasks' && (
         <PlaceholderTab tabName={activeTab} />
       )}
     </div>
@@ -417,6 +428,134 @@ function TeamTab({
           </div>
         </SectionCard>
       </div>
+    </div>
+  )
+}
+
+/* ─── Tasks Tab ────────────────────────────────────────────────── */
+function TasksTab({ projectId, tasks }: { projectId: string; tasks: TaskWithRelations[] }) {
+  const today = new Date().toISOString().split('T')[0]
+  const headers = ['Task', 'Category', 'Assigned To', 'Due Date', 'Priority', 'Status', 'Progress']
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <SectionCard
+        title="Project Tasks"
+        actions={
+          <Link
+            href={`/tasks/new?project_id=${projectId}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '0.75rem',
+              color: 'var(--color-primary)',
+              textDecoration: 'none',
+              fontWeight: 500,
+            }}
+          >
+            <Plus size={12} aria-hidden="true" />
+            Add Task
+          </Link>
+        }
+        noPadding
+      >
+        {tasks.length === 0 ? (
+          <div style={{
+            padding: '24px 16px',
+            textAlign: 'center',
+            color: 'var(--color-text-muted)',
+            fontSize: '0.8125rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+          }}>
+            <CheckSquare size={16} />
+            No tasks created for this project yet.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  {headers.map(h => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: '8px 14px',
+                        textAlign: 'left',
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        color: 'var(--color-text-muted)',
+                        backgroundColor: 'var(--color-surface-subtle)',
+                        letterSpacing: '0.02em',
+                        textTransform: 'uppercase',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.map((task, idx) => {
+                  const isOverdue = task.due_date && task.due_date < today && task.status !== 'done'
+                  const isBlocked = task.status === 'blocked'
+
+                  return (
+                    <tr
+                      key={task.id}
+                      style={{
+                        borderBottom: idx < tasks.length - 1 ? '1px solid var(--color-border)' : undefined,
+                        backgroundColor: isBlocked ? '#FEF2F2' : isOverdue ? '#FFFBEB' : undefined,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <td style={{ padding: '8px 14px', maxWidth: '250px' }}>
+                        <Link href={`/tasks/${task.id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          {isOverdue && <AlertTriangle size={12} style={{ color: '#D97706', flexShrink: 0 }} />}
+                          <span style={{ fontWeight: 500, color: 'var(--color-text-primary)', fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {task.title}
+                          </span>
+                        </Link>
+                      </td>
+                      <td style={{ padding: '8px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
+                        {task.category?.replace(/_/g, ' ') ?? '—'}
+                      </td>
+                      <td style={{ padding: '8px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                        {task.assignee?.full_name ?? '—'}
+                      </td>
+                      <td style={{
+                        padding: '8px 14px',
+                        fontSize: '0.75rem',
+                        color: isOverdue ? '#D97706' : 'var(--color-text-muted)',
+                        fontWeight: isOverdue ? 600 : 400,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {formatDate(task.due_date)}
+                      </td>
+                      <td style={{ padding: '8px 14px' }}>
+                        <PriorityBadge priority={task.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'} />
+                      </td>
+                      <td style={{ padding: '8px 14px' }}>
+                        <TaskStatusBadge status={task.status} />
+                      </td>
+                      <td style={{ padding: '8px 14px', minWidth: '80px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <ProgressBar value={task.progress_percent} height={5} />
+                          <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>{task.progress_percent}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
     </div>
   )
 }

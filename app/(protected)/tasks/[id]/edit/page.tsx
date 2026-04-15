@@ -1,0 +1,42 @@
+import { notFound } from 'next/navigation'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { SectionCard } from '@/components/shared/SectionCard'
+import { TaskForm } from '@/components/modules/tasks/TaskForm'
+import { getTaskById } from '@/lib/tasks/queries'
+import { getProjects } from '@/lib/projects/queries'
+import { getUsersForSelect } from '@/lib/users/queries'
+
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const { id } = await params
+  const task = await getTaskById(id)
+  return { title: task ? `Edit ${task.title} — Engineering Agency OS` : 'Task Not Found' }
+}
+
+export default async function EditTaskPage({ params }: PageProps) {
+  const { id } = await params
+  const [task, projectsRaw, users] = await Promise.all([
+    getTaskById(id),
+    getProjects(),
+    getUsersForSelect(),
+  ])
+
+  if (!task) notFound()
+
+  const projects = projectsRaw.map(p => ({ id: p.id, name: p.name, project_code: p.project_code }))
+
+  return (
+    <div>
+      <PageHeader
+        title={`Edit: ${task.title}`}
+        subtitle={task.projects ? `${task.projects.project_code}` : ''}
+      />
+      <SectionCard>
+        <TaskForm mode="edit" task={task} projects={projects} users={users} />
+      </SectionCard>
+    </div>
+  )
+}

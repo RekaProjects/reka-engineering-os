@@ -93,3 +93,28 @@ export const INTAKE_STATUS_OPTIONS = [
   { value: 'rejected',      label: 'Rejected' },
   { value: 'converted',     label: 'Converted' },
 ] as const
+
+export const TASK_STATUS_OPTIONS = [
+  { value: 'to_do',        label: 'To Do' },
+  { value: 'in_progress',  label: 'In Progress' },
+  { value: 'review',       label: 'Review' },
+  { value: 'revision',     label: 'Revision' },
+  { value: 'blocked',      label: 'Blocked' },
+  { value: 'done',         label: 'Done' },
+] as const
+
+export const TASK_CATEGORY_OPTIONS = [
+  { value: 'brief_review',         label: 'Brief Review' },
+  { value: 'reference_collection', label: 'Reference Collection' },
+  { value: 'modeling',             label: 'Modeling' },
+  { value: 'drafting',             label: 'Drafting' },
+  { value: 'calculation',          label: 'Calculation' },
+  { value: 'checking',             label: 'Checking' },
+  { value: 'boq',                  label: 'BOQ' },
+  { value: 'report_writing',       label: 'Report Writing' },
+  { value: 'revision',             label: 'Revision' },
+  { value: 'coordination',         label: 'Coordination' },
+  { value: 'submission_prep',      label: 'Submission Prep' },
+  { value: 'admin',                label: 'Admin' },
+] as const
+
