@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { getSessionProfile } from '@/lib/auth/session'
+import { effectiveRole } from '@/lib/auth/permissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -17,21 +19,41 @@ interface PageProps {
 }
 
 export default async function TasksPage({ searchParams }: PageProps) {
+  const profile = await getSessionProfile()
+  const role = effectiveRole(profile.system_role)
   const params = await searchParams
+
+  const scopeOpts =
+    role === 'member'      ? { scopeAssignedTo: profile.id } :
+    role === 'reviewer'    ? { scopeReviewerId: profile.id } :
+    role === 'coordinator' ? { scopeProjectUserId: profile.id } :
+    {}
+
   const tasks = await getTasks({
     search: params.search,
     status: params.status,
     priority: params.priority,
     project_id: params.project_id,
+    ...scopeOpts,
   }).catch(() => [] as TaskWithRelations[])
+
+  const pageTitle = role === 'member' ? 'My Tasks' : 'Tasks'
+  const pageSubtitle = role === 'member'
+    ? 'Tasks assigned to you.'
+    : role === 'reviewer'
+      ? 'Tasks where you are the reviewer.'
+      : role === 'coordinator'
+        ? 'Tasks in your assigned projects.'
+        : 'Executable work items assigned to team members across all projects.'
+  const canCreate = role === 'admin' || role === 'coordinator'
 
   return (
     <div>
       <PageHeader
-        title="Tasks"
-        subtitle="Executable work items assigned to team members across all projects."
+        title={pageTitle}
+        subtitle={pageSubtitle}
         actions={
-          <Link
+          canCreate ? <Link
             href="/tasks/new"
             style={{
               display: 'inline-flex',
@@ -48,7 +70,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
           >
             <Plus size={14} aria-hidden="true" />
             New Task
-          </Link>
+          </Link> : undefined
         }
       />
 

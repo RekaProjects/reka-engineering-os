@@ -10,6 +10,17 @@ export type TaskWithRelations = Task & {
   reviewer: { id: string; full_name: string } | null
 }
 
+// ─── Scoping helper ──────────────────────────────────────────
+
+async function getAssignedProjectIds(userId: string): Promise<string[]> {
+  const supabase = await createServerClient()
+  const { data } = await supabase
+    .from('project_team_assignments')
+    .select('project_id')
+    .eq('user_id', userId)
+  return (data ?? []).map((r) => r.project_id)
+}
+
 // ─── List (all tasks, cross-project) ──────────────────────────
 
 export async function getTasks(opts?: {
@@ -18,6 +29,12 @@ export async function getTasks(opts?: {
   priority?: string
   project_id?: string
   assigned_to?: string
+  /** Member scope: only tasks assigned to this user */
+  scopeAssignedTo?: string
+  /** Reviewer scope: only tasks where this user is the reviewer */
+  scopeReviewerId?: string
+  /** Coordinator scope: only tasks in projects this user is assigned to */
+  scopeProjectUserId?: string
 }): Promise<TaskWithRelations[]> {
   const supabase = await createServerClient()
 
@@ -44,6 +61,19 @@ export async function getTasks(opts?: {
     query = query.or(
       `title.ilike.%${opts.search}%`
     )
+  }
+
+  // Role-scoped filters
+  if (opts?.scopeAssignedTo) {
+    query = query.eq('assigned_to_user_id', opts.scopeAssignedTo)
+  }
+  if (opts?.scopeReviewerId) {
+    query = query.eq('reviewer_user_id', opts.scopeReviewerId)
+  }
+  if (opts?.scopeProjectUserId) {
+    const ids = await getAssignedProjectIds(opts.scopeProjectUserId)
+    if (ids.length === 0) return []
+    query = query.in('project_id', ids)
   }
 
   const { data, error } = await query

@@ -43,19 +43,18 @@ export function AppSidebar({
   const pathname = usePathname()
   const perms = getNavPermissions(systemRole)
 
-  // Build nav items based on role permissions
   const navItems: NavItem[] = [
-    { label: 'Dashboard',    href: '/dashboard',    icon: <LayoutDashboard size={16} /> },
+    { label: perms.labelDashboard,    href: '/dashboard',    icon: <LayoutDashboard size={16} /> },
     ...(perms.showClients
       ? [{ label: 'Clients',   href: '/clients',    icon: <Users size={16} /> }]
       : []),
     ...(perms.showIntakes
       ? [{ label: 'Intakes',   href: '/intakes',    icon: <ClipboardList size={16} /> }]
       : []),
-    { label: 'Projects',     href: '/projects',     icon: <FolderKanban size={16} /> },
-    { label: 'Tasks',        href: '/tasks',         icon: <CheckSquare size={16} /> },
-    { label: 'Deliverables', href: '/deliverables',  icon: <FileText size={16} /> },
-    { label: 'Files',        href: '/files',         icon: <Paperclip size={16} /> },
+    { label: perms.labelProjects,     href: '/projects',     icon: <FolderKanban size={16} /> },
+    { label: perms.labelTasks,        href: '/tasks',         icon: <CheckSquare size={16} /> },
+    { label: perms.labelDeliverables, href: '/deliverables',  icon: <FileText size={16} /> },
+    { label: perms.labelFiles,        href: '/files',         icon: <Paperclip size={16} /> },
     ...(perms.showTeam
       ? [{ label: 'Team',         href: '/team',         icon: <UserSquare2 size={16} /> }]
       : []),

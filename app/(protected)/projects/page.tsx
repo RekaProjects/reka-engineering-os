@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { getSessionProfile } from '@/lib/auth/session'
+import { effectiveRole } from '@/lib/auth/permissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -17,21 +19,40 @@ interface PageProps {
 }
 
 export default async function ProjectsPage({ searchParams }: PageProps) {
+  const profile = await getSessionProfile()
+  const role = effectiveRole(profile.system_role)
   const params = await searchParams
+
+  const scopeOpts =
+    role === 'member'      ? { assignedUserId: profile.id } :
+    role === 'coordinator' ? { assignedUserId: profile.id } :
+    role === 'reviewer'    ? { reviewerUserId: profile.id } :
+    {}
+
   const projects = await getProjects({
     search: params.search,
     status: params.status,
     discipline: params.discipline,
     priority: params.priority,
+    ...scopeOpts,
   }).catch(() => [] as ProjectWithRelations[])
+
+  const pageTitle = role === 'member' ? 'My Projects' : 'Projects'
+  const pageSubtitle = role === 'member'
+    ? 'Projects you are assigned to.'
+    : role === 'reviewer'
+      ? 'Projects where you are assigned as reviewer.'
+      : role === 'coordinator'
+        ? 'Projects in your operational scope.'
+        : 'Active and historical engineering project work.'
 
   return (
     <div>
       <PageHeader
-        title="Projects"
-        subtitle="Active and historical engineering project work."
+        title={pageTitle}
+        subtitle={pageSubtitle}
         actions={
-          <Link
+          role === 'admin' ? <Link
             href="/projects/new"
             style={{
               display: 'inline-flex',
@@ -48,7 +69,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
           >
             <Plus size={14} aria-hidden="true" />
             New Project
-          </Link>
+          </Link> : undefined
         }
       />
 

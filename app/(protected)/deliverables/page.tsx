@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { getSessionProfile } from '@/lib/auth/session'
+import { effectiveRole } from '@/lib/auth/permissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -14,21 +16,41 @@ interface PageProps {
 }
 
 export default async function DeliverablesPage({ searchParams }: PageProps) {
+  const profile = await getSessionProfile()
+  const role = effectiveRole(profile.system_role)
   const params = await searchParams
+
+  const scopeOpts =
+    role === 'member'      ? { scopePreparerId: profile.id } :
+    role === 'reviewer'    ? { scopeReviewerId: profile.id } :
+    role === 'coordinator' ? { scopeProjectUserId: profile.id } :
+    {}
+
   const deliverables = await getDeliverables({
     search: params.search,
     status: params.status,
     type: params.type,
     project_id: params.project_id,
+    ...scopeOpts,
   }).catch(() => [] as DeliverableWithRelations[])
+
+  const pageTitle = role === 'member' ? 'My Deliverables' : 'Deliverables'
+  const pageSubtitle = role === 'member'
+    ? 'Deliverables you prepared.'
+    : role === 'reviewer'
+      ? 'Deliverables assigned to you for review.'
+      : role === 'coordinator'
+        ? 'Deliverables in your assigned projects.'
+        : 'Project outputs tracked through review, revision, and final issuance.'
+  const canCreate = role === 'admin' || role === 'coordinator'
 
   return (
     <div>
       <PageHeader
-        title="Deliverables"
-        subtitle="Project outputs tracked through review, revision, and final issuance."
+        title={pageTitle}
+        subtitle={pageSubtitle}
         actions={
-          <Link
+          canCreate ? <Link
             href="/deliverables/new"
             style={{
               display: 'inline-flex',
@@ -45,7 +67,7 @@ export default async function DeliverablesPage({ searchParams }: PageProps) {
           >
             <Plus size={14} aria-hidden="true" />
             New Deliverable
-          </Link>
+          </Link> : undefined
         }
       />
 

@@ -34,7 +34,7 @@ export function isAdminOrCoordinator(role: SystemRole | null | undefined): boole
   return r === 'admin' || r === 'coordinator'
 }
 
-// ── Nav visibility helpers ───────────────────────────────────
+// ── Nav visibility + labelling helpers ───────────────────────
 
 export type NavPermissions = {
   showClients:      boolean
@@ -44,10 +44,18 @@ export type NavPermissions = {
   showPayments:     boolean
   showSettings:     boolean
   showMyPayments:   boolean
+  /** Label overrides for roles that see a personal scope */
+  labelProjects:     string
+  labelTasks:        string
+  labelDeliverables: string
+  labelFiles:        string
+  labelDashboard:    string
 }
 
 export function getNavPermissions(role: SystemRole | null | undefined): NavPermissions {
   const r = effectiveRole(role)
+  const personal = r === 'member'
+
   return {
     showClients:      r === 'admin' || r === 'coordinator',
     showIntakes:      r === 'admin' || r === 'coordinator',
@@ -56,5 +64,11 @@ export function getNavPermissions(role: SystemRole | null | undefined): NavPermi
     showPayments:     r === 'admin',
     showSettings:     r === 'admin',
     showMyPayments:   r === 'member' || r === 'reviewer',
+
+    labelDashboard:    personal ? 'My Dashboard'    : 'Dashboard',
+    labelProjects:     personal ? 'My Projects'     : 'Projects',
+    labelTasks:        personal ? 'My Tasks'        : 'Tasks',
+    labelDeliverables: personal ? 'My Deliverables' : 'Deliverables',
+    labelFiles:        personal ? 'My Files'        : 'Files',
   }
 }
