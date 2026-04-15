@@ -31,6 +31,19 @@ export async function getClients(opts?: {
   return (data ?? []) as Client[]
 }
 
+export async function getClientsForSelect(): Promise<{ id: string; client_name: string; client_code: string }[]> {
+  const supabase = await createServerClient()
+
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id, client_name, client_code')
+    .in('status', ['lead', 'active'])
+    .order('client_name', { ascending: true })
+
+  if (error) return []
+  return data ?? []
+}
+
 export async function getClientById(id: string): Promise<Client | null> {
   const supabase = await createServerClient()
 

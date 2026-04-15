@@ -1,0 +1,223 @@
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { SectionCard } from '@/components/shared/SectionCard'
+import { IntakeStatusBadge } from '@/components/modules/intakes/IntakeStatusBadge'
+import { getIntakeById } from '@/lib/intakes/queries'
+import { formatDate } from '@/lib/utils/formatters'
+import {
+  Pencil,
+  ExternalLink,
+  Users,
+} from 'lucide-react'
+
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const { id } = await params
+  const intake = await getIntakeById(id)
+  return { title: intake ? `${intake.title} — Engineering Agency OS` : 'Intake Not Found' }
+}
+
+export default async function IntakeDetailPage({ params }: PageProps) {
+  const { id } = await params
+  const intake = await getIntakeById(id)
+  if (!intake) notFound()
+
+  const clientDisplay = intake.clients
+    ? intake.clients.client_name
+    : intake.temp_client_name ?? '—'
+  const clientIsLinked = !!intake.clients
+
+  return (
+    <div>
+      {/* Header */}
+      <PageHeader
+        title={intake.title}
+        subtitle={`${intake.intake_code} · ${intake.discipline.charAt(0).toUpperCase() + intake.discipline.slice(1)} · ${intake.project_type.charAt(0).toUpperCase() + intake.project_type.slice(1)}`}
+        actions={
+          <Link
+            href={`/intakes/${intake.id}/edit`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              backgroundColor: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '6px',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
+              color: 'var(--color-text-secondary)',
+              textDecoration: 'none',
+            }}
+          >
+            <Pencil size={13} aria-hidden="true" />
+            Edit Intake
+          </Link>
+        }
+      />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px', alignItems: 'start' }}>
+
+        {/* Left column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Overview */}
+          <SectionCard title="Overview">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <DetailRow label="Status">
+                <IntakeStatusBadge status={intake.status} />
+              </DetailRow>
+              <DetailRow label="Source">
+                <span style={{ textTransform: 'capitalize' }}>{intake.source}</span>
+              </DetailRow>
+              <DetailRow label="Client / Prospect">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {clientIsLinked ? (
+                    <Link
+                      href={`/clients/${intake.clients!.id}`}
+                      style={{
+                        color: 'var(--color-primary)',
+                        textDecoration: 'none',
+                        fontWeight: 500,
+                        fontSize: '0.8125rem',
+                      }}
+                    >
+                      {clientDisplay}
+                    </Link>
+                  ) : (
+                    <span>{clientDisplay}</span>
+                  )}
+                  {!clientIsLinked && (
+                    <span
+                      style={{
+                        fontSize: '0.6875rem',
+                        backgroundColor: 'var(--color-surface-subtle)',
+                        color: 'var(--color-text-muted)',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      Prospect
+                    </span>
+                  )}
+                </div>
+              </DetailRow>
+              <DetailRow label="Discipline">
+                <span style={{ textTransform: 'capitalize' }}>{intake.discipline}</span>
+              </DetailRow>
+              <DetailRow label="Project Type">
+                <span style={{ textTransform: 'capitalize' }}>{intake.project_type}</span>
+              </DetailRow>
+              <DetailRow label="Received Date">
+                {formatDate(intake.received_date)}
+              </DetailRow>
+            </div>
+          </SectionCard>
+
+          {/* Brief */}
+          {intake.short_brief && (
+            <SectionCard title="Brief">
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--color-text-secondary)',
+                lineHeight: '1.7',
+                whiteSpace: 'pre-wrap',
+              }}>
+                {intake.short_brief}
+              </p>
+            </SectionCard>
+          )}
+
+          {/* Qualification Notes */}
+          {intake.qualification_notes && (
+            <SectionCard title="Qualification Notes">
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--color-text-secondary)',
+                lineHeight: '1.7',
+                whiteSpace: 'pre-wrap',
+              }}>
+                {intake.qualification_notes}
+              </p>
+            </SectionCard>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Timeline & Budget */}
+          <SectionCard title="Timeline & Budget">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <DetailRow label="Proposed Deadline">
+                {formatDate(intake.proposed_deadline)}
+              </DetailRow>
+              <DetailRow label="Budget Estimate">
+                {intake.budget_estimate
+                  ? `$${Number(intake.budget_estimate).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                  : <span style={{ color: 'var(--color-text-muted)' }}>Not specified</span>
+                }
+              </DetailRow>
+              <DetailRow label="Estimated Complexity">
+                {intake.estimated_complexity
+                  ? <span style={{ textTransform: 'capitalize' }}>{intake.estimated_complexity}</span>
+                  : <span style={{ color: 'var(--color-text-muted)' }}>Not assessed</span>
+                }
+              </DetailRow>
+            </div>
+          </SectionCard>
+
+          {/* External Link */}
+          {intake.external_reference_url && (
+            <SectionCard title="External Reference">
+              <a
+                href={intake.external_reference_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--color-primary)',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  wordBreak: 'break-all',
+                }}
+              >
+                <ExternalLink size={13} aria-hidden="true" />
+                {intake.external_reference_url.length > 50
+                  ? intake.external_reference_url.slice(0, 50) + '…'
+                  : intake.external_reference_url
+                }
+              </a>
+            </SectionCard>
+          )}
+
+          {/* Metadata */}
+          <SectionCard title="Record Info">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <DetailRow label="Created">{formatDate(intake.created_at)}</DetailRow>
+              <DetailRow label="Last Updated">{formatDate(intake.updated_at)}</DetailRow>
+            </div>
+          </SectionCard>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '3px', fontWeight: 500 }}>
+        {label}
+      </p>
+      <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-primary)' }}>{children}</div>
+    </div>
+  )
+}

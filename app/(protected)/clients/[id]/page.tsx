@@ -3,16 +3,18 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { ClientStatusBadge } from '@/components/modules/clients/ClientStatusBadge'
+import { IntakeStatusBadge } from '@/components/modules/intakes/IntakeStatusBadge'
 import { getClientById } from '@/lib/clients/queries'
+import { getIntakesByClientId } from '@/lib/intakes/queries'
 import { formatDate } from '@/lib/utils/formatters'
 import {
   Mail,
   Phone,
   Building2,
-  Globe,
   Pencil,
   FolderKanban,
   ClipboardList,
+  Plus,
 } from 'lucide-react'
 
 interface PageProps {
@@ -29,6 +31,8 @@ export default async function ClientDetailPage({ params }: PageProps) {
   const { id } = await params
   const client = await getClientById(id)
   if (!client) notFound()
+
+  const intakes = await getIntakesByClientId(client.id)
 
   return (
     <div>
@@ -95,28 +99,103 @@ export default async function ClientDetailPage({ params }: PageProps) {
             </SectionCard>
           )}
 
-          {/* Linked Intakes placeholder */}
+          {/* Linked Intakes — real data */}
           <SectionCard
             title="Linked Intakes"
             actions={
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                Available in Stage 02B
-              </span>
+              <Link
+                href={`/intakes/new`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.75rem',
+                  color: 'var(--color-primary)',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                <Plus size={12} aria-hidden="true" />
+                New Intake
+              </Link>
             }
+            noPadding
           >
-            <div style={{
-              padding: '20px 0',
-              textAlign: 'center',
-              color: 'var(--color-text-muted)',
-              fontSize: '0.8125rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-            }}>
-              <ClipboardList size={16} />
-              Intakes linked to this client will appear here.
-            </div>
+            {intakes.length === 0 ? (
+              <div style={{
+                padding: '20px 16px',
+                textAlign: 'center',
+                color: 'var(--color-text-muted)',
+                fontSize: '0.8125rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}>
+                <ClipboardList size={16} />
+                No intakes linked to this client yet.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      {['Code', 'Title', 'Status', 'Received'].map(h => (
+                        <th
+                          key={h}
+                          style={{
+                            padding: '8px 14px',
+                            textAlign: 'left',
+                            fontSize: '0.6875rem',
+                            fontWeight: 600,
+                            color: 'var(--color-text-muted)',
+                            backgroundColor: 'var(--color-surface-subtle)',
+                            letterSpacing: '0.02em',
+                            textTransform: 'uppercase',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {intakes.map((intake, idx) => (
+                      <tr
+                        key={intake.id}
+                        style={{
+                          borderBottom: idx < intakes.length - 1 ? '1px solid var(--color-border)' : undefined,
+                          cursor: 'pointer',
+                        }}
+                        className="hover:bg-[#F8FAFC]"
+                      >
+                        <td style={{ padding: '8px 14px' }}>
+                          <Link href={`/intakes/${intake.id}`} style={{ textDecoration: 'none' }}>
+                            <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                              {intake.intake_code}
+                            </span>
+                          </Link>
+                        </td>
+                        <td style={{ padding: '8px 14px' }}>
+                          <Link href={`/intakes/${intake.id}`} style={{ textDecoration: 'none' }}>
+                            <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-primary)', fontWeight: 500 }}>
+                              {intake.title}
+                            </span>
+                          </Link>
+                        </td>
+                        <td style={{ padding: '8px 14px' }}>
+                          <IntakeStatusBadge status={intake.status} />
+                        </td>
+                        <td style={{ padding: '8px 14px', fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                          {formatDate(intake.received_date)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </SectionCard>
 
           {/* Linked Projects placeholder */}

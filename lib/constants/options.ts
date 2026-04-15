@@ -52,3 +52,18 @@ export const CLIENT_STATUSES_OPTIONS = [
   { value: 'inactive', label: 'Inactive' },
   { value: 'archived', label: 'Archived' },
 ] as const
+
+export const COMPLEXITY_OPTIONS = [
+  { value: 'low',     label: 'Low' },
+  { value: 'medium',  label: 'Medium' },
+  { value: 'high',    label: 'High' },
+  { value: 'unknown', label: 'Unknown' },
+] as const
+
+export const INTAKE_STATUS_OPTIONS = [
+  { value: 'new',           label: 'New' },
+  { value: 'awaiting_info', label: 'Awaiting Info' },
+  { value: 'qualified',     label: 'Qualified' },
+  { value: 'rejected',      label: 'Rejected' },
+  { value: 'converted',     label: 'Converted' },
+] as const
