@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
+import { logActivity } from '@/lib/activity/actions'
 
 // ─── Create ───────────────────────────────────────────────────
 export async function createDeliverable(formData: FormData) {
@@ -104,6 +105,14 @@ export async function updateDeliverable(id: string, formData: FormData) {
     .eq('id', id)
 
   if (error) return { error: error.message }
+
+  await logActivity({
+    entity_type: 'deliverable',
+    entity_id:   id,
+    action_type: 'status_updated',
+    user_id:     user.id,
+    note:        `Deliverable status changed to ${status}`,
+  })
 
   revalidatePath('/deliverables')
   revalidatePath(`/deliverables/${id}`)

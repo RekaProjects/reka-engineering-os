@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
+import { logActivity } from '@/lib/activity/actions'
 
 // ─── Create ───────────────────────────────────────────────────
 export async function createProject(formData: FormData) {
@@ -55,6 +56,14 @@ export async function createProject(formData: FormData) {
 
   if (error) return { error: error.message }
 
+  await logActivity({
+    entity_type: 'project',
+    entity_id:   data.id,
+    action_type: 'created',
+    user_id:     user.id,
+    note:        `Project '${name}' created`,
+  })
+
   revalidatePath('/projects')
   revalidatePath(`/clients/${clientId}`)
   redirect(`/projects/${data.id}`)
@@ -105,6 +114,14 @@ export async function updateProject(id: string, formData: FormData) {
     .eq('id', id)
 
   if (error) return { error: error.message }
+
+  await logActivity({
+    entity_type: 'project',
+    entity_id:   id,
+    action_type: 'status_updated',
+    user_id:     user.id,
+    note:        `Project status set to ${payload.status}`,
+  })
 
   revalidatePath('/projects')
   revalidatePath(`/projects/${id}`)

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
+import { logActivity } from '@/lib/activity/actions'
 
 /**
  * Convert a qualified intake into a project.
@@ -101,7 +102,15 @@ export async function convertIntakeToProject(formData: FormData) {
       if (teamErr) console.error('Failed to create lead team assignment:', teamErr.message)
     })
 
-  // ─── 4. Revalidate and redirect ─────────────────────────────
+  // ─── 4. Log activity, revalidate, redirect ──────────────────
+  await logActivity({
+    entity_type: 'intake',
+    entity_id:   intakeId,
+    action_type: 'converted',
+    user_id:     user.id,
+    note:        `Intake converted to project '${name}'`,
+  })
+
   revalidatePath('/projects')
   revalidatePath('/intakes')
   revalidatePath(`/intakes/${intakeId}`)
