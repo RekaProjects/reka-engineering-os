@@ -3,12 +3,13 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { IntakeStatusBadge } from '@/components/modules/intakes/IntakeStatusBadge'
+import { ConvertToProjectButton } from '@/components/modules/intakes/ConvertToProjectButton'
 import { getIntakeById } from '@/lib/intakes/queries'
 import { formatDate } from '@/lib/utils/formatters'
 import {
   Pencil,
   ExternalLink,
-  Users,
+  FolderKanban,
 } from 'lucide-react'
 
 interface PageProps {
@@ -31,6 +32,10 @@ export default async function IntakeDetailPage({ params }: PageProps) {
     : intake.temp_client_name ?? '—'
   const clientIsLinked = !!intake.clients
 
+  // Determine if conversion is possible
+  const canConvert = intake.status === 'qualified'
+  const isConverted = intake.status === 'converted'
+
   return (
     <div>
       {/* Header */}
@@ -38,25 +43,30 @@ export default async function IntakeDetailPage({ params }: PageProps) {
         title={intake.title}
         subtitle={`${intake.intake_code} · ${intake.discipline.charAt(0).toUpperCase() + intake.discipline.slice(1)} · ${intake.project_type.charAt(0).toUpperCase() + intake.project_type.slice(1)}`}
         actions={
-          <Link
-            href={`/intakes/${intake.id}/edit`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '6px',
-              fontSize: '0.8125rem',
-              fontWeight: 500,
-              color: 'var(--color-text-secondary)',
-              textDecoration: 'none',
-            }}
-          >
-            <Pencil size={13} aria-hidden="true" />
-            Edit Intake
-          </Link>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {canConvert && (
+              <ConvertToProjectButton intakeId={intake.id} />
+            )}
+            <Link
+              href={`/intakes/${intake.id}/edit`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                backgroundColor: 'var(--color-surface)',
+                border: '1px solid var(--color-border)',
+                borderRadius: '6px',
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                color: 'var(--color-text-secondary)',
+                textDecoration: 'none',
+              }}
+            >
+              <Pencil size={13} aria-hidden="true" />
+              Edit Intake
+            </Link>
+          </div>
         }
       />
 
@@ -150,6 +160,41 @@ export default async function IntakeDetailPage({ params }: PageProps) {
 
         {/* Right column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Linked Project — shown after conversion */}
+          {isConverted && intake.converted_project && (
+            <SectionCard title="Linked Project">
+              <Link
+                href={`/projects/${intake.converted_project.id}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  textDecoration: 'none',
+                  padding: '8px 0',
+                }}
+              >
+                <FolderKanban size={16} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                <div>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '0.75rem',
+                    color: 'var(--color-text-muted)',
+                    display: 'block',
+                  }}>
+                    {intake.converted_project.project_code}
+                  </span>
+                  <span style={{
+                    fontSize: '0.8125rem',
+                    color: 'var(--color-primary)',
+                    fontWeight: 500,
+                  }}>
+                    {intake.converted_project.name}
+                  </span>
+                </div>
+              </Link>
+            </SectionCard>
+          )}
 
           {/* Timeline & Budget */}
           <SectionCard title="Timeline & Budget">

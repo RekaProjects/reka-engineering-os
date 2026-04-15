@@ -1,0 +1,452 @@
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { SectionCard } from '@/components/shared/SectionCard'
+import { ProjectStatusBadge } from '@/components/modules/projects/ProjectStatusBadge'
+import { PriorityBadge } from '@/components/shared/PriorityBadge'
+import { ProgressBar } from '@/components/shared/ProgressBar'
+import { TeamMemberList } from '@/components/modules/projects/TeamMemberList'
+import { AddTeamMemberForm } from '@/components/modules/projects/AddTeamMemberForm'
+import { getProjectById } from '@/lib/projects/queries'
+import { getTeamByProjectId } from '@/lib/projects/team-queries'
+import { getUsersForSelect } from '@/lib/users/queries'
+import { formatDate } from '@/lib/utils/formatters'
+import {
+  Pencil,
+  ExternalLink,
+  FolderOpen,
+  ClipboardList,
+  CheckSquare,
+  FileText,
+  Users,
+  Activity,
+} from 'lucide-react'
+
+interface PageProps {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string }>
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const { id } = await params
+  const project = await getProjectById(id)
+  return { title: project ? `${project.name} — Engineering Agency OS` : 'Project Not Found' }
+}
+
+export default async function ProjectDetailPage({ params, searchParams }: PageProps) {
+  const { id } = await params
+  const { tab } = await searchParams
+  const activeTab = tab || 'overview'
+
+  const project = await getProjectById(id)
+  if (!project) notFound()
+
+  const clientName = project.clients?.client_name ?? '—'
+  const leadName = project.lead?.full_name ?? '—'
+  const reviewerName = project.reviewer?.full_name ?? null
+
+  // Fetch team data for Team tab
+  const [teamMembers, users] = activeTab === 'team'
+    ? await Promise.all([getTeamByProjectId(id), getUsersForSelect()])
+    : [[], []]
+
+  const tabs = [
+    { key: 'overview', label: 'Overview', icon: <ClipboardList size={13} /> },
+    { key: 'team', label: 'Team', icon: <Users size={13} /> },
+    { key: 'tasks', label: 'Tasks', icon: <CheckSquare size={13} /> },
+    { key: 'deliverables', label: 'Deliverables', icon: <FileText size={13} /> },
+    { key: 'files', label: 'Files', icon: <FolderOpen size={13} /> },
+    { key: 'activity', label: 'Activity', icon: <Activity size={13} /> },
+  ]
+
+  return (
+    <div>
+      {/* Header */}
+      <PageHeader
+        title={project.name}
+        subtitle={`${project.project_code} · ${project.discipline.charAt(0).toUpperCase() + project.discipline.slice(1)} · ${project.project_type.charAt(0).toUpperCase() + project.project_type.slice(1)}`}
+        actions={
+          <Link
+            href={`/projects/${project.id}/edit`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              backgroundColor: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '6px',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
+              color: 'var(--color-text-secondary)',
+              textDecoration: 'none',
+            }}
+          >
+            <Pencil size={13} aria-hidden="true" />
+            Edit Project
+          </Link>
+        }
+      />
+
+      {/* Quick status strip */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        marginBottom: '20px',
+        flexWrap: 'wrap',
+      }}>
+        <ProjectStatusBadge status={project.status} />
+        <PriorityBadge priority={project.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'} />
+        {project.waiting_on !== 'none' && (
+          <span style={{
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            color: 'var(--color-warning)',
+            backgroundColor: 'var(--color-warning-subtle)',
+            padding: '2px 10px',
+            borderRadius: '12px',
+          }}>
+            Waiting: {(project.waiting_on ?? 'none').charAt(0).toUpperCase() + (project.waiting_on ?? 'none').slice(1)}
+          </span>
+        )}
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+          Due {formatDate(project.target_due_date)}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '120px' }}>
+          <ProgressBar value={project.progress_percent} height={5} />
+          <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+            {project.progress_percent}%
+          </span>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{
+        display: 'flex',
+        borderBottom: '2px solid var(--color-border)',
+        marginBottom: '20px',
+      }}>
+        {tabs.map((t) => (
+          <Link
+            key={t.key}
+            href={`/projects/${project.id}${t.key === 'overview' ? '' : `?tab=${t.key}`}`}
+            style={{
+              padding: '10px 16px',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
+              color: activeTab === t.key ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              textDecoration: 'none',
+              borderBottom: activeTab === t.key ? '2px solid var(--color-primary)' : '2px solid transparent',
+              marginBottom: '-2px',
+            }}
+          >
+            {t.icon}
+            {t.label}
+          </Link>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === 'overview' && (
+        <OverviewTab project={project} clientName={clientName} leadName={leadName} reviewerName={reviewerName} />
+      )}
+      {activeTab === 'team' && (
+        <TeamTab
+          projectId={project.id}
+          teamMembers={teamMembers}
+          users={users}
+          leadName={leadName}
+          reviewerName={reviewerName}
+        />
+      )}
+      {activeTab !== 'overview' && activeTab !== 'team' && (
+        <PlaceholderTab tabName={activeTab} />
+      )}
+    </div>
+  )
+}
+
+/* ─── Overview Tab ─────────────────────────────────────────────── */
+function OverviewTab({
+  project,
+  clientName,
+  leadName,
+  reviewerName,
+}: {
+  project: Awaited<ReturnType<typeof getProjectById>> & {}
+  clientName: string
+  leadName: string
+  reviewerName: string | null
+}) {
+  if (!project) return null
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px', alignItems: 'start' }}>
+      {/* Left column */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Overview */}
+        <SectionCard title="Overview">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <DetailRow label="Client">
+              {project.clients ? (
+                <Link
+                  href={`/clients/${project.clients.id}`}
+                  style={{
+                    color: 'var(--color-primary)',
+                    textDecoration: 'none',
+                    fontWeight: 500,
+                    fontSize: '0.8125rem',
+                  }}
+                >
+                  {clientName}
+                </Link>
+              ) : (
+                <span>{clientName}</span>
+              )}
+            </DetailRow>
+            <DetailRow label="Source">
+              <span style={{ textTransform: 'capitalize' }}>{project.source}</span>
+            </DetailRow>
+            <DetailRow label="Discipline">
+              <span style={{ textTransform: 'capitalize' }}>{project.discipline}</span>
+            </DetailRow>
+            <DetailRow label="Project Type">
+              <span style={{ textTransform: 'capitalize' }}>{project.project_type}</span>
+            </DetailRow>
+            <DetailRow label="Start Date">
+              {formatDate(project.start_date)}
+            </DetailRow>
+            <DetailRow label="Target Due Date">
+              {formatDate(project.target_due_date)}
+            </DetailRow>
+            {project.actual_completion_date && (
+              <DetailRow label="Completed">
+                {formatDate(project.actual_completion_date)}
+              </DetailRow>
+            )}
+            <DetailRow label="Waiting On">
+              <span style={{ textTransform: 'capitalize' }}>
+                {project.waiting_on === 'none' ? '—' : project.waiting_on}
+              </span>
+            </DetailRow>
+          </div>
+        </SectionCard>
+
+        {/* Scope */}
+        {project.scope_summary && (
+          <SectionCard title="Scope Summary">
+            <p style={{
+              fontSize: '0.8125rem',
+              color: 'var(--color-text-secondary)',
+              lineHeight: '1.7',
+              whiteSpace: 'pre-wrap',
+            }}>
+              {project.scope_summary}
+            </p>
+          </SectionCard>
+        )}
+
+        {/* Internal Notes */}
+        {project.notes_internal && (
+          <SectionCard title="Internal Notes">
+            <p style={{
+              fontSize: '0.8125rem',
+              color: 'var(--color-text-secondary)',
+              lineHeight: '1.7',
+              whiteSpace: 'pre-wrap',
+            }}>
+              {project.notes_internal}
+            </p>
+          </SectionCard>
+        )}
+      </div>
+
+      {/* Right column */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Assignment */}
+        <SectionCard title="Assignment">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <DetailRow label="Project Lead">{leadName}</DetailRow>
+            <DetailRow label="Reviewer">
+              {reviewerName ?? <span style={{ color: 'var(--color-text-muted)' }}>Not assigned</span>}
+            </DetailRow>
+          </div>
+        </SectionCard>
+
+        {/* Linked Intake */}
+        {project.intakes && (
+          <SectionCard title="Linked Intake">
+            <Link
+              href={`/intakes/${project.intakes.id}`}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                textDecoration: 'none',
+              }}
+            >
+              <span style={{
+                fontFamily: 'monospace',
+                fontSize: '0.75rem',
+                color: 'var(--color-text-muted)',
+              }}>
+                {project.intakes.intake_code}
+              </span>
+              <span style={{
+                fontSize: '0.8125rem',
+                color: 'var(--color-primary)',
+                fontWeight: 500,
+              }}>
+                {project.intakes.title}
+              </span>
+            </Link>
+          </SectionCard>
+        )}
+
+        {/* External Links */}
+        {(project.external_reference_url || project.google_drive_folder_link) && (
+          <SectionCard title="Links">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {project.external_reference_url && (
+                <a
+                  href={project.external_reference_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontSize: '0.8125rem',
+                    color: 'var(--color-primary)',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  <ExternalLink size={13} aria-hidden="true" />
+                  External Reference
+                </a>
+              )}
+              {project.google_drive_folder_link && (
+                <a
+                  href={project.google_drive_folder_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontSize: '0.8125rem',
+                    color: 'var(--color-primary)',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <FolderOpen size={13} aria-hidden="true" />
+                  Google Drive Folder
+                </a>
+              )}
+            </div>
+          </SectionCard>
+        )}
+
+        {/* Record Info */}
+        <SectionCard title="Record Info">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <DetailRow label="Created">{formatDate(project.created_at)}</DetailRow>
+            <DetailRow label="Last Updated">{formatDate(project.updated_at)}</DetailRow>
+          </div>
+        </SectionCard>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Team Tab ─────────────────────────────────────────────────── */
+function TeamTab({
+  projectId,
+  teamMembers,
+  users,
+  leadName,
+  reviewerName,
+}: {
+  projectId: string
+  teamMembers: Awaited<ReturnType<typeof getTeamByProjectId>>
+  users: Awaited<ReturnType<typeof getUsersForSelect>>
+  leadName: string
+  reviewerName: string | null
+}) {
+  const assignedUserIds = teamMembers.map((m) => m.user_id)
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px', alignItems: 'start' }}>
+      {/* Left — team members table */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <SectionCard
+          title="Team Members"
+          actions={
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+              {teamMembers.length} member{teamMembers.length !== 1 ? 's' : ''}
+            </span>
+          }
+          noPadding
+        >
+          <TeamMemberList members={teamMembers} projectId={projectId} />
+        </SectionCard>
+
+        {/* Add member form */}
+        <SectionCard title="Add Team Member">
+          <AddTeamMemberForm
+            projectId={projectId}
+            users={users}
+            assignedUserIds={assignedUserIds}
+          />
+        </SectionCard>
+      </div>
+
+      {/* Right — assignment summary */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <SectionCard title="Project Assignment">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <DetailRow label="Project Lead">{leadName}</DetailRow>
+            <DetailRow label="Reviewer">
+              {reviewerName ?? <span style={{ color: 'var(--color-text-muted)' }}>Not assigned</span>}
+            </DetailRow>
+          </div>
+        </SectionCard>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Placeholder Tab ──────────────────────────────────────────── */
+function PlaceholderTab({ tabName }: { tabName: string }) {
+  const label = tabName.charAt(0).toUpperCase() + tabName.slice(1)
+  return (
+    <SectionCard>
+      <div style={{
+        padding: '32px 16px',
+        textAlign: 'center',
+        color: 'var(--color-text-muted)',
+        fontSize: '0.8125rem',
+      }}>
+        <ClipboardList size={20} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+        <p>{label} will be available in upcoming stages.</p>
+      </div>
+    </SectionCard>
+  )
+}
+
+/* ─── Shared Detail Row ────────────────────────────────────────── */
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '3px', fontWeight: 500 }}>
+        {label}
+      </p>
+      <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-primary)' }}>{children}</div>
+    </div>
+  )
+}

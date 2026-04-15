@@ -4,8 +4,10 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { ClientStatusBadge } from '@/components/modules/clients/ClientStatusBadge'
 import { IntakeStatusBadge } from '@/components/modules/intakes/IntakeStatusBadge'
+import { ProjectStatusBadge } from '@/components/modules/projects/ProjectStatusBadge'
 import { getClientById } from '@/lib/clients/queries'
 import { getIntakesByClientId } from '@/lib/intakes/queries'
+import { getProjectsByClientId } from '@/lib/projects/queries'
 import { formatDate } from '@/lib/utils/formatters'
 import {
   Mail,
@@ -32,7 +34,10 @@ export default async function ClientDetailPage({ params }: PageProps) {
   const client = await getClientById(id)
   if (!client) notFound()
 
-  const intakes = await getIntakesByClientId(client.id)
+  const [intakes, projects] = await Promise.all([
+    getIntakesByClientId(client.id),
+    getProjectsByClientId(client.id),
+  ])
 
   return (
     <div>
@@ -198,28 +203,103 @@ export default async function ClientDetailPage({ params }: PageProps) {
             )}
           </SectionCard>
 
-          {/* Linked Projects placeholder */}
+          {/* Linked Projects — real data */}
           <SectionCard
             title="Projects"
             actions={
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                Available in Stage 03
-              </span>
+              <Link
+                href={`/projects/new`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.75rem',
+                  color: 'var(--color-primary)',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                <Plus size={12} aria-hidden="true" />
+                New Project
+              </Link>
             }
+            noPadding
           >
-            <div style={{
-              padding: '20px 0',
-              textAlign: 'center',
-              color: 'var(--color-text-muted)',
-              fontSize: '0.8125rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-            }}>
-              <FolderKanban size={16} />
-              Projects for this client will appear here.
-            </div>
+            {projects.length === 0 ? (
+              <div style={{
+                padding: '20px 16px',
+                textAlign: 'center',
+                color: 'var(--color-text-muted)',
+                fontSize: '0.8125rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}>
+                <FolderKanban size={16} />
+                No projects linked to this client yet.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      {['Code', 'Name', 'Status', 'Due Date'].map(h => (
+                        <th
+                          key={h}
+                          style={{
+                            padding: '8px 14px',
+                            textAlign: 'left',
+                            fontSize: '0.6875rem',
+                            fontWeight: 600,
+                            color: 'var(--color-text-muted)',
+                            backgroundColor: 'var(--color-surface-subtle)',
+                            letterSpacing: '0.02em',
+                            textTransform: 'uppercase',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projects.map((prj, idx) => (
+                      <tr
+                        key={prj.id}
+                        style={{
+                          borderBottom: idx < projects.length - 1 ? '1px solid var(--color-border)' : undefined,
+                          cursor: 'pointer',
+                        }}
+                        className="hover:bg-[#F8FAFC]"
+                      >
+                        <td style={{ padding: '8px 14px' }}>
+                          <Link href={`/projects/${prj.id}`} style={{ textDecoration: 'none' }}>
+                            <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                              {prj.project_code}
+                            </span>
+                          </Link>
+                        </td>
+                        <td style={{ padding: '8px 14px' }}>
+                          <Link href={`/projects/${prj.id}`} style={{ textDecoration: 'none' }}>
+                            <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-primary)', fontWeight: 500 }}>
+                              {prj.name}
+                            </span>
+                          </Link>
+                        </td>
+                        <td style={{ padding: '8px 14px' }}>
+                          <ProjectStatusBadge status={prj.status} />
+                        </td>
+                        <td style={{ padding: '8px 14px', fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                          {formatDate(prj.target_due_date)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </SectionCard>
         </div>
 

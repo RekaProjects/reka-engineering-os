@@ -17,11 +17,37 @@ export const SOURCE_PLATFORMS = [
 ] as const
 
 export const TEAM_ROLES = [
-  { value: 'lead_engineer',  label: 'Lead Engineer' },
-  { value: 'reviewer',       label: 'Reviewer' },
-  { value: 'contributor',    label: 'Contributor' },
-  { value: 'drafter',        label: 'Drafter' },
-  { value: 'coordinator',    label: 'Coordinator' },
+  { value: 'lead',      label: 'Lead' },
+  { value: 'engineer',  label: 'Engineer' },
+  { value: 'drafter',   label: 'Drafter' },
+  { value: 'checker',   label: 'Checker' },
+  { value: 'support',   label: 'Support' },
+] as const
+
+export const PROJECT_STATUS_OPTIONS = [
+  { value: 'new',              label: 'New' },
+  { value: 'ready_to_start',   label: 'Ready to Start' },
+  { value: 'ongoing',          label: 'Ongoing' },
+  { value: 'internal_review',  label: 'Internal Review' },
+  { value: 'waiting_client',   label: 'Waiting Client' },
+  { value: 'in_revision',      label: 'In Revision' },
+  { value: 'on_hold',          label: 'On Hold' },
+  { value: 'completed',        label: 'Completed' },
+  { value: 'cancelled',        label: 'Cancelled' },
+] as const
+
+export const WAITING_ON_OPTIONS = [
+  { value: 'none',     label: 'None' },
+  { value: 'internal', label: 'Internal' },
+  { value: 'client',   label: 'Client' },
+  { value: 'vendor',   label: 'Vendor' },
+] as const
+
+export const PRIORITY_OPTIONS = [
+  { value: 'low',    label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high',   label: 'High' },
+  { value: 'urgent', label: 'Urgent' },
 ] as const
 
 export const PROJECT_TYPES = [

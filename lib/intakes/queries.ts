@@ -4,6 +4,7 @@ import type { Intake } from '@/types/database'
 
 export type IntakeWithClient = Intake & {
   clients: { id: string; client_name: string; client_code: string } | null
+  converted_project: { id: string; project_code: string; name: string } | null
 }
 
 export async function getIntakes(opts?: {
@@ -16,7 +17,7 @@ export async function getIntakes(opts?: {
 
   let query = supabase
     .from('intakes')
-    .select('*, clients(id, client_name, client_code)')
+    .select('*, clients(id, client_name, client_code), converted_project:projects!intakes_converted_project_id_fk(id, project_code, name)')
     .order('received_date', { ascending: false })
     .order('created_at', { ascending: false })
 
@@ -45,7 +46,7 @@ export async function getIntakeById(id: string): Promise<IntakeWithClient | null
 
   const { data, error } = await supabase
     .from('intakes')
-    .select('*, clients(id, client_name, client_code)')
+    .select('*, clients(id, client_name, client_code), converted_project:projects!intakes_converted_project_id_fk(id, project_code, name)')
     .eq('id', id)
     .single()
 
