@@ -7,9 +7,13 @@ import { PageHeader }        from '@/components/layout/PageHeader'
 import { SectionCard }       from '@/components/shared/SectionCard'
 import { AvailabilityBadge } from '@/components/modules/team/AvailabilityBadge'
 import { WorkerTypeBadge }   from '@/components/modules/team/WorkerTypeBadge'
+import { CompensationStatusBadge } from '@/components/modules/compensation/CompensationStatusBadge'
+import { PaymentStatusBadge }      from '@/components/modules/payments/PaymentStatusBadge'
 import { getMemberById }     from '@/lib/team/queries'
-import { formatDate }        from '@/lib/utils/formatters'
-import { FUNCTIONAL_ROLES, RATE_TYPE_OPTIONS, SYSTEM_ROLES } from '@/lib/constants/options'
+import { getCompensationByMember } from '@/lib/compensation/queries'
+import { getPaymentsByMember }     from '@/lib/payments/queries'
+import { formatDate, formatIDR }   from '@/lib/utils/formatters'
+import { FUNCTIONAL_ROLES, RATE_TYPE_OPTIONS, SYSTEM_ROLES, WORK_BASIS_OPTIONS } from '@/lib/constants/options'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -26,6 +30,7 @@ export async function generateMetadata({ params }: PageProps) {
 const FUNC_LABEL  = Object.fromEntries(FUNCTIONAL_ROLES.map((r) => [r.value, r.label]))
 const RATE_LABEL  = Object.fromEntries(RATE_TYPE_OPTIONS.map((r) => [r.value, r.label]))
 const ROLE_LABEL  = Object.fromEntries(SYSTEM_ROLES.map((r) => [r.value, r.label]))
+const WORK_LABEL  = Object.fromEntries(WORK_BASIS_OPTIONS.map((o) => [o.value, o.label]))
 
 // ── Shared detail row ─────────────────────────────────────────
 
@@ -48,10 +53,35 @@ const GRID2: CSSProperties = {
 
 // ── Page ──────────────────────────────────────────────────────
 
+const TH_SMALL: CSSProperties = {
+  padding: '7px 12px',
+  textAlign: 'left',
+  fontSize: '0.6875rem',
+  fontWeight: 600,
+  color: 'var(--color-text-muted)',
+  backgroundColor: 'var(--color-surface-subtle)',
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  whiteSpace: 'nowrap',
+  borderBottom: '1px solid var(--color-border)',
+}
+
+const TD_SMALL: CSSProperties = {
+  padding: '8px 12px',
+  fontSize: '0.8125rem',
+  color: 'var(--color-text-secondary)',
+  whiteSpace: 'nowrap',
+}
+
 export default async function TeamMemberDetailPage({ params }: PageProps) {
   const { id } = await params
   const member = await getMemberById(id)
   if (!member) notFound()
+
+  const [compRecords, payRecords] = await Promise.all([
+    getCompensationByMember(id),
+    getPaymentsByMember(id),
+  ])
 
   const activeColor =
     member.active_status === 'active'   ? 'var(--color-success)' :
@@ -188,6 +218,115 @@ export default async function TeamMemberDetailPage({ params }: PageProps) {
             </p>
           </SectionCard>
         )}
+
+        {/* ── Compensation Records ────────────────────────────── */}
+        <SectionCard
+          title="Compensation Records"
+          noPadding
+          actions={
+            <Link
+              href={`/compensation/new`}
+              style={{ fontSize: '0.75rem', color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 500 }}
+            >
+              + Add
+            </Link>
+          }
+        >
+          {compRecords.length === 0 ? (
+            <p style={{ padding: '20px 16px', fontSize: '0.8125rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>
+              No compensation records for this member yet.
+            </p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Project', 'Type', 'Qty', 'Subtotal', 'Period', 'Status', ''].map((h) => (
+                      <th key={h} style={TH_SMALL}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {compRecords.slice(0, 10).map((c, idx) => (
+                    <tr key={c.id} style={{ borderBottom: idx === Math.min(compRecords.length, 10) - 1 ? undefined : '1px solid var(--color-border)' }}>
+                      <td style={{ ...TD_SMALL, fontWeight: 500, color: 'var(--color-text-primary)' }}>{c.project?.name ?? '—'}</td>
+                      <td style={TD_SMALL}>{WORK_LABEL[c.rate_type] ?? c.rate_type}</td>
+                      <td style={{ ...TD_SMALL, fontFamily: 'monospace', fontSize: '0.75rem' }}>{Number(c.qty)}</td>
+                      <td style={{ ...TD_SMALL, fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600 }}>{formatIDR(c.subtotal_amount)}</td>
+                      <td style={TD_SMALL}>{c.period_label ?? (c.work_date ? formatDate(c.work_date) : '—')}</td>
+                      <td style={TD_SMALL}><CompensationStatusBadge status={c.status} /></td>
+                      <td style={{ ...TD_SMALL, textAlign: 'right' }}>
+                        <Link href={`/compensation/${c.id}`} style={{ fontSize: '0.6875rem', color: 'var(--color-primary)', textDecoration: 'none' }}>View</Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {compRecords.length > 10 && (
+                <div style={{ padding: '8px 12px', textAlign: 'center' }}>
+                  <Link href={`/compensation`} style={{ fontSize: '0.75rem', color: 'var(--color-primary)', textDecoration: 'none' }}>
+                    View all {compRecords.length} records →
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </SectionCard>
+
+        {/* ── Payment Records ─────────────────────────────────── */}
+        <SectionCard
+          title="Payment Records"
+          noPadding
+          actions={
+            <Link
+              href={`/payments/new`}
+              style={{ fontSize: '0.75rem', color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 500 }}
+            >
+              + Add
+            </Link>
+          }
+        >
+          {payRecords.length === 0 ? (
+            <p style={{ padding: '20px 16px', fontSize: '0.8125rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>
+              No payment records for this member yet.
+            </p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Period', 'Due', 'Paid', 'Balance', 'Status', ''].map((h) => (
+                      <th key={h} style={TH_SMALL}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {payRecords.slice(0, 10).map((p, idx) => (
+                    <tr key={p.id} style={{ borderBottom: idx === Math.min(payRecords.length, 10) - 1 ? undefined : '1px solid var(--color-border)' }}>
+                      <td style={{ ...TD_SMALL, fontWeight: 500, color: 'var(--color-text-primary)' }}>{p.period_label ?? '—'}</td>
+                      <td style={{ ...TD_SMALL, fontFamily: 'monospace', fontSize: '0.75rem' }}>{formatIDR(p.total_due)}</td>
+                      <td style={{ ...TD_SMALL, fontFamily: 'monospace', fontSize: '0.75rem' }}>{formatIDR(p.total_paid)}</td>
+                      <td style={{ ...TD_SMALL, fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: Number(p.balance) > 0 ? '#B54708' : 'var(--color-text-primary)' }}>
+                        {formatIDR(p.balance)}
+                      </td>
+                      <td style={TD_SMALL}><PaymentStatusBadge status={p.payment_status} /></td>
+                      <td style={{ ...TD_SMALL, textAlign: 'right' }}>
+                        <Link href={`/payments/${p.id}`} style={{ fontSize: '0.6875rem', color: 'var(--color-primary)', textDecoration: 'none' }}>View</Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {payRecords.length > 10 && (
+                <div style={{ padding: '8px 12px', textAlign: 'center' }}>
+                  <Link href={`/payments`} style={{ fontSize: '0.75rem', color: 'var(--color-primary)', textDecoration: 'none' }}>
+                    View all {payRecords.length} records →
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </SectionCard>
 
       </div>
     </div>

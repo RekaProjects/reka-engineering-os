@@ -47,4 +47,17 @@ export const DELIVERABLE_STATUSES = {
   FINAL_ISSUED:       { label: 'Final Issued',          variant: 'success'  },
 } as const
 
+export const COMPENSATION_STATUSES = {
+  DRAFT:     { label: 'Draft',     variant: 'neutral'  },
+  CONFIRMED: { label: 'Confirmed', variant: 'active'   },
+  PAID:      { label: 'Paid',      variant: 'success'  },
+  CANCELLED: { label: 'Cancelled', variant: 'danger'   },
+} as const
+
+export const PAYMENT_STATUSES = {
+  UNPAID:  { label: 'Unpaid',  variant: 'danger'  },
+  PARTIAL: { label: 'Partial', variant: 'review'  },
+  PAID:    { label: 'Paid',    variant: 'success' },
+} as const
+
 export type StatusVariant = 'neutral' | 'active' | 'review' | 'success' | 'danger'

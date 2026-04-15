@@ -1,0 +1,60 @@
+import { notFound } from 'next/navigation'
+
+import { PageHeader }  from '@/components/layout/PageHeader'
+import { SectionCard } from '@/components/shared/SectionCard'
+import { CompensationForm } from '@/components/modules/compensation/CompensationForm'
+import { getCompensationById } from '@/lib/compensation/queries'
+import { updateCompensation } from '@/lib/compensation/actions'
+import { getMemberOptions, getProjectOptions } from '@/lib/compensation/helpers'
+
+interface PageProps { params: Promise<{ id: string }> }
+
+export async function generateMetadata({ params }: PageProps) {
+  const { id } = await params
+  const record = await getCompensationById(id)
+  return { title: record ? `Edit Compensation — ${record.member?.full_name ?? 'Record'}` : 'Not Found' }
+}
+
+export default async function EditCompensationPage({ params }: PageProps) {
+  const { id } = await params
+  const [record, members, projects] = await Promise.all([
+    getCompensationById(id),
+    getMemberOptions(),
+    getProjectOptions(),
+  ])
+
+  if (!record) notFound()
+
+  const dv: Record<string, string | number | null> = {
+    member_id: record.member_id,
+    project_id: record.project_id,
+    task_id: record.task_id,
+    deliverable_id: record.deliverable_id,
+    rate_type: record.rate_type,
+    qty: record.qty,
+    rate_amount: record.rate_amount,
+    currency_code: record.currency_code,
+    status: record.status,
+    period_label: record.period_label,
+    work_date: record.work_date,
+    notes: record.notes,
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="Edit Compensation Record"
+        subtitle={record.member?.full_name ?? ''}
+      />
+      <SectionCard>
+        <CompensationForm
+          members={members}
+          projects={projects}
+          defaultValues={dv}
+          action={updateCompensation.bind(null, id)}
+          submitLabel="Save Changes"
+        />
+      </SectionCard>
+    </div>
+  )
+}

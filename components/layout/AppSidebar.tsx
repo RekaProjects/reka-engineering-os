@@ -10,6 +10,8 @@ import {
   CheckSquare,
   FileText,
   UserSquare2,
+  Receipt,
+  Wallet,
   Settings,
   LogOut,
   UserCircle,
@@ -31,8 +33,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Projects',    href: '/projects',     icon: <FolderKanban size={16} /> },
   { label: 'Tasks',       href: '/tasks',        icon: <CheckSquare size={16} /> },
   { label: 'Deliverables',href: '/deliverables', icon: <FileText size={16} /> },
-  { label: 'Team',        href: '/team',         icon: <UserSquare2 size={16} /> },
-  { label: 'Settings',    href: '/settings',     icon: <Settings size={16} /> },
+  { label: 'Team',          href: '/team',          icon: <UserSquare2 size={16} /> },
+  { label: 'Compensation', href: '/compensation', icon: <Receipt size={16} /> },
+  { label: 'Payments',     href: '/payments',     icon: <Wallet size={16} /> },
+  { label: 'Settings',     href: '/settings',     icon: <Settings size={16} /> },
 ]
 
 interface AppSidebarProps {

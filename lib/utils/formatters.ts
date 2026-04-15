@@ -41,3 +41,18 @@ export function getInitials(name: string): string {
     .map((n) => n[0].toUpperCase())
     .join('')
 }
+
+const idrFormatter = new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+})
+
+/** Format a number as IDR currency, e.g. 2500000 → "Rp 2.500.000" */
+export function formatIDR(amount: number | string | null | undefined): string {
+  if (amount == null || amount === '') return '—'
+  const n = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (isNaN(n)) return '—'
+  return idrFormatter.format(n)
+}

@@ -206,3 +206,33 @@ export const FILE_PROVIDER_OPTIONS = [
   { value: 'manual',       label: 'Manual Link' },
   { value: 'google_drive', label: 'Google Drive' },
 ] as const
+
+// ── V2 Sprint 03 — Compensation / Payment options ───────────
+
+export const COMPENSATION_STATUS_OPTIONS = [
+  { value: 'draft',     label: 'Draft' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'paid',      label: 'Paid' },
+  { value: 'cancelled', label: 'Cancelled' },
+] as const
+
+export const PAYMENT_STATUS_OPTIONS = [
+  { value: 'unpaid',  label: 'Unpaid' },
+  { value: 'partial', label: 'Partial' },
+  { value: 'paid',    label: 'Paid' },
+] as const
+
+export const PAYMENT_METHOD_OPTIONS = [
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'ewallet',       label: 'E-Wallet' },
+  { value: 'cash',          label: 'Cash' },
+  { value: 'other',         label: 'Other' },
+] as const
+
+export const WORK_BASIS_OPTIONS = [
+  { value: 'hourly',          label: 'Per Hour' },
+  { value: 'daily',           label: 'Per Day' },
+  { value: 'per_task',        label: 'Per Task' },
+  { value: 'per_deliverable', label: 'Per Deliverable' },
+  { value: 'per_project',     label: 'Per Project' },
+] as const

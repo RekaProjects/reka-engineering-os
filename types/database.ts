@@ -7,6 +7,8 @@ export type WorkerType = 'internal' | 'freelancer' | 'subcontractor'
 export type ActiveStatus = 'active' | 'inactive' | 'archived'
 export type AvailabilityStatus = 'available' | 'partially_available' | 'unavailable' | 'on_leave'
 export type RateType = 'hourly' | 'daily' | 'per_task' | 'per_deliverable' | 'per_project' | 'monthly_fixed'
+export type CompensationStatus = 'draft' | 'confirmed' | 'paid' | 'cancelled'
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid'
 
 export interface UserProfile {
   id: string
@@ -207,4 +209,43 @@ export interface ActivityLog {
   user_id: string
   note: string | null
   created_at: string
+}
+
+export interface CompensationRecord {
+  id: string
+  member_id: string
+  project_id: string
+  task_id: string | null
+  deliverable_id: string | null
+  rate_type: RateType
+  qty: number
+  rate_amount: number
+  subtotal_amount: number
+  currency_code: string
+  status: CompensationStatus
+  period_label: string | null
+  work_date: string | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PaymentRecord {
+  id: string
+  member_id: string
+  period_label: string | null
+  total_due: number
+  total_paid: number
+  balance: number
+  currency_code: string
+  payment_status: PaymentStatus
+  payment_date: string | null
+  payment_method: string | null
+  payment_reference: string | null
+  proof_link: string | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
 }
