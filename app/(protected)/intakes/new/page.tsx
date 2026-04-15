@@ -1,3 +1,4 @@
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { IntakeForm } from '@/components/modules/intakes/IntakeForm'
@@ -6,6 +7,9 @@ import { getClientsForSelect } from '@/lib/clients/queries'
 export const metadata = { title: 'New Intake — Engineering Agency OS' }
 
 export default async function NewIntakePage() {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin', 'coordinator'])
+
   const clients = await getClientsForSelect()
 
   return (

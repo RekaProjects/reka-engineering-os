@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Pencil, ExternalLink } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }        from '@/components/layout/PageHeader'
 import { SectionCard }       from '@/components/shared/SectionCard'
 import { AvailabilityBadge } from '@/components/modules/team/AvailabilityBadge'
@@ -74,6 +75,9 @@ const TD_SMALL: CSSProperties = {
 }
 
 export default async function TeamMemberDetailPage({ params }: PageProps) {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin'])
+
   const { id } = await params
   const member = await getMemberById(id)
   if (!member) notFound()

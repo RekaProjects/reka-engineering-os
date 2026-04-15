@@ -9,6 +9,7 @@ import {
   FolderKanban,
   CheckSquare,
   FileText,
+  Paperclip,
   UserSquare2,
   Receipt,
   Wallet,
@@ -19,6 +20,8 @@ import {
 import { cn } from '@/lib/utils/cn'
 import { logout } from '@/app/auth/login/actions'
 import { getInitials } from '@/lib/utils/formatters'
+import { getNavPermissions } from '@/lib/auth/permissions'
+import type { SystemRole } from '@/types/database'
 
 interface NavItem {
   label: string
@@ -26,26 +29,49 @@ interface NavItem {
   icon: React.ReactNode
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard',   href: '/dashboard',    icon: <LayoutDashboard size={16} /> },
-  { label: 'Clients',     href: '/clients',      icon: <Users size={16} /> },
-  { label: 'Intakes',     href: '/intakes',      icon: <ClipboardList size={16} /> },
-  { label: 'Projects',    href: '/projects',     icon: <FolderKanban size={16} /> },
-  { label: 'Tasks',       href: '/tasks',        icon: <CheckSquare size={16} /> },
-  { label: 'Deliverables',href: '/deliverables', icon: <FileText size={16} /> },
-  { label: 'Team',          href: '/team',          icon: <UserSquare2 size={16} /> },
-  { label: 'Compensation', href: '/compensation', icon: <Receipt size={16} /> },
-  { label: 'Payments',     href: '/payments',     icon: <Wallet size={16} /> },
-  { label: 'Settings',     href: '/settings',     icon: <Settings size={16} /> },
-]
-
 interface AppSidebarProps {
   userFullName?: string
   userEmail?: string
+  systemRole?: SystemRole | null
 }
 
-export function AppSidebar({ userFullName = 'User', userEmail = '' }: AppSidebarProps) {
+export function AppSidebar({
+  userFullName = 'User',
+  userEmail = '',
+  systemRole = null,
+}: AppSidebarProps) {
   const pathname = usePathname()
+  const perms = getNavPermissions(systemRole)
+
+  // Build nav items based on role permissions
+  const navItems: NavItem[] = [
+    { label: 'Dashboard',    href: '/dashboard',    icon: <LayoutDashboard size={16} /> },
+    ...(perms.showClients
+      ? [{ label: 'Clients',   href: '/clients',    icon: <Users size={16} /> }]
+      : []),
+    ...(perms.showIntakes
+      ? [{ label: 'Intakes',   href: '/intakes',    icon: <ClipboardList size={16} /> }]
+      : []),
+    { label: 'Projects',     href: '/projects',     icon: <FolderKanban size={16} /> },
+    { label: 'Tasks',        href: '/tasks',         icon: <CheckSquare size={16} /> },
+    { label: 'Deliverables', href: '/deliverables',  icon: <FileText size={16} /> },
+    { label: 'Files',        href: '/files',         icon: <Paperclip size={16} /> },
+    ...(perms.showTeam
+      ? [{ label: 'Team',         href: '/team',         icon: <UserSquare2 size={16} /> }]
+      : []),
+    ...(perms.showCompensation
+      ? [{ label: 'Compensation', href: '/compensation', icon: <Receipt size={16} /> }]
+      : []),
+    ...(perms.showPayments
+      ? [{ label: 'Payments',     href: '/payments',     icon: <Wallet size={16} /> }]
+      : []),
+    ...(perms.showMyPayments
+      ? [{ label: 'My Payments',  href: '/my-payments',  icon: <Wallet size={16} /> }]
+      : []),
+    ...(perms.showSettings
+      ? [{ label: 'Settings',     href: '/settings',     icon: <Settings size={16} /> }]
+      : []),
+  ]
 
   return (
     <aside
@@ -110,7 +136,7 @@ export function AppSidebar({ userFullName = 'User', userEmail = '' }: AppSidebar
         aria-label="Main navigation"
       >
         <ul role="list" style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const isActive =
               item.href === '/dashboard'
                 ? pathname === '/dashboard'

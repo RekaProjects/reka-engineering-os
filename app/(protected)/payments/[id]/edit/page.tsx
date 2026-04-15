@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { PaymentForm } from '@/components/modules/payments/PaymentForm'
@@ -16,6 +17,9 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function EditPaymentPage({ params }: PageProps) {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin'])
+
   const { id } = await params
   const [record, members] = await Promise.all([
     getPaymentById(id),

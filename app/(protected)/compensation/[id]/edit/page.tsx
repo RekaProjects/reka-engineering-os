@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { CompensationForm } from '@/components/modules/compensation/CompensationForm'
@@ -16,6 +17,9 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function EditCompensationPage({ params }: PageProps) {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin'])
+
   const { id } = await params
   const [record, members, projects] = await Promise.all([
     getCompensationById(id),

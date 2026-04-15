@@ -122,11 +122,11 @@ export async function globalSearch(rawQuery: string): Promise<SearchResults> {
 
   const results: SearchResults = {
     query:        q,
-    clients:      (clients.data      ?? []) as ClientResult[],
-    intakes:      (intakes.data      ?? []) as IntakeResult[],
-    projects:     (projects.data     ?? []) as ProjectResult[],
-    tasks:        (tasks.data        ?? []) as TaskResult[],
-    deliverables: (deliverables.data ?? []) as DeliverableResult[],
+    clients:      (clients.data      ?? []) as unknown as ClientResult[],
+    intakes:      (intakes.data      ?? []) as unknown as IntakeResult[],
+    projects:     (projects.data     ?? []) as unknown as ProjectResult[],
+    tasks:        (tasks.data        ?? []) as unknown as TaskResult[],
+    deliverables: (deliverables.data ?? []) as unknown as DeliverableResult[],
     total:        0,
   }
 

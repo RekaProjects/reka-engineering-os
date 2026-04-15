@@ -1,3 +1,4 @@
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { CompensationForm } from '@/components/modules/compensation/CompensationForm'
@@ -7,6 +8,9 @@ import { createCompensation } from '@/lib/compensation/actions'
 export const metadata = { title: 'New Compensation Record — Engineering Agency OS' }
 
 export default async function NewCompensationPage() {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin'])
+
   const [members, projects] = await Promise.all([
     getMemberOptions(),
     getProjectOptions(),

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -15,6 +16,9 @@ interface PageProps {
 }
 
 export default async function IntakesPage({ searchParams }: PageProps) {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin', 'coordinator'])
+
   const params = await searchParams
   const intakes = await getIntakes({
     search: params.search,

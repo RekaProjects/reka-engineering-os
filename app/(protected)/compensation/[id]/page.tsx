@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Pencil, Trash2 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { CompensationStatusBadge } from '@/components/modules/compensation/CompensationStatusBadge'
@@ -38,6 +39,9 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
 const GRID2: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }
 
 export default async function CompensationDetailPage({ params }: PageProps) {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin'])
+
   const { id } = await params
   const r = await getCompensationById(id)
   if (!r) notFound()

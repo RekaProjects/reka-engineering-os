@@ -1,3 +1,4 @@
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { PaymentForm } from '@/components/modules/payments/PaymentForm'
@@ -7,6 +8,9 @@ import { createPayment } from '@/lib/payments/actions'
 export const metadata = { title: 'New Payment — Engineering Agency OS' }
 
 export default async function NewPaymentPage() {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin'])
+
   const members = await getMemberOptions()
 
   return (

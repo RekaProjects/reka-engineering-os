@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { ClientStatusBadge } from '@/components/modules/clients/ClientStatusBadge'
@@ -30,6 +31,9 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function ClientDetailPage({ params }: PageProps) {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin', 'coordinator'])
+
   const { id } = await params
   const client = await getClientById(id)
   if (!client) notFound()

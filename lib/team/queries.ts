@@ -19,9 +19,16 @@ export type TeamMember = {
   approved_rate:        number | null
   rate_type:            RateType | null
   currency_code:        string
+  bank_name:            string | null
+  bank_account_name:    string | null
+  bank_account_number:  string | null
+  ewallet_type:         string | null
+  ewallet_number:       string | null
   city:                 string | null
   portfolio_link:       string | null
   notes_internal:       string | null
+  skill_tags:           string[]
+  profile_completed_at: string | null
   is_active:            boolean
   created_at:           string
   updated_at:           string
@@ -32,7 +39,10 @@ const TEAM_SELECT = `
   system_role, functional_role, discipline, worker_type,
   active_status, availability_status, joined_date,
   expected_rate, approved_rate, rate_type, currency_code,
+  bank_name, bank_account_name, bank_account_number,
+  ewallet_type, ewallet_number,
   city, portfolio_link, notes_internal,
+  skill_tags, profile_completed_at,
   is_active, created_at, updated_at
 `.trim()
 
@@ -45,7 +55,7 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
     .order('full_name', { ascending: true })
 
   if (error) return []
-  return (data ?? []) as TeamMember[]
+  return (data ?? []) as unknown as TeamMember[]
 }
 
 export async function getMemberById(id: string): Promise<TeamMember | null> {
@@ -58,5 +68,5 @@ export async function getMemberById(id: string): Promise<TeamMember | null> {
     .single()
 
   if (error) return null
-  return data as TeamMember
+  return data as unknown as TeamMember
 }

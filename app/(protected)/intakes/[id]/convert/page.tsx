@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { ConvertIntakeForm } from '@/components/modules/intakes/ConvertIntakeForm'
@@ -21,6 +22,9 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function ConvertIntakePage({ params }: PageProps) {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin', 'coordinator'])
+
   const { id } = await params
   const intake = await getIntakeById(id)
   if (!intake) notFound()

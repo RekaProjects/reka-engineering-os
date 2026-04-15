@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Receipt, Plus } from 'lucide-react'
 import type { CSSProperties } from 'react'
 
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState }  from '@/components/shared/EmptyState'
@@ -35,6 +36,9 @@ const TD: CSSProperties = {
 }
 
 export default async function CompensationListPage() {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin'])
+
   const records = await getCompensationRecords()
 
   return (

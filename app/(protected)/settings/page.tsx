@@ -1,3 +1,4 @@
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SectionCard } from '@/components/shared/SectionCard'
@@ -7,7 +8,9 @@ export const metadata = {
   title: 'Settings — Engineering Agency OS',
 }
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin'])
   return (
     <div>
       <PageHeader

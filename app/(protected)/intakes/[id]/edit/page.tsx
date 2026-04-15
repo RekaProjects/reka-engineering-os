@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { IntakeForm } from '@/components/modules/intakes/IntakeForm'
@@ -16,6 +17,9 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function EditIntakePage({ params }: PageProps) {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin', 'coordinator'])
+
   const { id } = await params
   const [intake, clients] = await Promise.all([
     getIntakeById(id),

@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { UserSquare2, Plus, Mail, Clock } from 'lucide-react'
 
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }     from '@/components/layout/PageHeader'
 import { SectionCard }    from '@/components/shared/SectionCard'
 import { EmptyState }     from '@/components/shared/EmptyState'
@@ -10,7 +11,7 @@ import { WorkerTypeBadge }   from '@/components/modules/team/WorkerTypeBadge'
 import { CopyLinkButton }    from '@/components/modules/onboarding/CopyLinkButton'
 import { getTeamMembers }    from '@/lib/team/queries'
 import { getPendingInvites } from '@/lib/invites/queries'
-import { revokeInvite }      from '@/lib/invites/actions'
+import { revokeInvite as _revokeInvite } from '@/lib/invites/actions'
 import { formatDate }        from '@/lib/utils/formatters'
 import { FUNCTIONAL_ROLES, SYSTEM_ROLES, WORKER_TYPES } from '@/lib/constants/options'
 
@@ -42,11 +43,19 @@ const TD: CSSProperties = {
   whiteSpace: 'nowrap',
 }
 
+async function handleRevokeInvite(id: string) {
+  'use server'
+  await _revokeInvite(id)
+}
+
 export default async function TeamPage({
   searchParams,
 }: {
   searchParams: Promise<{ invited?: string }>
 }) {
+  const _sp = await getSessionProfile()
+  requireRole(_sp.system_role, ['admin'])
+
   const { invited } = await searchParams
   const [members, pendingInvites] = await Promise.all([
     getTeamMembers(),
@@ -311,7 +320,7 @@ export default async function TeamPage({
                         <CopyLinkButton url={inviteUrl} />
                       </td>
                       <td style={{ ...TD, textAlign: 'right' }}>
-                        <form action={revokeInvite.bind(null, inv.id)}>
+                        <form action={handleRevokeInvite.bind(null, inv.id)}>
                           <button
                             type="submit"
                             style={{
