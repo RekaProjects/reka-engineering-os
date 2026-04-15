@@ -25,3 +25,17 @@ export async function getRecentActivity(limit = 20): Promise<ActivityLogEntry[]>
   if (error) return []
   return (data ?? []) as unknown as ActivityLogEntry[]
 }
+
+export async function getProjectActivity(projectId: string, limit = 30): Promise<ActivityLogEntry[]> {
+  const supabase = await createServerClient()
+
+  const { data, error } = await supabase
+    .from('activity_logs')
+    .select('id, entity_type, entity_id, action_type, note, created_at, actor:profiles!user_id(full_name)')
+    .eq('entity_id', projectId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) return []
+  return (data ?? []) as unknown as ActivityLogEntry[]
+}

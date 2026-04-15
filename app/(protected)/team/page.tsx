@@ -17,8 +17,8 @@ export default function TeamPage() {
       <SectionCard noPadding>
         <EmptyState
           icon={<UserSquare2 size={22} />}
-          title="Team management coming in Stage 03"
-          description="You will be able to view team members, their disciplines, roles, and current project assignments."
+          title="Team directory not yet implemented"
+          description="Team members are managed through project assignments. Open any project and use the Team tab to add or remove members. A summary of who is working on what is visible on the Dashboard under Team Workload."
         />
       </SectionCard>
     </div>

@@ -15,6 +15,7 @@ import { getTasksByProjectId, type TaskWithRelations } from '@/lib/tasks/queries
 import { getDeliverablesByProjectId, type DeliverableWithRelations } from '@/lib/deliverables/queries'
 import { getFilesByProjectId, type FileWithRelations } from '@/lib/files/queries'
 import { getUsersForSelect } from '@/lib/users/queries'
+import { getProjectActivity, type ActivityLogEntry } from '@/lib/activity/queries'
 import { formatDate } from '@/lib/utils/formatters'
 import {
   Pencil,
@@ -69,6 +70,10 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
 
   const projectFiles = activeTab === 'files'
     ? await getFilesByProjectId(id)
+    : []
+
+  const projectActivity = activeTab === 'activity'
+    ? await getProjectActivity(id)
     : []
 
   const tabs = [
@@ -193,8 +198,8 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
       {activeTab === 'files' && (
         <FilesTab projectId={project.id} files={projectFiles} driveFolderLink={project.google_drive_folder_link} />
       )}
-      {activeTab !== 'overview' && activeTab !== 'team' && activeTab !== 'tasks' && activeTab !== 'deliverables' && activeTab !== 'files' && (
-        <PlaceholderTab tabName={activeTab} />
+      {activeTab === 'activity' && (
+        <ActivityTab logs={projectActivity} />
       )}
     </div>
   )
@@ -853,19 +858,64 @@ function FilesTab({ projectId, files, driveFolderLink }: { projectId: string; fi
   )
 }
 
-/* ─── Placeholder Tab ──────────────────────────────────────────── */
-function PlaceholderTab({ tabName }: { tabName: string }) {
-  const label = tabName.charAt(0).toUpperCase() + tabName.slice(1)
+/* ─── Activity Tab ─────────────────────────────────────────────── */
+const ACTION_LABELS: Record<string, string> = {
+  created:        'Project created',
+  status_updated: 'Status updated',
+  converted:      'Converted from intake',
+}
+
+function ActivityTab({ logs }: { logs: ActivityLogEntry[] }) {
+  if (logs.length === 0) {
+    return (
+      <SectionCard title="Activity">
+        <div style={{
+          padding: '24px 0',
+          textAlign: 'center',
+          color: 'var(--color-text-muted)',
+          fontSize: '0.8125rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+        }}>
+          <Activity size={16} />
+          No activity recorded for this project yet.
+        </div>
+      </SectionCard>
+    )
+  }
+
   return (
-    <SectionCard>
-      <div style={{
-        padding: '32px 16px',
-        textAlign: 'center',
-        color: 'var(--color-text-muted)',
-        fontSize: '0.8125rem',
-      }}>
-        <ClipboardList size={20} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
-        <p>{label} will be available in upcoming stages.</p>
+    <SectionCard title="Activity" noPadding>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {logs.map((log, idx) => (
+          <div
+            key={log.id}
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '10px',
+              padding: '10px 16px',
+              borderBottom: idx < logs.length - 1 ? '1px solid var(--color-border)' : undefined,
+            }}
+          >
+            <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-primary)', fontWeight: 500, flex: 1, minWidth: 0 }}>
+              {ACTION_LABELS[log.action_type] ?? log.action_type.replace(/_/g, ' ')}
+              {log.note && (
+                <span style={{ fontWeight: 400, color: 'var(--color-text-secondary)' }}>
+                  {' — '}{log.note}
+                </span>
+              )}
+            </span>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {log.actor?.full_name ?? 'System'}
+            </span>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', flexShrink: 0, minWidth: '80px', textAlign: 'right' }}>
+              {formatDate(log.created_at)}
+            </span>
+          </div>
+        ))}
       </div>
     </SectionCard>
   )

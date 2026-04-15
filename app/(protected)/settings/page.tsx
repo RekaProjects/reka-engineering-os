@@ -17,8 +17,8 @@ export default function SettingsPage() {
       <SectionCard noPadding>
         <EmptyState
           icon={<Settings size={22} />}
-          title="Settings coming in Stage 06"
-          description="This area will include project templates, status configuration, user management, and application preferences."
+          title="Settings not implemented in this MVP"
+          description="This area is reserved for future configuration such as project templates, status labels, and user preferences. For now, all configuration is done directly in the database."
         />
       </SectionCard>
     </div>
