@@ -143,6 +143,7 @@ export async function getMemberDashboard(userId: string) {
     tasks:        (myRecentTasks.data   ?? []) as unknown as ScopedTask[],
     deliverables: (myDeliverables.data  ?? []) as unknown as ScopedDeliverable[],
     payments:     (myPayments.data      ?? []) as unknown as ScopedPayment[],
+    projectIds:   [] as string[],
   }
 }
 
@@ -200,6 +201,7 @@ export async function getReviewerDashboard(userId: string) {
     tasks:        (reviewTasks.data        ?? []) as unknown as ScopedTask[],
     deliverables: (reviewDeliverables.data ?? []) as unknown as ScopedDeliverable[],
     payments:     (myPayments.data         ?? []) as unknown as ScopedPayment[],
+    projectIds:   [] as string[],
   }
 }
 
@@ -218,6 +220,7 @@ export async function getCoordinatorDashboard(userId: string) {
       tasks: [] as ScopedTask[],
       deliverables: [] as ScopedDeliverable[],
       payments: [] as ScopedPayment[],
+      projectIds: [] as string[],
     }
   }
 
@@ -293,5 +296,6 @@ export async function getCoordinatorDashboard(userId: string) {
     tasks:        (recentTasks.data        ?? []) as unknown as ScopedTask[],
     deliverables: (recentDeliverables.data ?? []) as unknown as ScopedDeliverable[],
     payments:     [] as ScopedPayment[],
+    projectIds:   projIds,
   }
 }

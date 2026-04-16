@@ -58,8 +58,8 @@ export default async function DeliverablesPage({ searchParams }: PageProps) {
               gap: '6px',
               padding: '8px 14px',
               backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderRadius: '6px',
+              color: 'var(--color-primary-fg)',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               textDecoration: 'none',
@@ -72,30 +72,32 @@ export default async function DeliverablesPage({ searchParams }: PageProps) {
       />
 
       {/* Filters */}
-      <form method="GET" style={{ marginBottom: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+      <form method="GET" style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', rowGap: '10px' }}>
         <input
           name="search"
           type="search"
           defaultValue={params.search ?? ''}
           placeholder="Search deliverables…"
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             minWidth: '220px',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         />
         <select
           name="status"
           defaultValue={params.status ?? ''}
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         >
           <option value="">All Statuses</option>
@@ -111,11 +113,12 @@ export default async function DeliverablesPage({ searchParams }: PageProps) {
           name="type"
           defaultValue={params.type ?? ''}
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         >
           <option value="">All Types</option>
@@ -132,10 +135,10 @@ export default async function DeliverablesPage({ searchParams }: PageProps) {
         <button
           type="submit"
           style={{
-            padding: '7px 14px',
+            padding: '8px 14px',
             backgroundColor: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             cursor: 'pointer',
             color: 'var(--color-text-secondary)',
@@ -184,23 +187,27 @@ function DeliverablesTable({ deliverables }: { deliverables: DeliverableWithRela
   if (deliverables.length === 0) {
     return (
       <EmptyState
-        icon={<FileText size={22} />}
+        emphasis
+        icon={<FileText size={24} strokeWidth={1.5} />}
         title="No deliverables yet"
         description="Create your first deliverable to start tracking project outputs, revisions, and client submissions."
         action={
           <Link
             href="/deliverables/new"
             style={{
-              padding: '8px 16px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '9px 18px',
               backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderRadius: '6px',
+              color: 'var(--color-primary-fg)',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
-              fontWeight: 500,
+              fontWeight: 600,
               textDecoration: 'none',
             }}
           >
-            Create First Deliverable
+            Create first deliverable
           </Link>
         }
       />
@@ -243,7 +250,8 @@ function DeliverablesTable({ deliverables }: { deliverables: DeliverableWithRela
                 key={d.id}
                 style={{
                   borderBottom: idx < deliverables.length - 1 ? '1px solid var(--color-border)' : undefined,
-                  backgroundColor: isRevisionRequested ? '#FEF2F2' : 'var(--color-surface)',
+                  backgroundColor: 'var(--color-surface)',
+                  boxShadow: isRevisionRequested ? 'inset 3px 0 0 var(--color-danger)' : undefined,
                   cursor: 'pointer',
                 }}
               >

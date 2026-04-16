@@ -17,263 +17,388 @@ import {
   LogOut,
   UserCircle,
 } from 'lucide-react'
-import { cn } from '@/lib/utils/cn'
 import { logout } from '@/app/auth/login/actions'
 import { getInitials } from '@/lib/utils/formatters'
 import { getNavPermissions } from '@/lib/auth/permissions'
 import type { SystemRole } from '@/types/database'
 
+// ── Role display helpers ──────────────────────────────────────────────────
+
+const ROLE_CONTEXT: Record<string, string> = {
+  admin:       'Admin Workspace',
+  coordinator: 'Coordinator',
+  reviewer:    'Review Queue',
+  member:      'My Workspace',
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  admin:       'Admin',
+  coordinator: 'Coordinator',
+  reviewer:    'Reviewer',
+  member:      'Member',
+}
+
 interface NavItem {
   label: string
-  href: string
-  icon: React.ReactNode
+  href:  string
+  icon:  React.ReactNode
+}
+
+interface NavGroup {
+  label?: string
+  items:  NavItem[]
 }
 
 interface AppSidebarProps {
   userFullName?: string
-  userEmail?: string
-  systemRole?: SystemRole | null
+  userEmail?:    string
+  systemRole?:   SystemRole | null
 }
 
 export function AppSidebar({
   userFullName = 'User',
-  userEmail = '',
-  systemRole = null,
+  userEmail    = '',
+  systemRole   = null,
 }: AppSidebarProps) {
   const pathname = usePathname()
-  const perms = getNavPermissions(systemRole)
+  const perms    = getNavPermissions(systemRole)
 
-  const navItems: NavItem[] = [
-    { label: perms.labelDashboard,    href: '/dashboard',    icon: <LayoutDashboard size={16} /> },
-    ...(perms.showClients
-      ? [{ label: 'Clients',   href: '/clients',    icon: <Users size={16} /> }]
-      : []),
-    ...(perms.showIntakes
-      ? [{ label: 'Intakes',   href: '/intakes',    icon: <ClipboardList size={16} /> }]
-      : []),
-    { label: perms.labelProjects,     href: '/projects',     icon: <FolderKanban size={16} /> },
-    { label: perms.labelTasks,        href: '/tasks',         icon: <CheckSquare size={16} /> },
-    { label: perms.labelDeliverables, href: '/deliverables',  icon: <FileText size={16} /> },
-    { label: perms.labelFiles,        href: '/files',         icon: <Paperclip size={16} /> },
-    ...(perms.showTeam
-      ? [{ label: 'Team',         href: '/team',         icon: <UserSquare2 size={16} /> }]
-      : []),
-    ...(perms.showCompensation
-      ? [{ label: 'Compensation', href: '/compensation', icon: <Receipt size={16} /> }]
-      : []),
-    ...(perms.showPayments
-      ? [{ label: 'Payments',     href: '/payments',     icon: <Wallet size={16} /> }]
-      : []),
-    ...(perms.showMyPayments
-      ? [{ label: 'My Payments',  href: '/my-payments',  icon: <Wallet size={16} /> }]
-      : []),
-    ...(perms.showSettings
-      ? [{ label: 'Settings',     href: '/settings',     icon: <Settings size={16} /> }]
-      : []),
+  // ── Build nav groups ────────────────────────────────────────
+
+  const mainItems: NavItem[] = [
+    { label: perms.labelDashboard, href: '/dashboard', icon: <LayoutDashboard size={15} /> },
   ]
+
+  const operationsItems: NavItem[] = [
+    ...(perms.showClients  ? [{ label: 'Clients',      href: '/clients',      icon: <Users size={15} /> }]        : []),
+    ...(perms.showIntakes  ? [{ label: 'Intakes',      href: '/intakes',      icon: <ClipboardList size={15} /> }] : []),
+    { label: perms.labelProjects,     href: '/projects',     icon: <FolderKanban size={15} /> },
+    { label: perms.labelTasks,        href: '/tasks',        icon: <CheckSquare size={15} /> },
+    { label: perms.labelDeliverables, href: '/deliverables', icon: <FileText size={15} /> },
+    { label: perms.labelFiles,        href: '/files',        icon: <Paperclip size={15} /> },
+  ]
+
+  const peopleItems: NavItem[] = [
+    ...(perms.showTeam         ? [{ label: 'Team',         href: '/team',         icon: <UserSquare2 size={15} /> }] : []),
+    ...(perms.showCompensation ? [{ label: 'Compensation', href: '/compensation', icon: <Receipt size={15} /> }]    : []),
+    ...(perms.showPayments     ? [{ label: 'Payments',     href: '/payments',     icon: <Wallet size={15} /> }]     : []),
+    ...(perms.showMyPayments   ? [{ label: 'My Payments',  href: '/my-payments',  icon: <Wallet size={15} /> }]     : []),
+  ]
+
+  const bottomItems: NavItem[] = [
+    ...(perms.showSettings ? [{ label: 'Settings', href: '/settings', icon: <Settings size={15} /> }] : []),
+  ]
+
+  const navGroups: NavGroup[] = [
+    { items: mainItems },
+    { label: 'Operations',  items: operationsItems },
+    ...(peopleItems.length  ? [{ label: 'People',     items: peopleItems }]  : []),
+    ...(bottomItems.length  ? [{ label: 'Admin',      items: bottomItems }]  : []),
+  ]
+
+  // ── Nav item renderer ───────────────────────────────────────
+
+  const isActive = (href: string) =>
+    href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
+
+  const renderItem = (item: NavItem) => {
+    const active = isActive(item.href)
+    return (
+      <li key={item.href}>
+        <Link
+          href={item.href}
+          aria-current={active ? 'page' : undefined}
+          className="sidebar-nav-item"
+          style={{
+            display:         'flex',
+            alignItems:      'center',
+            gap:             '9px',
+            padding:         '6px 10px',
+            borderRadius:    '7px',
+            fontSize:        '0.8125rem',
+            fontWeight:      active ? 600 : 400,
+            color:           active ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-muted)',
+            backgroundColor: active ? 'var(--sidebar-active-bg)' : 'transparent',
+            textDecoration:  'none',
+            transition:      'background-color 0.12s, color 0.12s',
+          }}
+        >
+          <span
+            style={{
+              display:    'flex',
+              flexShrink: 0,
+              color:      active ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-muted)',
+              transition: 'color 0.12s',
+            }}
+            aria-hidden="true"
+          >
+            {item.icon}
+          </span>
+          {item.label}
+        </Link>
+      </li>
+    )
+  }
+
+  // ── Render ──────────────────────────────────────────────────
 
   return (
     <aside
       style={{
-        width: 'var(--sidebar-width)',
-        minWidth: 'var(--sidebar-width)',
-        height: '100vh',
-        position: 'sticky',
-        top: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: 'var(--color-surface)',
-        borderRight: '1px solid var(--color-border)',
-        overflow: 'hidden',
+        width:           'var(--sidebar-width)',
+        minWidth:        'var(--sidebar-width)',
+        height:          '100vh',
+        position:        'sticky',
+        top:             0,
+        display:         'flex',
+        flexDirection:   'column',
+        backgroundColor: 'var(--sidebar-bg)',
+        borderRight:     '1px solid var(--sidebar-border)',
+        overflow:        'hidden',
       }}
     >
-      {/* App brand */}
+
+      {/* ── Brand ─────────────────────────────────────────────── */}
       <div
         style={{
-          height: 'var(--topbar-height)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '0 16px',
-          borderBottom: '1px solid var(--color-border)',
-          flexShrink: 0,
+          height:       'var(--topbar-height)',
+          display:      'flex',
+          alignItems:   'center',
+          gap:          '10px',
+          padding:      '0 16px',
+          borderBottom: '1px solid var(--sidebar-border)',
+          flexShrink:   0,
         }}
       >
         <div
           style={{
-            width: '26px',
-            height: '26px',
+            width:           '28px',
+            height:          '28px',
             backgroundColor: 'var(--color-primary)',
-            borderRadius: '5px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
+            borderRadius:    '7px',
+            display:         'flex',
+            alignItems:      'center',
+            justifyContent:  'center',
+            flexShrink:      0,
+            boxShadow:       '0 1px 3px rgba(20,45,80,0.25)',
           }}
           aria-hidden="true"
         >
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: '11px' }}>EA</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: '11px', letterSpacing: '0.02em' }}>EA</span>
         </div>
-        <span
-          style={{
-            fontWeight: 600,
-            fontSize: '0.875rem',
-            color: 'var(--color-text-primary)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          Agency OS
-        </span>
+        <div style={{ minWidth: 0 }}>
+          <span
+            style={{
+              fontWeight:   700,
+              fontSize:     '0.875rem',
+              color:        'var(--sidebar-text)',
+              whiteSpace:   'nowrap',
+              overflow:     'hidden',
+              textOverflow: 'ellipsis',
+              display:      'block',
+            }}
+          >
+            Agency OS
+          </span>
+          <span
+            style={{
+              fontSize:      '0.625rem',
+              color:         'var(--sidebar-label)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              fontWeight:    600,
+            }}
+          >
+            {systemRole ? (ROLE_CONTEXT[systemRole] ?? 'Engineering Agency') : 'Engineering Agency'}
+          </span>
+        </div>
       </div>
 
-      {/* Nav */}
+      {/* ── Nav groups ────────────────────────────────────────── */}
       <nav
-        className="flex-1"
-        style={{ padding: '8px', overflowY: 'auto' }}
+        style={{ flex: 1, padding: '8px', overflowY: 'auto' }}
         aria-label="Main navigation"
       >
-        <ul role="list" style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-          {navItems.map((item) => {
-            const isActive =
-              item.href === '/dashboard'
-                ? pathname === '/dashboard'
-                : pathname.startsWith(item.href)
+        {navGroups.map((group, gi) => (
+          <div key={gi} style={{ marginBottom: '2px' }}>
 
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors no-underline',
-                  )}
-                  style={{
-                    color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                    backgroundColor: isActive ? 'var(--color-primary-subtle)' : 'transparent',
-                    fontSize: '0.8125rem',
-                  }}
-                >
-                  <span
-                    aria-hidden="true"
-                    style={{ color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)' }}
-                  >
-                    {item.icon}
-                  </span>
-                  {item.label}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
+            {/* Group label */}
+            {group.label && (
+              <p
+                style={{
+                  fontSize:      '0.625rem',
+                  fontWeight:    700,
+                  color:         'var(--sidebar-label)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.07em',
+                  padding:       '12px 10px 4px',
+                }}
+              >
+                {group.label}
+              </p>
+            )}
+
+            {/* Items */}
+            <ul
+              role="list"
+              style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1px' }}
+            >
+              {group.items.map(renderItem)}
+            </ul>
+
+            {/* Divider */}
+            {gi < navGroups.length - 1 && (
+              <div
+                style={{
+                  height:          '1px',
+                  backgroundColor: 'var(--sidebar-border)',
+                  margin:          '6px 4px 2px',
+                  opacity:         0.6,
+                }}
+              />
+            )}
+
+          </div>
+        ))}
       </nav>
 
-      {/* User menu */}
+      {/* ── Footer ────────────────────────────────────────────── */}
       <div
         style={{
-          borderTop: '1px solid var(--color-border)',
-          padding: '12px',
+          borderTop: '1px solid var(--sidebar-border)',
+          padding:   '10px 8px',
           flexShrink: 0,
         }}
       >
-        {/* My Profile link */}
+        {/* My Profile */}
         <Link
           href="/my-profile"
           aria-current={pathname === '/my-profile' ? 'page' : undefined}
-          className="flex items-center gap-2.5 rounded-md px-3 py-2 transition-colors no-underline mb-2"
+          className="sidebar-nav-item"
           style={{
-            color:           pathname === '/my-profile' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            backgroundColor: pathname === '/my-profile' ? 'var(--color-primary-subtle)' : 'transparent',
+            display:         'flex',
+            alignItems:      'center',
+            gap:             '9px',
+            padding:         '6px 10px',
+            borderRadius:    '7px',
             fontSize:        '0.8125rem',
-            fontWeight:      500,
+            fontWeight:      pathname === '/my-profile' ? 600 : 400,
+            color:           pathname === '/my-profile' ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-muted)',
+            backgroundColor: pathname === '/my-profile' ? 'var(--sidebar-active-bg)' : 'transparent',
+            textDecoration:  'none',
+            transition:      'background-color 0.12s, color 0.12s',
+            marginBottom:    '6px',
           }}
         >
-          <span aria-hidden="true" style={{ color: pathname === '/my-profile' ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
-            <UserCircle size={16} />
+          <span
+            style={{
+              display:  'flex',
+              flexShrink: 0,
+              color:    pathname === '/my-profile' ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-muted)',
+            }}
+            aria-hidden="true"
+          >
+            <UserCircle size={15} />
           </span>
           My Profile
         </Link>
 
+        {/* User card */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            marginBottom: '8px',
+            display:         'flex',
+            alignItems:      'center',
+            gap:             '9px',
+            padding:         '8px 10px',
+            borderRadius:    '7px',
+            backgroundColor: 'rgba(255,253,247,0.06)',
+            border:          '1px solid var(--sidebar-border)',
           }}
         >
           {/* Avatar */}
           <div
             style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--color-primary-subtle)',
-              color: 'var(--color-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '11px',
-              fontWeight: 600,
-              flexShrink: 0,
+              width:           '28px',
+              height:          '28px',
+              borderRadius:    '50%',
+              backgroundColor: 'var(--color-primary)',
+              color:           '#fff',
+              display:         'flex',
+              alignItems:      'center',
+              justifyContent:  'center',
+              fontSize:        '10px',
+              fontWeight:      700,
+              flexShrink:      0,
+              letterSpacing:   '0.02em',
             }}
             aria-hidden="true"
           >
             {getInitials(userFullName)}
           </div>
-          <div style={{ minWidth: 0 }}>
+
+          {/* Name + role */}
+          <div style={{ minWidth: 0, flex: 1 }}>
             <p
               style={{
-                fontSize: '0.8125rem',
-                fontWeight: 500,
-                color: 'var(--color-text-primary)',
-                overflow: 'hidden',
+                fontSize:     '0.75rem',
+                fontWeight:   600,
+                color:        'var(--sidebar-text)',
+                overflow:     'hidden',
                 textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                whiteSpace:   'nowrap',
               }}
             >
               {userFullName}
             </p>
-            {userEmail && (
-              <p
+            {systemRole && (
+              <span
                 style={{
-                  fontSize: '0.6875rem',
-                  color: 'var(--color-text-muted)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  display:         'inline-flex',
+                  alignItems:      'center',
+                  marginTop:       '3px',
+                  padding:         '1px 7px',
+                  borderRadius:    'var(--radius-pill)',
+                  fontSize:        '0.5625rem',
+                  fontWeight:      700,
+                  letterSpacing:   '0.05em',
+                  textTransform:   'uppercase',
+                  backgroundColor: 'rgba(255,253,247,0.10)',
+                  border:          '1px solid rgba(255,253,247,0.16)',
+                  color:           'var(--sidebar-text-muted)',
+                  whiteSpace:      'nowrap',
                 }}
               >
-                {userEmail}
-              </p>
+                {ROLE_LABEL[systemRole] ?? systemRole}
+              </span>
             )}
           </div>
+
+          {/* Sign out icon button */}
+          <form action={logout}>
+            <button
+              type="submit"
+              title="Sign out"
+              aria-label="Sign out"
+              style={{
+                display:         'flex',
+                alignItems:      'center',
+                justifyContent:  'center',
+                width:           '26px',
+                height:          '26px',
+                borderRadius:    '6px',
+                border:          '1px solid rgba(255,253,247,0.14)',
+                backgroundColor: 'rgba(255,253,247,0.06)',
+                color:           'var(--sidebar-text-muted)',
+                cursor:          'pointer',
+                flexShrink:      0,
+                transition:      'background-color 0.12s, color 0.12s, border-color 0.12s',
+              }}
+              className="signout-btn"
+            >
+              <LogOut size={12} aria-hidden="true" />
+            </button>
+          </form>
         </div>
-        <form action={logout}>
-          <button
-            type="submit"
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '7px 10px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: 'transparent',
-              color: 'var(--color-text-muted)',
-              fontSize: '0.8125rem',
-              cursor: 'pointer',
-              transition: 'background-color 0.1s, color 0.1s',
-            }}
-            className="hover:bg-[#FEE2E2] hover:text-[#DC2626]"
-            aria-label="Sign out"
-          >
-            <LogOut size={14} aria-hidden="true" />
-            Sign out
-          </button>
-        </form>
       </div>
     </aside>
   )

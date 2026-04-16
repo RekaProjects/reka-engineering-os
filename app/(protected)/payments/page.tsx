@@ -57,8 +57,8 @@ export default async function PaymentsListPage() {
               gap: '6px',
               padding: '8px 14px',
               backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderRadius: '6px',
+              color: 'var(--color-primary-fg)',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               textDecoration: 'none',
@@ -73,7 +73,8 @@ export default async function PaymentsListPage() {
       <SectionCard noPadding>
         {records.length === 0 ? (
           <EmptyState
-            icon={<Wallet size={22} />}
+            emphasis
+            icon={<Wallet size={24} strokeWidth={1.5} />}
             title="No payment records yet"
             description="Create a payment record to track what has been paid to members."
             action={
@@ -83,17 +84,17 @@ export default async function PaymentsListPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '8px 16px',
+                  padding: '9px 18px',
                   backgroundColor: 'var(--color-primary)',
-                  color: '#fff',
-                  borderRadius: '6px',
+                  color: 'var(--color-primary-fg)',
+                  borderRadius: 'var(--radius-control)',
                   fontSize: '0.8125rem',
-                  fontWeight: 500,
+                  fontWeight: 600,
                   textDecoration: 'none',
                 }}
               >
                 <Plus size={14} aria-hidden="true" />
-                Add Payment
+                Add payment
               </Link>
             }
           />
@@ -114,7 +115,7 @@ export default async function PaymentsListPage() {
                     <tr
                       key={r.id}
                       style={{ borderBottom: isLast ? undefined : '1px solid var(--color-border)' }}
-                      className="hover:bg-[#F8FAFC] transition-colors"
+                      className="hover:bg-[var(--color-surface-muted)] transition-colors"
                     >
                       <td style={{ ...TD, maxWidth: '180px' }}>
                         <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
@@ -130,7 +131,7 @@ export default async function PaymentsListPage() {
                       <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.75rem' }}>
                         {formatIDR(r.total_paid)}
                       </td>
-                      <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: Number(r.balance) > 0 ? '#B54708' : 'var(--color-text-primary)' }}>
+                      <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: Number(r.balance) > 0 ? 'var(--color-warning)' : 'var(--color-text-primary)' }}>
                         {formatIDR(r.balance)}
                       </td>
                       <td style={TD}>

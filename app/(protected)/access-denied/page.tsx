@@ -21,14 +21,14 @@ export default function AccessDeniedPage() {
           width:           '52px',
           height:          '52px',
           borderRadius:    '14px',
-          backgroundColor: '#FEF3F2',
+          backgroundColor: 'var(--color-danger-subtle)',
           display:         'flex',
           alignItems:      'center',
           justifyContent:  'center',
           marginBottom:    '20px',
         }}
       >
-        <ShieldOff size={24} style={{ color: '#B42318' }} />
+        <ShieldOff size={24} style={{ color: 'var(--color-danger)' }} />
       </div>
 
       <h1
@@ -63,8 +63,8 @@ export default function AccessDeniedPage() {
           gap:             '6px',
           padding:         '8px 18px',
           backgroundColor: 'var(--color-primary)',
-          color:           '#fff',
-          borderRadius:    '7px',
+          color:           'var(--color-primary-fg)',
+          borderRadius:    'var(--radius-control)',
           fontSize:        '0.8125rem',
           fontWeight:      500,
           textDecoration:  'none',

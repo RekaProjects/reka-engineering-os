@@ -92,7 +92,7 @@ export default async function TeamMemberDetailPage({ params }: PageProps) {
   const activeColor =
     member.active_status === 'active'   ? 'var(--color-success)' :
     member.active_status === 'inactive' ? 'var(--color-text-muted)' :
-    '#94A3B8'
+    'var(--color-neutral)'
 
   const rateFormatted = (n: number | null) =>
     n ? Number(n).toLocaleString('id-ID') : null
@@ -116,7 +116,7 @@ export default async function TeamMemberDetailPage({ params }: PageProps) {
               padding:         '8px 14px',
               backgroundColor: 'var(--color-surface)',
               border:          '1px solid var(--color-border)',
-              borderRadius:    '6px',
+              borderRadius:    'var(--radius-control)',
               fontSize:        '0.8125rem',
               fontWeight:      500,
               color:           'var(--color-text-primary)',
@@ -312,7 +312,7 @@ export default async function TeamMemberDetailPage({ params }: PageProps) {
                       <td style={{ ...TD_SMALL, fontWeight: 500, color: 'var(--color-text-primary)' }}>{p.period_label ?? '—'}</td>
                       <td style={{ ...TD_SMALL, fontFamily: 'monospace', fontSize: '0.75rem' }}>{formatIDR(p.total_due)}</td>
                       <td style={{ ...TD_SMALL, fontFamily: 'monospace', fontSize: '0.75rem' }}>{formatIDR(p.total_paid)}</td>
-                      <td style={{ ...TD_SMALL, fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: Number(p.balance) > 0 ? '#B54708' : 'var(--color-text-primary)' }}>
+                      <td style={{ ...TD_SMALL, fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: Number(p.balance) > 0 ? 'var(--color-warning)' : 'var(--color-text-primary)' }}>
                         {formatIDR(p.balance)}
                       </td>
                       <td style={TD_SMALL}><PaymentStatusBadge status={p.payment_status} /></td>

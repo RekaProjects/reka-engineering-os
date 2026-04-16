@@ -40,7 +40,7 @@ export default async function FileDetailPage({ params }: PageProps) {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
               padding: '8px 14px', backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)', borderRadius: '6px',
+              border: '1px solid var(--color-border)', borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-text-secondary)',
               textDecoration: 'none',
             }}
@@ -56,9 +56,9 @@ export default async function FileDetailPage({ params }: PageProps) {
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: '4px',
           fontSize: '0.6875rem', fontWeight: 600,
-          color: f.provider === 'google_drive' ? '#2563EB' : '#94A3B8',
-          backgroundColor: f.provider === 'google_drive' ? '#DBEAFE' : '#F1F5F9',
-          padding: '2px 10px', borderRadius: '10px',
+          color: f.provider === 'google_drive' ? 'var(--color-primary)' : 'var(--color-neutral)',
+          backgroundColor: f.provider === 'google_drive' ? 'var(--color-primary-subtle)' : 'var(--color-neutral-subtle)',
+          padding: '2px 10px', borderRadius: 'var(--radius-pill)',
         }}>
           {f.provider === 'google_drive' && <HardDrive size={11} />}
           {f.provider === 'google_drive' ? 'Google Drive' : 'Manual Link'}

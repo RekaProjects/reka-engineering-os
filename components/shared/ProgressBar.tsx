@@ -1,13 +1,12 @@
 interface ProgressBarProps {
-  value: number       // 0–100
-  height?: number     // px, defaults to 6
+  value: number
+  height?: number
   className?: string
 }
 
 export function ProgressBar({ value, height = 6, className }: ProgressBarProps) {
   const clamped = Math.max(0, Math.min(100, value))
 
-  // Color logic: 0 = neutral, <50 = blue, <80 = blue, >=80 = green, 100 = green
   let fillColor = 'var(--color-neutral)'
   if (clamped > 0 && clamped < 100) fillColor = 'var(--color-primary)'
   if (clamped === 100) fillColor = 'var(--color-success)'
@@ -18,7 +17,7 @@ export function ProgressBar({ value, height = 6, className }: ProgressBarProps) 
       style={{
         width: '100%',
         height: `${height}px`,
-        backgroundColor: 'var(--color-surface-subtle)',
+        backgroundColor: 'var(--color-surface-muted)',
         borderRadius: `${height / 2}px`,
         overflow: 'hidden',
       }}

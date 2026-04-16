@@ -19,6 +19,7 @@ function daysFromNow(n: number): string {
 
 export type DashboardKpis = {
   activeProjects: number
+  openTasks:      number
   overdueTasks:   number
   dueThisWeek:    number
   awaitingReview: number
@@ -31,13 +32,19 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
   const today   = todayStr()
   const weekEnd = daysFromNow(7)
 
-  const [activeProj, overdue, thisWeek, awaitingRev, waitClient, revision] = await Promise.all([
+  const [activeProj, openTasks, overdue, thisWeek, awaitingRev, waitClient, revision] = await Promise.all([
     // Active projects: everything except completed and cancelled
     supabase
       .from('projects')
       .select('*', { count: 'exact', head: true })
       .neq('status', 'completed')
       .neq('status', 'cancelled'),
+
+    // All open (non-done) tasks
+    supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .neq('status', 'done'),
 
     // Overdue tasks: past due date, not done
     supabase
@@ -75,6 +82,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
 
   return {
     activeProjects: activeProj.count  ?? 0,
+    openTasks:      openTasks.count   ?? 0,
     overdueTasks:   overdue.count     ?? 0,
     dueThisWeek:    thisWeek.count    ?? 0,
     awaitingReview: awaitingRev.count ?? 0,
@@ -140,6 +148,48 @@ export async function getNeedsAttention(): Promise<NeedsAttentionData> {
     overdueTasks:         (overdue.data    ?? []) as unknown as AttentionTask[],
     blockedTasks:         (blocked.data    ?? []) as unknown as AttentionTask[],
     revisionDeliverables: (revisions.data  ?? []) as unknown as AttentionDeliverable[],
+  }
+}
+
+/** Same shapes as getNeedsAttention, scoped to tasks/deliverables in the given projects. */
+export async function getNeedsAttentionForProjects(projectIds: string[]): Promise<NeedsAttentionData> {
+  if (projectIds.length === 0) {
+    return { overdueTasks: [], blockedTasks: [], revisionDeliverables: [] }
+  }
+  const supabase = await createServerClient()
+  const today = todayStr()
+  const taskCols =
+    'id, title, due_date, status, priority, blocked_reason, projects(id, name, project_code), assignee:profiles!assigned_to_user_id(id, full_name)'
+
+  const [overdue, blocked, revisions] = await Promise.all([
+    supabase
+      .from('tasks')
+      .select(taskCols)
+      .in('project_id', projectIds)
+      .lt('due_date', today)
+      .neq('status', 'done')
+      .order('due_date', { ascending: true })
+      .limit(6),
+
+    supabase
+      .from('tasks')
+      .select(taskCols)
+      .in('project_id', projectIds)
+      .eq('status', 'blocked')
+      .limit(6),
+
+    supabase
+      .from('deliverables')
+      .select('id, name, type, projects(id, name, project_code)')
+      .in('project_id', projectIds)
+      .eq('status', 'revision_requested')
+      .limit(6),
+  ])
+
+  return {
+    overdueTasks: (overdue.data ?? []) as unknown as AttentionTask[],
+    blockedTasks: (blocked.data ?? []) as unknown as AttentionTask[],
+    revisionDeliverables: (revisions.data ?? []) as unknown as AttentionDeliverable[],
   }
 }
 
@@ -280,4 +330,259 @@ export async function getTeamWorkload(): Promise<WorkloadUser[]> {
     })
     .filter((u) => u.openTasks > 0)              // only show users with active assignments
     .sort((a, b) => b.openTasks - a.openTasks)   // highest load first
+}
+
+// ── Open task pipeline (non-done tasks by status) ─────────────────────────────
+
+const PIPELINE_STATUSES = ['to_do', 'in_progress', 'review', 'revision', 'blocked'] as const
+export type TaskPipelineStatus = (typeof PIPELINE_STATUSES)[number]
+
+export type OpenTaskStatusCounts = Record<TaskPipelineStatus, number>
+
+export async function getOpenTaskStatusCounts(): Promise<OpenTaskStatusCounts> {
+  const supabase = await createServerClient()
+  const results = await Promise.all(
+    PIPELINE_STATUSES.map((status) =>
+      supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', status),
+    ),
+  )
+  const out = {} as OpenTaskStatusCounts
+  PIPELINE_STATUSES.forEach((s, i) => {
+    out[s] = results[i].count ?? 0
+  })
+  return out
+}
+
+/** Same as getOpenTaskStatusCounts but scoped to project IDs (empty → all zeros). */
+export async function getOpenTaskStatusCountsForProjects(projectIds: string[]): Promise<OpenTaskStatusCounts> {
+  if (projectIds.length === 0) {
+    return { to_do: 0, in_progress: 0, review: 0, revision: 0, blocked: 0 }
+  }
+  const supabase = await createServerClient()
+  const results = await Promise.all(
+    PIPELINE_STATUSES.map((status) =>
+      supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', status)
+        .in('project_id', projectIds),
+    ),
+  )
+  const out = {} as OpenTaskStatusCounts
+  PIPELINE_STATUSES.forEach((s, i) => {
+    out[s] = results[i].count ?? 0
+  })
+  return out
+}
+
+// ── Deadline buckets (next 7 days vs 8–14 days) ──────────────────────────────
+
+export type DeadlineBuckets = {
+  week1: { tasks: number; projects: number }
+  week2: { tasks: number; projects: number }
+}
+
+export async function getDeadlineBuckets(): Promise<DeadlineBuckets> {
+  const supabase = await createServerClient()
+  const today = todayStr()
+  const w1End = daysFromNow(7)
+  const w2Start = daysFromNow(8)
+  const w2End = daysFromNow(14)
+
+  const [w1Tasks, w2Tasks, w1Proj, w2Proj] = await Promise.all([
+    supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .gte('due_date', today)
+      .lte('due_date', w1End)
+      .neq('status', 'done'),
+    supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .gte('due_date', w2Start)
+      .lte('due_date', w2End)
+      .neq('status', 'done'),
+    supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .gte('target_due_date', today)
+      .lte('target_due_date', w1End)
+      .neq('status', 'completed')
+      .neq('status', 'cancelled'),
+    supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .gte('target_due_date', w2Start)
+      .lte('target_due_date', w2End)
+      .neq('status', 'completed')
+      .neq('status', 'cancelled'),
+  ])
+
+  return {
+    week1: { tasks: w1Tasks.count ?? 0, projects: w1Proj.count ?? 0 },
+    week2: { tasks: w2Tasks.count ?? 0, projects: w2Proj.count ?? 0 },
+  }
+}
+
+export async function getDeadlineBucketsForProjects(projectIds: string[]): Promise<DeadlineBuckets> {
+  if (projectIds.length === 0) {
+    return {
+      week1: { tasks: 0, projects: 0 },
+      week2: { tasks: 0, projects: 0 },
+    }
+  }
+  const supabase = await createServerClient()
+  const today = todayStr()
+  const w1End = daysFromNow(7)
+  const w2Start = daysFromNow(8)
+  const w2End = daysFromNow(14)
+
+  const [w1Tasks, w2Tasks, w1Proj, w2Proj] = await Promise.all([
+    supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .in('project_id', projectIds)
+      .gte('due_date', today)
+      .lte('due_date', w1End)
+      .neq('status', 'done'),
+    supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .in('project_id', projectIds)
+      .gte('due_date', w2Start)
+      .lte('due_date', w2End)
+      .neq('status', 'done'),
+    supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .in('id', projectIds)
+      .gte('target_due_date', today)
+      .lte('target_due_date', w1End)
+      .neq('status', 'completed')
+      .neq('status', 'cancelled'),
+    supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .in('id', projectIds)
+      .gte('target_due_date', w2Start)
+      .lte('target_due_date', w2End)
+      .neq('status', 'completed')
+      .neq('status', 'cancelled'),
+  ])
+
+  return {
+    week1: { tasks: w1Tasks.count ?? 0, projects: w1Proj.count ?? 0 },
+    week2: { tasks: w2Tasks.count ?? 0, projects: w2Proj.count ?? 0 },
+  }
+}
+
+// ── Payment snapshot (admin) ─────────────────────────────────────────────────
+
+export type PaymentSnapshot = {
+  unpaidCount: number
+  partialCount: number
+  paidCount: number
+  totalOutstanding: number
+}
+
+export async function getPaymentSnapshot(): Promise<PaymentSnapshot> {
+  const supabase = await createServerClient()
+  const [unpaid, partial, paid, withBalance] = await Promise.all([
+    supabase.from('payment_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'unpaid'),
+    supabase.from('payment_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'partial'),
+    supabase.from('payment_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'paid'),
+    supabase.from('payment_records').select('balance').gt('balance', 0),
+  ])
+
+  const rows = withBalance.data ?? []
+  const totalOutstanding = rows.reduce((s, r) => s + Number(r.balance), 0)
+
+  return {
+    unpaidCount: unpaid.count ?? 0,
+    partialCount: partial.count ?? 0,
+    paidCount: paid.count ?? 0,
+    totalOutstanding,
+  }
+}
+
+// ── Waiting on client (for attention queue) ───────────────────────────────────
+
+export type WaitingClientProjectRow = {
+  id: string
+  project_code: string
+  name: string
+  target_due_date: string
+  clients: { client_name: string } | null
+}
+
+export async function getWaitingOnClientProjects(): Promise<WaitingClientProjectRow[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, project_code, name, target_due_date, clients(client_name)')
+    .eq('status', 'waiting_client')
+    .order('target_due_date', { ascending: true })
+    .limit(6)
+
+  if (error) return []
+  return (data ?? []) as unknown as WaitingClientProjectRow[]
+}
+
+export async function getWaitingOnClientProjectsForProjects(projectIds: string[]): Promise<WaitingClientProjectRow[]> {
+  if (projectIds.length === 0) return []
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, project_code, name, target_due_date, clients(client_name)')
+    .in('id', projectIds)
+    .eq('status', 'waiting_client')
+    .order('target_due_date', { ascending: true })
+    .limit(6)
+
+  if (error) return []
+  return (data ?? []) as unknown as WaitingClientProjectRow[]
+}
+
+// ── Team workload scoped to projects ────────────────────────────────────────
+
+export async function getTeamWorkloadForProjects(projectIds: string[]): Promise<WorkloadUser[]> {
+  if (projectIds.length === 0) return []
+  const supabase = await createServerClient()
+  const today = todayStr()
+
+  const [profilesRes, tasksRes] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('is_active', true)
+      .order('full_name', { ascending: true }),
+
+    supabase
+      .from('tasks')
+      .select('assigned_to_user_id, due_date, status')
+      .in('project_id', projectIds)
+      .neq('status', 'done'),
+  ])
+
+  const profiles = profilesRes.data ?? []
+  const tasks = tasksRes.data ?? []
+
+  return profiles
+    .map((profile) => {
+      const mine = tasks.filter((t) => t.assigned_to_user_id === profile.id)
+      const openTasks = mine.length
+      const overdueTasks = mine.filter((t) => t.due_date && t.due_date < today).length
+
+      let label: WorkloadUser['label'] = 'Low'
+      if (openTasks >= 3 && openTasks < 8) label = 'Normal'
+      if (openTasks >= 8 && openTasks < 13) label = 'High'
+      if (openTasks >= 13) label = 'Overloaded'
+
+      return { id: profile.id, full_name: profile.full_name, openTasks, overdueTasks, label }
+    })
+    .filter((u) => u.openTasks > 0)
+    .sort((a, b) => b.openTasks - a.openTasks)
 }

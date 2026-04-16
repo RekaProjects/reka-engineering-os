@@ -27,7 +27,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px 11px',
   border: '1px solid var(--color-border)',
-  borderRadius: '6px',
+  borderRadius: 'var(--radius-control)',
   fontSize: '0.8125rem',
   color: 'var(--color-text-primary)',
   backgroundColor: 'var(--color-surface)',
@@ -100,8 +100,8 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
           style={{
             padding: '12px 16px',
             backgroundColor: 'var(--color-primary-subtle)',
-            border: '1px solid #BFDBFE',
-            borderRadius: '6px',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             color: 'var(--color-text-secondary)',
           }}
@@ -156,8 +156,8 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
                     style={{
                       padding: '8px 12px',
                       backgroundColor: 'var(--color-surface-subtle)',
-                      borderRadius: '6px',
-                      fontSize: '0.75rem',
+                    borderRadius: 'var(--radius-control)',
+                    fontSize: '0.75rem',
                       color: 'var(--color-text-muted)',
                       marginBottom: '4px',
                     }}
@@ -190,7 +190,7 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
                   style={{
                     padding: '10px 14px',
                     backgroundColor: 'var(--color-surface-subtle)',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--radius-control)',
                     fontSize: '0.8125rem',
                     color: 'var(--color-text-primary)',
                   }}
@@ -339,8 +339,8 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
             style={{
               padding: '10px 12px',
               backgroundColor: 'var(--color-danger-subtle)',
-              border: '1px solid #FECACA',
-              borderRadius: '6px',
+              border: '1px solid var(--color-border-strong)',
+              borderRadius: 'var(--radius-control)',
               color: 'var(--color-danger)',
               fontSize: '0.8125rem',
             }}
@@ -357,9 +357,9 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
             style={{
               padding: '9px 20px',
               backgroundColor: isPending ? 'var(--color-primary-hover)' : 'var(--color-primary)',
-              color: '#fff',
+              color: 'var(--color-primary-fg)',
               border: 'none',
-              borderRadius: '6px',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               cursor: isPending ? 'not-allowed' : 'pointer',
@@ -376,7 +376,7 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
               backgroundColor: 'var(--color-surface)',
               color: 'var(--color-text-secondary)',
               border: '1px solid var(--color-border)',
-              borderRadius: '6px',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               cursor: 'pointer',
             }}

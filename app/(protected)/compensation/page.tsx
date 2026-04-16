@@ -55,8 +55,8 @@ export default async function CompensationListPage() {
               gap: '6px',
               padding: '8px 14px',
               backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderRadius: '6px',
+              color: 'var(--color-primary-fg)',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               textDecoration: 'none',
@@ -71,7 +71,8 @@ export default async function CompensationListPage() {
       <SectionCard noPadding>
         {records.length === 0 ? (
           <EmptyState
-            icon={<Receipt size={22} />}
+            emphasis
+            icon={<Receipt size={24} strokeWidth={1.5} />}
             title="No compensation records yet"
             description="Create a compensation record to track what is owed for work done."
             action={
@@ -81,17 +82,17 @@ export default async function CompensationListPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '8px 16px',
+                  padding: '9px 18px',
                   backgroundColor: 'var(--color-primary)',
-                  color: '#fff',
-                  borderRadius: '6px',
+                  color: 'var(--color-primary-fg)',
+                  borderRadius: 'var(--radius-control)',
                   fontSize: '0.8125rem',
-                  fontWeight: 500,
+                  fontWeight: 600,
                   textDecoration: 'none',
                 }}
               >
                 <Plus size={14} aria-hidden="true" />
-                Add Record
+                Add record
               </Link>
             }
           />
@@ -112,7 +113,7 @@ export default async function CompensationListPage() {
                     <tr
                       key={r.id}
                       style={{ borderBottom: isLast ? undefined : '1px solid var(--color-border)' }}
-                      className="hover:bg-[#F8FAFC] transition-colors"
+                      className="hover:bg-[var(--color-surface-muted)] transition-colors"
                     >
                       <td style={{ ...TD, maxWidth: '180px' }}>
                         <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>

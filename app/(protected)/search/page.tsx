@@ -38,7 +38,7 @@ interface PageProps {
 // ── Shared row style ──────────────────────────────────────────────────────────
 
 // Applied as className so hover works (Tailwind)
-const ROW_CLASS = 'flex items-center gap-3 px-4 py-2.5 no-underline hover:bg-[#F8FAFC] transition-colors'
+const ROW_CLASS = 'flex items-center gap-3 px-4 py-2.5 no-underline hover:bg-[var(--color-surface-muted)] transition-colors'
 
 const PRIMARY_TEXT: CSSProperties = {
   fontWeight: 500,
@@ -95,7 +95,7 @@ function CountBadge({ n }: { n: number }) {
 
 function Rows({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col divide-y divide-[#E2E8F0]">
+    <div className="flex flex-col divide-y divide-[var(--color-border)]">
       {children}
     </div>
   )
@@ -179,7 +179,7 @@ function ProjectsSection({ results }: { results: ProjectResult[] }) {
               <span
                 style={{
                   ...META_TEXT,
-                  color: isOverdue ? '#DC2626' : 'var(--color-text-muted)',
+                  color: isOverdue ? 'var(--color-warning)' : 'var(--color-text-muted)',
                   fontWeight: isOverdue ? 600 : 400,
                 }}
               >
@@ -216,7 +216,7 @@ function TasksSection({ results }: { results: TaskResult[] }) {
                 <span
                   style={{
                     ...META_TEXT,
-                    color:      isOverdue ? '#DC2626' : 'var(--color-text-muted)',
+                    color:      isOverdue ? 'var(--color-warning)' : 'var(--color-text-muted)',
                     fontWeight: isOverdue ? 600 : 400,
                   }}
                 >

@@ -58,7 +58,7 @@ export default async function CompensationDetailPage({ params }: PageProps) {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 padding: '8px 14px', backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)', borderRadius: '6px',
+                border: '1px solid var(--color-border)', borderRadius: 'var(--radius-control)',
                 fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-text-primary)',
                 textDecoration: 'none',
               }}
@@ -70,9 +70,9 @@ export default async function CompensationDetailPage({ params }: PageProps) {
                 type="submit"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  padding: '8px 14px', backgroundColor: '#FEF3F2',
-                  border: '1px solid #FECDCA', borderRadius: '6px',
-                  fontSize: '0.8125rem', fontWeight: 500, color: '#B42318',
+                  padding: '8px 14px', backgroundColor: 'var(--color-danger-subtle)',
+                  border: '1px solid var(--color-border-strong)', borderRadius: 'var(--radius-control)',
+                  fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-danger)',
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >

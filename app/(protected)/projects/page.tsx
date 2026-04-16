@@ -60,8 +60,8 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
               gap: '6px',
               padding: '8px 14px',
               backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderRadius: '6px',
+              color: 'var(--color-primary-fg)',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               textDecoration: 'none',
@@ -74,30 +74,32 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
       />
 
       {/* Filters */}
-      <form method="GET" style={{ marginBottom: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+      <form method="GET" style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', rowGap: '10px' }}>
         <input
           name="search"
           type="search"
           defaultValue={params.search ?? ''}
           placeholder="Search projects…"
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             minWidth: '220px',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         />
         <select
           name="status"
           defaultValue={params.status ?? ''}
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         >
           <option value="">All Statuses</option>
@@ -115,11 +117,12 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
           name="discipline"
           defaultValue={params.discipline ?? ''}
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         >
           <option value="">All Disciplines</option>
@@ -133,11 +136,12 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
           name="priority"
           defaultValue={params.priority ?? ''}
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         >
           <option value="">All Priorities</option>
@@ -149,10 +153,10 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
         <button
           type="submit"
           style={{
-            padding: '7px 14px',
+            padding: '8px 14px',
             backgroundColor: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             cursor: 'pointer',
             color: 'var(--color-text-secondary)',
@@ -196,16 +200,16 @@ function ProjectsTable({ projects }: { projects: ProjectWithRelations[] }) {
           <Link
             href="/projects/new"
             style={{
-              padding: '8px 16px',
+              padding: '9px 18px',
               backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderRadius: '6px',
+              color: 'var(--color-primary-fg)',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
-              fontWeight: 500,
+              fontWeight: 600,
               textDecoration: 'none',
             }}
           >
-            Create First Project
+            Create first project
           </Link>
         }
       />
@@ -248,7 +252,7 @@ function ProjectsTable({ projects }: { projects: ProjectWithRelations[] }) {
                 backgroundColor: 'var(--color-surface)',
                 cursor: 'pointer',
               }}
-              className="hover:bg-[#F8FAFC]"
+              className="hover:bg-[var(--color-surface-muted)] transition-colors"
             >
               {/* Code */}
               <td style={{ padding: '10px 14px' }}>

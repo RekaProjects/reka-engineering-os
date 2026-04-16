@@ -82,7 +82,7 @@ export function TopbarSearch() {
             border:          focused
               ? '1px solid var(--color-primary)'
               : '1px solid var(--color-border)',
-            borderRadius:    '6px',
+            borderRadius:    'var(--radius-control)',
             fontSize:        '0.8125rem',
             width:           focused ? '260px' : '220px',
             backgroundColor: 'var(--color-surface)',

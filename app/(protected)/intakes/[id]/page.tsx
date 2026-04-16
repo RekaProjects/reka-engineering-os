@@ -60,7 +60,7 @@ export default async function IntakeDetailPage({ params }: PageProps) {
                 padding: '8px 14px',
                 backgroundColor: 'var(--color-surface)',
                 border: '1px solid var(--color-border)',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius-control)',
                 fontSize: '0.8125rem',
                 fontWeight: 500,
                 color: 'var(--color-text-secondary)',

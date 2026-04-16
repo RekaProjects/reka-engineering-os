@@ -1,7 +1,8 @@
 import Link     from 'next/link'
-import { AppSidebar }   from '@/components/layout/AppSidebar'
-import { AppTopbar }    from '@/components/layout/AppTopbar'
-import { TopbarSearch } from '@/components/layout/TopbarSearch'
+import { AppSidebar }    from '@/components/layout/AppSidebar'
+import { AppTopbar }     from '@/components/layout/AppTopbar'
+import { TopbarSearch }  from '@/components/layout/TopbarSearch'
+import { BreadcrumbNav } from '@/components/layout/BreadcrumbNav'
 import { getSessionProfile } from '@/lib/auth/session'
 
 export default async function ProtectedLayout({
@@ -22,15 +23,15 @@ export default async function ProtectedLayout({
       />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <AppTopbar right={<TopbarSearch />} />
+        <AppTopbar left={<BreadcrumbNav />} right={<TopbarSearch />} />
 
         {/* Profile completion banner */}
         {profileIncomplete && (
           <div
             style={{
-              padding:         '10px 24px',
-              backgroundColor: '#FFFAEB',
-              borderBottom:    '1px solid #FDE68A',
+              padding:         '10px 28px',
+              backgroundColor: 'var(--color-warning-subtle)',
+              borderBottom:    '1px solid var(--color-border)',
               display:         'flex',
               alignItems:      'center',
               justifyContent:  'space-between',
@@ -38,7 +39,7 @@ export default async function ProtectedLayout({
               flexShrink:      0,
             }}
           >
-            <span style={{ fontSize: '0.8125rem', color: '#B45309' }}>
+            <span style={{ fontSize: '0.8125rem', color: 'var(--color-warning)' }}>
               Your profile is incomplete. Complete it so the team knows how to reach you and what you work on.
             </span>
             <Link
@@ -46,13 +47,13 @@ export default async function ProtectedLayout({
               style={{
                 fontSize:        '0.8125rem',
                 fontWeight:      600,
-                color:           '#B45309',
+                color:           'var(--color-warning)',
                 textDecoration:  'none',
                 whiteSpace:      'nowrap',
-                padding:         '4px 10px',
-                border:          '1px solid #FCD34D',
-                borderRadius:    '5px',
-                backgroundColor: '#FFFBEB',
+                padding:         '4px 12px',
+                border:          '1px solid var(--color-border-strong)',
+                borderRadius:    'var(--radius-control)',
+                backgroundColor: 'var(--color-surface)',
               }}
             >
               Complete profile →
@@ -71,7 +72,7 @@ export default async function ProtectedLayout({
             style={{
               maxWidth: 'var(--content-max-width)',
               margin:   '0 auto',
-              padding:  '28px',
+              padding:  '28px 32px',
             }}
           >
             {children}

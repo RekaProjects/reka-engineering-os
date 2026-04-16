@@ -12,10 +12,18 @@ export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap',
+        'inline-flex items-center whitespace-nowrap',
         className
       )}
-      style={{ color: config.color, backgroundColor: config.bgColor }}
+      style={{
+        color: config.color,
+        backgroundColor: config.bgColor,
+        borderRadius: 'var(--radius-pill)',
+        padding: '2px 10px',
+        fontSize: '0.6875rem',
+        fontWeight: 600,
+        letterSpacing: '0.01em',
+      }}
     >
       {config.label}
     </span>

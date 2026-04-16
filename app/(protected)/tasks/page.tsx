@@ -61,8 +61,8 @@ export default async function TasksPage({ searchParams }: PageProps) {
               gap: '6px',
               padding: '8px 14px',
               backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderRadius: '6px',
+              color: 'var(--color-primary-fg)',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               textDecoration: 'none',
@@ -75,30 +75,32 @@ export default async function TasksPage({ searchParams }: PageProps) {
       />
 
       {/* Filters */}
-      <form method="GET" style={{ marginBottom: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+      <form method="GET" style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', rowGap: '10px' }}>
         <input
           name="search"
           type="search"
           defaultValue={params.search ?? ''}
           placeholder="Search tasks…"
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             minWidth: '220px',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         />
         <select
           name="status"
           defaultValue={params.status ?? ''}
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         >
           <option value="">All Statuses</option>
@@ -113,11 +115,12 @@ export default async function TasksPage({ searchParams }: PageProps) {
           name="priority"
           defaultValue={params.priority ?? ''}
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         >
           <option value="">All Priorities</option>
@@ -129,10 +132,10 @@ export default async function TasksPage({ searchParams }: PageProps) {
         <button
           type="submit"
           style={{
-            padding: '7px 14px',
+            padding: '8px 14px',
             backgroundColor: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             cursor: 'pointer',
             color: 'var(--color-text-secondary)',
@@ -176,16 +179,16 @@ function TasksTable({ tasks }: { tasks: TaskWithRelations[] }) {
           <Link
             href="/tasks/new"
             style={{
-              padding: '8px 16px',
+              padding: '9px 18px',
               backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderRadius: '6px',
+              color: 'var(--color-primary-fg)',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
-              fontWeight: 500,
+              fontWeight: 600,
               textDecoration: 'none',
             }}
           >
-            Create First Task
+            Create first task
           </Link>
         }
       />
@@ -230,14 +233,19 @@ function TasksTable({ tasks }: { tasks: TaskWithRelations[] }) {
                 key={task.id}
                 style={{
                   borderBottom: idx < tasks.length - 1 ? '1px solid var(--color-border)' : undefined,
-                  backgroundColor: isBlocked ? '#FEF2F2' : isOverdue ? '#FFFBEB' : 'var(--color-surface)',
+                  backgroundColor: 'var(--color-surface)',
+                  boxShadow: isBlocked
+                    ? 'inset 3px 0 0 var(--color-danger)'
+                    : isOverdue
+                      ? 'inset 3px 0 0 var(--color-warning)'
+                      : undefined,
                   cursor: 'pointer',
                 }}
               >
                 {/* Task title */}
                 <td style={{ padding: '10px 14px', maxWidth: '280px' }}>
                   <Link href={`/tasks/${task.id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {isOverdue && <AlertTriangle size={13} style={{ color: '#D97706', flexShrink: 0 }} />}
+                    {isOverdue && <AlertTriangle size={13} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />}
                     <span style={{
                       fontWeight: 500,
                       color: 'var(--color-text-primary)',
@@ -270,7 +278,7 @@ function TasksTable({ tasks }: { tasks: TaskWithRelations[] }) {
                 <td style={{
                   padding: '10px 14px',
                   fontSize: '0.75rem',
-                  color: isOverdue ? '#D97706' : 'var(--color-text-muted)',
+                  color: isOverdue ? 'var(--color-warning)' : 'var(--color-text-muted)',
                   fontWeight: isOverdue ? 600 : 400,
                   whiteSpace: 'nowrap',
                 }}>

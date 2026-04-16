@@ -25,7 +25,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px 11px',
   border: '1px solid var(--color-border)',
-  borderRadius: '6px',
+  borderRadius: 'var(--radius-control)',
   fontSize: '0.8125rem',
   color: 'var(--color-text-primary)',
   backgroundColor: 'var(--color-surface)',
@@ -288,8 +288,8 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
           <div role="alert" style={{
             padding: '10px 12px',
             backgroundColor: 'var(--color-danger-subtle)',
-            border: '1px solid #FECACA',
-            borderRadius: '6px',
+            border: '1px solid var(--color-border-strong)',
+            borderRadius: 'var(--radius-control)',
             color: 'var(--color-danger)',
             fontSize: '0.8125rem',
           }}>
@@ -302,9 +302,9 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
           <button type="submit" disabled={isPending} style={{
             padding: '9px 20px',
             backgroundColor: isPending ? 'var(--color-primary-hover)' : 'var(--color-primary)',
-            color: '#fff',
+            color: 'var(--color-primary-fg)',
             border: 'none',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             fontWeight: 500,
             cursor: isPending ? 'not-allowed' : 'pointer',
@@ -316,7 +316,7 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
             backgroundColor: 'var(--color-surface)',
             color: 'var(--color-text-secondary)',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             cursor: 'pointer',
           }}>

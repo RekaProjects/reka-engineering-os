@@ -25,7 +25,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px 11px',
   border: '1px solid var(--color-border)',
-  borderRadius: '6px',
+  borderRadius: 'var(--radius-control)',
   fontSize: '0.8125rem',
   color: 'var(--color-text-primary)',
   backgroundColor: 'var(--color-surface)',
@@ -186,11 +186,11 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
               <>
                 <div style={{
                   padding: '10px 12px',
-                  backgroundColor: '#DBEAFE',
-                  border: '1px solid #93C5FD',
-                  borderRadius: '6px',
+                  backgroundColor: 'var(--color-info-subtle)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-control)',
                   fontSize: '0.8125rem',
-                  color: '#1E40AF',
+                  color: 'var(--color-info)',
                 }}>
                   Google Drive integration is not yet active. Enter metadata manually for now.
                 </div>
@@ -241,8 +241,8 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
           <div role="alert" style={{
             padding: '10px 12px',
             backgroundColor: 'var(--color-danger-subtle)',
-            border: '1px solid #FECACA',
-            borderRadius: '6px',
+            border: '1px solid var(--color-border-strong)',
+            borderRadius: 'var(--radius-control)',
             color: 'var(--color-danger)',
             fontSize: '0.8125rem',
           }}>
@@ -255,9 +255,9 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
           <button type="submit" disabled={isPending} style={{
             padding: '9px 20px',
             backgroundColor: isPending ? 'var(--color-primary-hover)' : 'var(--color-primary)',
-            color: '#fff',
+            color: 'var(--color-primary-fg)',
             border: 'none',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             fontWeight: 500,
             cursor: isPending ? 'not-allowed' : 'pointer',
@@ -269,7 +269,7 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
             backgroundColor: 'var(--color-surface)',
             color: 'var(--color-text-secondary)',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             cursor: 'pointer',
           }}>

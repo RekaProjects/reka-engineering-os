@@ -78,7 +78,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
 
       {/* Domain tabs */}
       <div
-        className="flex flex-wrap gap-2 mb-5"
+        className="flex flex-wrap gap-3 mb-6"
         role="tablist"
       >
         {summary.map((s) => {
@@ -93,17 +93,17 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '7px 14px',
-                borderRadius: '6px',
+                padding: '8px 16px',
+                borderRadius: 'var(--radius-control)',
                 fontSize: '0.8125rem',
-                fontWeight: active ? 600 : 400,
+                fontWeight: active ? 600 : 500,
                 textDecoration: 'none',
                 backgroundColor: active
                   ? 'var(--color-primary)'
                   : 'var(--color-surface-subtle)',
-                color: active ? '#fff' : 'var(--color-text-secondary)',
+                color: active ? 'var(--color-primary-fg)' : 'var(--color-text-secondary)',
                 border: active ? 'none' : '1px solid var(--color-border)',
-                transition: 'background-color 0.15s',
+                transition: 'background-color 0.15s, color 0.15s',
               }}
             >
               {s.label}
@@ -154,7 +154,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                       borderBottom: isLast ? undefined : '1px solid var(--color-border)',
                       opacity: o.is_active ? 1 : 0.5,
                     }}
-                    className="hover:bg-[#F8FAFC] transition-colors"
+                    className="hover:bg-[var(--color-surface-muted)] transition-colors"
                   >
                     <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.75rem', width: '48px' }}>
                       {o.sort_order}
@@ -174,7 +174,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            color: o.is_active ? 'var(--color-success, #16a34a)' : 'var(--color-text-muted)',
+                            color: o.is_active ? 'var(--color-success)' : 'var(--color-text-muted)',
                             padding: '2px',
                           }}
                         >
@@ -230,7 +230,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
               placeholder="e.g. site_engineer"
               style={{
                 padding: '8px 12px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius-control)',
                 border: '1px solid var(--color-border)',
                 fontSize: '0.8125rem',
                 backgroundColor: 'var(--color-surface)',
@@ -254,7 +254,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
               placeholder="e.g. Site Engineer"
               style={{
                 padding: '8px 12px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius-control)',
                 border: '1px solid var(--color-border)',
                 fontSize: '0.8125rem',
                 backgroundColor: 'var(--color-surface)',
@@ -272,8 +272,8 @@ export default async function SettingsPage({ searchParams }: PageProps) {
               gap: '6px',
               padding: '8px 14px',
               backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderRadius: '6px',
+              color: 'var(--color-primary-fg)',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               border: 'none',

@@ -28,7 +28,7 @@ const INPUT: CSSProperties = {
   padding: '8px 10px',
   fontSize: '0.8125rem',
   border: '1px solid var(--color-border)',
-  borderRadius: '8px',
+  borderRadius: 'var(--radius-control)',
   backgroundColor: 'var(--color-surface)',
   color: 'var(--color-text-primary)',
 }
@@ -51,7 +51,7 @@ export function PaymentForm({ members, defaultValues: dv = {}, action, submitLab
   return (
     <form action={formAction}>
       {state?.error && (
-        <div style={{ padding: '10px 14px', marginBottom: '16px', borderRadius: '8px', backgroundColor: '#FEF3F2', color: '#B42318', fontSize: '0.8125rem' }}>
+        <div style={{ padding: '10px 14px', marginBottom: '16px', borderRadius: 'var(--radius-control)', backgroundColor: 'var(--color-danger-subtle)', color: 'var(--color-danger)', fontSize: '0.8125rem' }}>
           {state.error}
         </div>
       )}
@@ -147,9 +147,9 @@ export function PaymentForm({ members, defaultValues: dv = {}, action, submitLab
           style={{
             padding: '9px 20px',
             backgroundColor: 'var(--color-primary)',
-            color: '#fff',
+            color: 'var(--color-primary-fg)',
             border: 'none',
-            borderRadius: '8px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             fontWeight: 600,
             cursor: isPending ? 'not-allowed' : 'pointer',

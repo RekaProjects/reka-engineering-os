@@ -48,7 +48,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
               padding: '8px 14px',
               backgroundColor: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
-              borderRadius: '6px',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               color: 'var(--color-text-secondary)',
@@ -69,10 +69,10 @@ export default async function TaskDetailPage({ params }: PageProps) {
           <span style={{
             fontSize: '0.75rem',
             fontWeight: 600,
-            color: '#D97706',
-            backgroundColor: '#FEF3C7',
+            color: 'var(--color-warning)',
+            backgroundColor: 'var(--color-warning-subtle)',
             padding: '2px 10px',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-pill)',
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
@@ -85,10 +85,10 @@ export default async function TaskDetailPage({ params }: PageProps) {
           <span style={{
             fontSize: '0.75rem',
             fontWeight: 500,
-            color: '#DC2626',
-            backgroundColor: '#FEE2E2',
+            color: 'var(--color-danger)',
+            backgroundColor: 'var(--color-danger-subtle)',
             padding: '2px 10px',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-pill)',
           }}>
             Blocked: {task.blocked_reason}
           </span>

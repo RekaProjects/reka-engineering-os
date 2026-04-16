@@ -28,12 +28,12 @@ export default async function ProfileCompletionPage() {
       <div
         style={{
           padding:         '12px 16px',
-          backgroundColor: '#EFF8FF',
-          border:          '1px solid #BAE6FD',
-          borderRadius:    '8px',
+          backgroundColor: 'var(--color-info-subtle)',
+          border:          '1px solid var(--color-border)',
+          borderRadius:    'var(--radius-control)',
           marginBottom:    '20px',
           fontSize:        '0.8125rem',
-          color:           '#175CD3',
+          color:           'var(--color-info)',
           lineHeight:      1.5,
         }}
       >

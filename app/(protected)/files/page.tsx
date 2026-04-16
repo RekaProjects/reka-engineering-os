@@ -41,8 +41,8 @@ export default async function FilesPage({ searchParams }: PageProps) {
               gap: '6px',
               padding: '8px 14px',
               backgroundColor: 'var(--color-primary)',
-              color: '#fff',
-              borderRadius: '6px',
+              color: 'var(--color-primary-fg)',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               textDecoration: 'none',
@@ -55,30 +55,32 @@ export default async function FilesPage({ searchParams }: PageProps) {
       />
 
       {/* Filters */}
-      <form method="GET" style={{ marginBottom: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+      <form method="GET" style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', rowGap: '10px' }}>
         <input
           name="search"
           type="search"
           defaultValue={params.search ?? ''}
           placeholder="Search files…"
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             minWidth: '220px',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         />
         <select
           name="file_category"
           defaultValue={params.file_category ?? ''}
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         >
           <option value="">All Categories</option>
@@ -94,11 +96,12 @@ export default async function FilesPage({ searchParams }: PageProps) {
           name="provider"
           defaultValue={params.provider ?? ''}
           style={{
-            padding: '7px 11px',
+            padding: '8px 12px',
             border: '1px solid var(--color-border)',
-            borderRadius: '6px',
+            borderRadius: 'var(--radius-control)',
             fontSize: '0.8125rem',
             backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
           }}
         >
           <option value="">All Providers</option>
@@ -106,10 +109,10 @@ export default async function FilesPage({ searchParams }: PageProps) {
           <option value="google_drive">Google Drive</option>
         </select>
         <button type="submit" style={{
-          padding: '7px 14px',
+          padding: '8px 14px',
           backgroundColor: 'var(--color-surface)',
           border: '1px solid var(--color-border)',
-          borderRadius: '6px',
+          borderRadius: 'var(--radius-control)',
           fontSize: '0.8125rem',
           cursor: 'pointer',
           color: 'var(--color-text-secondary)',
@@ -126,12 +129,27 @@ export default async function FilesPage({ searchParams }: PageProps) {
       <SectionCard noPadding>
         {files.length === 0 ? (
           <EmptyState
-            icon={<FolderOpen size={22} />}
+            emphasis
+            icon={<FolderOpen size={24} strokeWidth={1.5} />}
             title="No files yet"
             description="Add file metadata to track project files, working documents, and deliverable attachments."
             action={
-              <Link href="/files/new" style={{ padding: '8px 16px', backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '6px', fontSize: '0.8125rem', fontWeight: 500, textDecoration: 'none' }}>
-                Add First File
+              <Link
+                href="/files/new"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '9px 18px',
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'var(--color-primary-fg)',
+                  borderRadius: 'var(--radius-control)',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                Add first file
               </Link>
             }
           />
@@ -182,9 +200,9 @@ export default async function FilesPage({ searchParams }: PageProps) {
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: '3px',
                           fontSize: '0.6875rem', fontWeight: 500,
-                          color: f.provider === 'google_drive' ? '#2563EB' : '#94A3B8',
-                          backgroundColor: f.provider === 'google_drive' ? '#DBEAFE' : '#F1F5F9',
-                          padding: '2px 8px', borderRadius: '10px',
+                          color: f.provider === 'google_drive' ? 'var(--color-primary)' : 'var(--color-neutral)',
+                          backgroundColor: f.provider === 'google_drive' ? 'var(--color-primary-subtle)' : 'var(--color-neutral-subtle)',
+                          padding: '2px 8px', borderRadius: 'var(--radius-pill)',
                         }}>
                           {f.provider === 'google_drive' ? <HardDrive size={10} /> : null}
                           {f.provider === 'google_drive' ? 'Drive' : 'Manual'}

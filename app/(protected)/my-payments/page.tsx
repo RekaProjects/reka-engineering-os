@@ -50,8 +50,8 @@ export default async function MyPaymentsPage() {
       {records.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '24px' }}>
           <SummaryCard label="Total Due" value={formatIDR(totalDue)} />
-          <SummaryCard label="Total Paid" value={formatIDR(totalPaid)} color="#027A48" />
-          <SummaryCard label="Outstanding Balance" value={formatIDR(totalBal)} color={totalBal > 0 ? '#DC2626' : '#027A48'} />
+          <SummaryCard label="Total Paid" value={formatIDR(totalPaid)} color="var(--color-success)" />
+          <SummaryCard label="Outstanding Balance" value={formatIDR(totalBal)} color={totalBal > 0 ? 'var(--color-warning)' : 'var(--color-success)'} />
         </div>
       )}
 
@@ -102,7 +102,7 @@ export default async function MyPaymentsPage() {
                       textAlign: 'right',
                       fontVariantNumeric: 'tabular-nums',
                       fontWeight: Number(r.balance) > 0 ? 600 : 400,
-                      color: Number(r.balance) > 0 ? '#DC2626' : 'var(--color-text-secondary)',
+                      color: Number(r.balance) > 0 ? 'var(--color-warning)' : 'var(--color-text-secondary)',
                     }}>
                       {formatIDR(r.balance)}
                     </td>
@@ -132,7 +132,7 @@ function SummaryCard({ label, value, color }: { label: string; value: string; co
       style={{
         backgroundColor: 'var(--color-surface)',
         border:          '1px solid var(--color-border)',
-        borderRadius:    '10px',
+        borderRadius:    'var(--radius-card)',
         padding:         '16px 20px',
       }}
     >

@@ -32,9 +32,10 @@ export function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-md border py-2 pl-8 pr-3 text-sm outline-none transition-colors"
+        className="w-full py-2 pl-8 pr-3 text-sm outline-none transition-colors"
         style={{
-          borderColor: 'var(--color-border)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-control)',
           backgroundColor: 'var(--color-surface)',
           color: 'var(--color-text-primary)',
           fontSize: '0.8125rem',

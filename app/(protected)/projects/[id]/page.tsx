@@ -101,7 +101,7 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
               padding: '8px 14px',
               backgroundColor: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
-              borderRadius: '6px',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               color: 'var(--color-text-secondary)',
@@ -533,13 +533,13 @@ function TasksTab({ projectId, tasks }: { projectId: string; tasks: TaskWithRela
                       key={task.id}
                       style={{
                         borderBottom: idx < tasks.length - 1 ? '1px solid var(--color-border)' : undefined,
-                        backgroundColor: isBlocked ? '#FEF2F2' : isOverdue ? '#FFFBEB' : undefined,
+                        backgroundColor: isBlocked ? 'var(--color-danger-subtle)' : isOverdue ? 'var(--color-warning-subtle)' : undefined,
                         cursor: 'pointer',
                       }}
                     >
                       <td style={{ padding: '8px 14px', maxWidth: '250px' }}>
                         <Link href={`/tasks/${task.id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          {isOverdue && <AlertTriangle size={12} style={{ color: '#D97706', flexShrink: 0 }} />}
+                          {isOverdue && <AlertTriangle size={12} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />}
                           <span style={{ fontWeight: 500, color: 'var(--color-text-primary)', fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {task.title}
                           </span>
@@ -554,7 +554,7 @@ function TasksTab({ projectId, tasks }: { projectId: string; tasks: TaskWithRela
                       <td style={{
                         padding: '8px 14px',
                         fontSize: '0.75rem',
-                        color: isOverdue ? '#D97706' : 'var(--color-text-muted)',
+                        color: isOverdue ? 'var(--color-warning)' : 'var(--color-text-muted)',
                         fontWeight: isOverdue ? 600 : 400,
                         whiteSpace: 'nowrap',
                       }}>
@@ -665,7 +665,7 @@ function DeliverablesTab({ projectId, deliverables }: { projectId: string; deliv
                       key={d.id}
                       style={{
                         borderBottom: idx < deliverables.length - 1 ? '1px solid var(--color-border)' : undefined,
-                        backgroundColor: isRevisionRequested ? '#FEF2F2' : undefined,
+                        backgroundColor: isRevisionRequested ? 'var(--color-danger-subtle)' : undefined,
                         cursor: 'pointer',
                       }}
                     >
@@ -818,8 +818,8 @@ function FilesTab({ projectId, files, driveFolderLink }: { projectId: string; fi
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: '3px',
                           fontSize: '0.6875rem', fontWeight: 500,
-                          color: f.provider === 'google_drive' ? '#2563EB' : '#94A3B8',
-                          backgroundColor: f.provider === 'google_drive' ? '#DBEAFE' : '#F1F5F9',
+                          color: f.provider === 'google_drive' ? 'var(--color-primary)' : 'var(--color-neutral)',
+                          backgroundColor: f.provider === 'google_drive' ? 'var(--color-primary-subtle)' : 'var(--color-neutral-subtle)',
                           padding: '2px 8px', borderRadius: '10px',
                         }}>
                           {f.provider === 'google_drive' ? <HardDrive size={10} /> : null}

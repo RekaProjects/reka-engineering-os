@@ -1,27 +1,28 @@
+import type { CSSProperties } from 'react'
 import type { CompensationStatus } from '@/types/database'
 
 const CONFIG: Record<CompensationStatus, { label: string; bg: string; color: string }> = {
-  draft:     { label: 'Draft',     bg: '#F2F4F7', color: '#344054' },
-  confirmed: { label: 'Confirmed', bg: '#EFF8FF', color: '#175CD3' },
-  paid:      { label: 'Paid',      bg: '#ECFDF3', color: '#027A48' },
-  cancelled: { label: 'Cancelled', bg: '#FEF3F2', color: '#B42318' },
+  draft:     { label: 'Draft',     bg: '#F1EFE8', color: '#6A6666' },
+  confirmed: { label: 'Confirmed', bg: '#E8EEF8', color: '#142D50' },
+  paid:      { label: 'Paid',      bg: '#ECFDF3', color: '#166534' },
+  cancelled: { label: 'Cancelled', bg: '#F8E9E8', color: '#851E1E' },
+}
+
+const badgeStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '2px 10px',
+  borderRadius: 'var(--radius-pill)',
+  fontSize: '0.6875rem',
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  letterSpacing: '0.01em',
 }
 
 export function CompensationStatusBadge({ status }: { status: CompensationStatus }) {
   const c = CONFIG[status] ?? CONFIG.draft
   return (
-    <span
-      style={{
-        display: 'inline-block',
-        padding: '2px 9px',
-        borderRadius: '999px',
-        fontSize: '0.6875rem',
-        fontWeight: 600,
-        backgroundColor: c.bg,
-        color: c.color,
-        letterSpacing: '0.02em',
-      }}
-    >
+    <span style={{ ...badgeStyle, backgroundColor: c.bg, color: c.color }}>
       {c.label}
     </span>
   )

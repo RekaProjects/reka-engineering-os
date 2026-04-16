@@ -59,7 +59,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
               padding: '8px 14px',
               backgroundColor: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
-              borderRadius: '6px',
+              borderRadius: 'var(--radius-control)',
               fontSize: '0.8125rem',
               fontWeight: 500,
               color: 'var(--color-text-secondary)',
@@ -177,7 +177,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
                           borderBottom: idx < intakes.length - 1 ? '1px solid var(--color-border)' : undefined,
                           cursor: 'pointer',
                         }}
-                        className="hover:bg-[#F8FAFC]"
+                        className="hover:bg-[var(--color-surface-muted)]"
                       >
                         <td style={{ padding: '8px 14px' }}>
                           <Link href={`/intakes/${intake.id}`} style={{ textDecoration: 'none' }}>
@@ -276,7 +276,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
                           borderBottom: idx < projects.length - 1 ? '1px solid var(--color-border)' : undefined,
                           cursor: 'pointer',
                         }}
-                        className="hover:bg-[#F8FAFC]"
+                        className="hover:bg-[var(--color-surface-muted)]"
                       >
                         <td style={{ padding: '8px 14px' }}>
                           <Link href={`/projects/${prj.id}`} style={{ textDecoration: 'none' }}>

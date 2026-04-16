@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils/cn'
-import type { ReactNode } from 'react'
+import type { ReactNode, CSSProperties } from 'react'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
@@ -16,10 +16,10 @@ interface QuickActionButtonProps {
   'aria-label'?: string
 }
 
-const variantStyles: Record<ButtonVariant, React.CSSProperties> = {
+const variantStyles: Record<ButtonVariant, CSSProperties> = {
   primary: {
     backgroundColor: 'var(--color-primary)',
-    color: '#fff',
+    color: 'var(--color-primary-fg)',
     border: 'none',
   },
   secondary: {
@@ -34,7 +34,7 @@ const variantStyles: Record<ButtonVariant, React.CSSProperties> = {
   },
   danger: {
     backgroundColor: 'var(--color-danger)',
-    color: '#fff',
+    color: 'var(--color-danger-fg)',
     border: 'none',
   },
 }
@@ -55,9 +55,10 @@ export function QuickActionButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel ?? label}
-      className={cn('inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-opacity', className)}
+      className={cn('inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium transition-opacity', className)}
       style={{
         ...variantStyles[variant],
+        borderRadius: 'var(--radius-control)',
         fontSize: '0.8125rem',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,

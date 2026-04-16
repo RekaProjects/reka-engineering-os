@@ -31,7 +31,7 @@ const inputStyle: CSSProperties = {
   width:           '100%',
   padding:         '8px 11px',
   border:          '1px solid var(--color-border)',
-  borderRadius:    '6px',
+  borderRadius:    'var(--radius-control)',
   fontSize:        '0.8125rem',
   color:           'var(--color-text-primary)',
   backgroundColor: 'var(--color-surface)',
@@ -326,7 +326,7 @@ export function TeamMemberForm({ mode, member, functionalRoleOptions, discipline
             style={{
               padding:         '8px 16px',
               border:          '1px solid var(--color-border)',
-              borderRadius:    '6px',
+              borderRadius:    'var(--radius-control)',
               fontSize:        '0.8125rem',
               fontWeight:      500,
               color:           'var(--color-text-secondary)',
@@ -342,10 +342,10 @@ export function TeamMemberForm({ mode, member, functionalRoleOptions, discipline
             style={{
               padding:         '8px 18px',
               border:          'none',
-              borderRadius:    '6px',
+              borderRadius:    'var(--radius-control)',
               fontSize:        '0.8125rem',
               fontWeight:      500,
-              color:           '#fff',
+              color:           'var(--color-primary-fg)',
               backgroundColor: isPending ? 'var(--color-text-muted)' : 'var(--color-primary)',
               cursor:          isPending ? 'not-allowed' : 'pointer',
             }}

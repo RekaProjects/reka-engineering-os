@@ -12,13 +12,14 @@ import { CopyLinkButton }    from '@/components/modules/onboarding/CopyLinkButto
 import { getTeamMembers }    from '@/lib/team/queries'
 import { getPendingInvites } from '@/lib/invites/queries'
 import { revokeInvite as _revokeInvite } from '@/lib/invites/actions'
-import { formatDate }        from '@/lib/utils/formatters'
-import { SYSTEM_ROLES } from '@/lib/constants/options'
+import { formatDate, formatIDR } from '@/lib/utils/formatters'
+import { SYSTEM_ROLES, RATE_TYPE_OPTIONS } from '@/lib/constants/options'
 import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'Team — Engineering Agency OS' }
 
 const SYSTEM_ROLE_LABEL = Object.fromEntries(SYSTEM_ROLES.map((r) => [r.value, r.label]))
+const RATE_LABEL = Object.fromEntries(RATE_TYPE_OPTIONS.map((r) => [r.value, r.label]))
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
@@ -45,6 +46,25 @@ const TD: CSSProperties = {
 async function handleRevokeInvite(id: string) {
   'use server'
   await _revokeInvite(id)
+}
+
+/** Prefer IDR via design-system formatter; other currencies use locale currency when valid */
+function formatRateAmount(n: number | null | undefined, currencyCode: string | null | undefined): string | null {
+  if (n == null || n === undefined) return null
+  const num = Number(n)
+  if (Number.isNaN(num)) return null
+  const code = (currencyCode || 'IDR').toUpperCase()
+  if (code === 'IDR') return formatIDR(num)
+  try {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(num)
+  } catch {
+    return `${num.toLocaleString('id-ID')} ${code}`
+  }
 }
 
 export default async function TeamPage({
@@ -81,7 +101,7 @@ export default async function TeamPage({
                 padding:         '8px 14px',
                 backgroundColor: 'var(--color-surface)',
                 border:          '1px solid var(--color-border)',
-                borderRadius:    '6px',
+                borderRadius:    'var(--radius-control)',
                 fontSize:        '0.8125rem',
                 fontWeight:      500,
                 color:           'var(--color-text-primary)',
@@ -99,8 +119,8 @@ export default async function TeamPage({
                 gap:             '6px',
                 padding:         '8px 14px',
                 backgroundColor: 'var(--color-primary)',
-                color:           '#fff',
-                borderRadius:    '6px',
+                color:           'var(--color-primary-fg)',
+                borderRadius:    'var(--radius-control)',
                 fontSize:        '0.8125rem',
                 fontWeight:      500,
                 textDecoration:  'none',
@@ -128,8 +148,8 @@ export default async function TeamPage({
                   gap:             '6px',
                   padding:         '8px 16px',
                   backgroundColor: 'var(--color-primary)',
-                  color:           '#fff',
-                  borderRadius:    '6px',
+                  color:           'var(--color-primary-fg)',
+                  borderRadius:    'var(--radius-control)',
                   fontSize:        '0.8125rem',
                   fontWeight:      500,
                   textDecoration:  'none',
@@ -153,14 +173,12 @@ export default async function TeamPage({
               <tbody>
                 {members.map((m, idx) => {
                   const isLast = idx === members.length - 1
-                  const rateLabel = m.approved_rate
-                    ? `${Number(m.approved_rate).toLocaleString('id-ID')} ${m.currency_code}`
-                    : m.expected_rate
-                    ? `~${Number(m.expected_rate).toLocaleString('id-ID')} ${m.currency_code}`
-                    : '—'
+                  const approved = formatRateAmount(m.approved_rate, m.currency_code)
+                  const expected = formatRateAmount(m.expected_rate, m.currency_code)
+                  const rateLabel = approved ?? (expected ? `~${expected}` : '—')
 
                   const rateType = m.rate_type
-                    ? ' / ' + m.rate_type.replace(/_/g, ' ')
+                    ? RATE_LABEL[m.rate_type] ?? m.rate_type.replace(/_/g, ' ')
                     : ''
 
                   const funcLabel = m.functional_role
@@ -170,13 +188,13 @@ export default async function TeamPage({
                   const activeColor =
                     m.active_status === 'active'   ? 'var(--color-success)' :
                     m.active_status === 'inactive' ? 'var(--color-text-muted)' :
-                    '#94A3B8'
+                    'var(--color-neutral)'
 
                   return (
                     <tr
                       key={m.id}
                       style={{ borderBottom: isLast ? undefined : '1px solid var(--color-border)' }}
-                      className="hover:bg-[#F8FAFC] transition-colors"
+                      className="hover:bg-[var(--color-surface-muted)] transition-colors"
                     >
                       {/* Name */}
                       <td style={{ ...TD, maxWidth: '200px' }}>
@@ -224,9 +242,9 @@ export default async function TeamPage({
                       {/* Rate */}
                       <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.75rem' }}>
                         {rateLabel}
-                        {m.approved_rate && (
-                          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.6875rem', display: 'block' }}>
-                            {rateType.trim()}
+                        {(approved || expected) && rateType && (
+                          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.6875rem', display: 'block', marginTop: '2px' }}>
+                            {rateType}
                           </span>
                         )}
                       </td>
@@ -275,12 +293,12 @@ export default async function TeamPage({
             <div style={{
               padding:      '10px 16px',
               borderBottom: '1px solid var(--color-border)',
-              backgroundColor: '#EFF8FF',
+              backgroundColor: 'var(--color-info-subtle)',
               display:      'flex',
               alignItems:   'center',
               gap:          '10px',
             }}>
-              <span style={{ fontSize: '0.8125rem', color: '#175CD3', fontWeight: 500 }}>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--color-info)', fontWeight: 500 }}>
                 Invite created. Copy the link below and share it with the invited person.
               </span>
             </div>
@@ -304,7 +322,7 @@ export default async function TeamPage({
                       key={inv.id}
                       style={{
                         borderBottom:    isLast ? undefined : '1px solid var(--color-border)',
-                        backgroundColor: isHighlighted ? '#F0F9FF' : undefined,
+                        backgroundColor: isHighlighted ? 'var(--color-info-subtle)' : undefined,
                       }}
                     >
                       <td style={TD}>{inv.email}</td>
