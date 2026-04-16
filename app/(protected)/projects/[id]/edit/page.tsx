@@ -5,8 +5,9 @@ import { ProjectForm } from '@/components/modules/projects/ProjectForm'
 import { getSessionProfile } from '@/lib/auth/session'
 import { requireProjectMetadataEdit, requireProjectView } from '@/lib/auth/access-surface'
 import { getProjectById } from '@/lib/projects/queries'
-import { getClientsForSelect } from '@/lib/clients/queries'
-import { getUsersForSelect } from '@/lib/users/queries'
+import { effectiveRole } from '@/lib/auth/permissions'
+import { getClientsForCoordinatorScopedSelect, getClientsForSelect } from '@/lib/clients/queries'
+import { getUsersForProjectAssignment, getUsersForSelect } from '@/lib/users/queries'
 import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
@@ -22,10 +23,11 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function EditProjectPage({ params }: PageProps) {
   const { id } = await params
   const profile = await getSessionProfile()
+  const r = effectiveRole(profile.system_role)
   const [project, clients, users, disciplineOptions, projectTypeOptions] = await Promise.all([
     getProjectById(id),
-    getClientsForSelect(),
-    getUsersForSelect(),
+    r === 'coordinator' ? getClientsForCoordinatorScopedSelect(profile.id) : getClientsForSelect(),
+    r === 'coordinator' ? getUsersForProjectAssignment(id) : getUsersForSelect(),
     getSettingOptions('discipline'),
     getSettingOptions('project_type'),
   ])

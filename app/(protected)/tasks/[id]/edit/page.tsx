@@ -5,8 +5,8 @@ import { TaskForm } from '@/components/modules/tasks/TaskForm'
 import { getSessionProfile } from '@/lib/auth/session'
 import { requireTaskEditPage } from '@/lib/auth/access-surface'
 import { getTaskById } from '@/lib/tasks/queries'
-import { projectOptionsForMutationForms } from '@/lib/auth/query-scope'
-import { getUsersForSelect } from '@/lib/users/queries'
+import { projectOptionsForMutationForms, usersForAssignmentPickers } from '@/lib/auth/query-scope'
+import { getTaskEditFormScope } from '@/lib/auth/edit-form-scopes'
 import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
@@ -26,9 +26,13 @@ export default async function EditTaskPage({ params }: PageProps) {
   if (!task) notFound()
   await requireTaskEditPage(profile, task)
 
+  const taskEditScope = getTaskEditFormScope(profile, task)
+
   const [projectsRaw, users, taskCategoryOptions] = await Promise.all([
     projectOptionsForMutationForms(profile, task.project_id),
-    getUsersForSelect(),
+    taskEditScope === 'full'
+      ? usersForAssignmentPickers(profile, { mode: 'edit', lockedProjectId: task.project_id })
+      : Promise.resolve([]),
     getSettingOptions('task_category'),
   ])
 
@@ -41,7 +45,14 @@ export default async function EditTaskPage({ params }: PageProps) {
         subtitle={task.projects ? `${task.projects.project_code}` : ''}
       />
       <SectionCard>
-        <TaskForm mode="edit" task={task} projects={projects} users={users} taskCategoryOptions={taskCategoryOptions} />
+        <TaskForm
+          mode="edit"
+          task={task}
+          projects={projects}
+          users={users}
+          taskCategoryOptions={taskCategoryOptions}
+          taskEditScope={taskEditScope}
+        />
       </SectionCard>
     </div>
   )

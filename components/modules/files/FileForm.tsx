@@ -7,6 +7,7 @@ import {
   FILE_CATEGORY_OPTIONS,
   FILE_PROVIDER_OPTIONS,
 } from '@/lib/constants/options'
+import type { FileEditFormScope } from '@/lib/auth/edit-form-scopes'
 import type { ProjectFile } from '@/types/database'
 
 type OptionPair = { value: string; label: string }
@@ -19,6 +20,7 @@ interface FileFormProps {
   deliverables?: { id: string; name: string }[]
   defaultProjectId?: string
   fileCategoryOptions?: OptionPair[]
+  fileEditScope?: FileEditFormScope
 }
 
 const inputStyle: React.CSSProperties = {
@@ -57,6 +59,25 @@ const sectionTitleStyle: React.CSSProperties = {
   borderBottom: '1px solid var(--color-border)',
 }
 
+const noticeStyle: React.CSSProperties = {
+  padding: '10px 12px',
+  backgroundColor: 'var(--color-info-subtle)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-control)',
+  fontSize: '0.8125rem',
+  color: 'var(--color-text-secondary)',
+  lineHeight: 1.5,
+}
+
+const readOnlyBoxStyle: React.CSSProperties = {
+  ...inputStyle,
+  opacity: 0.85,
+  cursor: 'default',
+  minHeight: '38px',
+  display: 'flex',
+  alignItems: 'center',
+}
+
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
@@ -68,11 +89,92 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-export function FileForm({ mode, file, projects, tasks, deliverables, defaultProjectId, fileCategoryOptions }: FileFormProps) {
+function FormChrome({
+  error,
+  isPending,
+  mode,
+  onCancel,
+}: {
+  error: string | null
+  isPending: boolean
+  mode: 'create' | 'edit'
+  onCancel: () => void
+}) {
+  return (
+    <>
+      {error && (
+        <div role="alert" style={{
+          padding: '10px 12px',
+          backgroundColor: 'var(--color-danger-subtle)',
+          border: '1px solid var(--color-border-strong)',
+          borderRadius: 'var(--radius-control)',
+          color: 'var(--color-danger)',
+          fontSize: '0.8125rem',
+        }}>
+          {error}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+        <button type="submit" disabled={isPending} style={{
+          padding: '9px 20px',
+          backgroundColor: isPending ? 'var(--color-primary-hover)' : 'var(--color-primary)',
+          color: 'var(--color-primary-fg)',
+          border: 'none',
+          borderRadius: 'var(--radius-control)',
+          fontSize: '0.8125rem',
+          fontWeight: 500,
+          cursor: isPending ? 'not-allowed' : 'pointer',
+        }}>
+          {isPending ? 'Saving…' : mode === 'create' ? 'Add File' : 'Save Changes'}
+        </button>
+        <button type="button" onClick={onCancel} disabled={isPending} style={{
+          padding: '9px 16px',
+          backgroundColor: 'var(--color-surface)',
+          color: 'var(--color-text-secondary)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-control)',
+          fontSize: '0.8125rem',
+          cursor: 'pointer',
+        }}>
+          Cancel
+        </button>
+      </div>
+    </>
+  )
+}
+
+function linkageSummary(
+  file: ProjectFile,
+  projects: FileFormProps['projects'],
+  tasks: FileFormProps['tasks'],
+  deliverables: FileFormProps['deliverables'],
+) {
+  const p = projects.find(x => x.id === file.project_id)
+  const t = tasks?.find(x => x.id === file.task_id)
+  const d = deliverables?.find(x => x.id === file.deliverable_id)
+  return {
+    projectLine: p ? `${p.name} (${p.project_code})` : file.project_id,
+    taskLine: t?.title ?? (file.task_id ? file.task_id : '—'),
+    deliverableLine: d?.name ?? (file.deliverable_id ? file.deliverable_id : '—'),
+  }
+}
+
+export function FileForm({
+  mode,
+  file,
+  projects,
+  tasks,
+  deliverables,
+  defaultProjectId,
+  fileCategoryOptions,
+  fileEditScope,
+}: FileFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [provider, setProvider] = useState(file?.provider ?? 'manual')
+
+  const scope: FileEditFormScope = mode === 'create' ? 'full' : (fileEditScope ?? 'full')
 
   function handleSubmit(formData: FormData) {
     setError(null)
@@ -84,11 +186,143 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
     })
   }
 
+  if (mode === 'edit' && scope === 'uploader' && file) {
+    const { projectLine, taskLine, deliverableLine } = linkageSummary(file, projects, tasks, deliverables)
+    return (
+      <form action={handleSubmit}>
+        <input type="hidden" name="project_id" value={file.project_id} />
+        <input type="hidden" name="task_id" value={file.task_id ?? ''} />
+        <input type="hidden" name="deliverable_id" value={file.deliverable_id ?? ''} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <p style={noticeStyle}>
+            You can update file metadata and links. Project and task linkage are locked; ask a coordinator if those need to change.
+          </p>
+          <div>
+            <p style={sectionTitleStyle}>Project & linkage (read-only)</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <Field label="Project">
+                <div style={readOnlyBoxStyle}>{projectLine}</div>
+              </Field>
+              <div style={fieldGroupStyle}>
+                <Field label="Linked task">
+                  <div style={readOnlyBoxStyle}>{taskLine}</div>
+                </Field>
+                <Field label="Linked deliverable">
+                  <div style={readOnlyBoxStyle}>{deliverableLine}</div>
+                </Field>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>File information</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <Field label="File name" required>
+                <input
+                  name="file_name"
+                  type="text"
+                  required
+                  defaultValue={file.file_name}
+                  style={inputStyle}
+                />
+              </Field>
+              <div style={fieldGroupStyle}>
+                <Field label="Category" required>
+                  <select name="file_category" defaultValue={file.file_category ?? 'working_file'} style={inputStyle}>
+                    {(fileCategoryOptions ?? FILE_CATEGORY_OPTIONS).map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Provider" required>
+                  <select
+                    name="provider"
+                    value={provider}
+                    onChange={(e) => setProvider(e.target.value)}
+                    style={inputStyle}
+                  >
+                    {FILE_PROVIDER_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>
+              {provider === 'google_drive' ? 'Google Drive details' : 'External link'}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {provider === 'manual' && (
+                <Field label="Link URL">
+                  <input
+                    name="manual_link"
+                    type="url"
+                    defaultValue={file.manual_link ?? ''}
+                    placeholder="https://…"
+                    style={inputStyle}
+                  />
+                </Field>
+              )}
+              {provider === 'google_drive' && (
+                <>
+                  <div style={{
+                    padding: '10px 12px',
+                    backgroundColor: 'var(--color-info-subtle)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-control)',
+                    fontSize: '0.8125rem',
+                    color: 'var(--color-info)',
+                  }}>
+                    Google Drive integration is not yet active. Enter metadata manually for now.
+                  </div>
+                  <div style={fieldGroupStyle}>
+                    <Field label="Drive file ID">
+                      <input name="external_file_id" type="text" defaultValue={file.external_file_id ?? ''} placeholder="Google Drive file ID" style={inputStyle} />
+                    </Field>
+                    <Field label="Web view link">
+                      <input name="google_web_view_link" type="url" defaultValue={file.google_web_view_link ?? ''} placeholder="https://drive.google.com/file/d/…" style={inputStyle} />
+                    </Field>
+                  </div>
+                </>
+              )}
+              <div style={fieldGroupStyle}>
+                <Field label="MIME type">
+                  <input name="mime_type" type="text" defaultValue={file.mime_type ?? ''} placeholder="e.g. application/pdf" style={inputStyle} />
+                </Field>
+                <Field label="Extension">
+                  <input name="extension" type="text" defaultValue={file.extension ?? ''} placeholder="e.g. pdf, dwg" style={inputStyle} />
+                </Field>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>Revision</p>
+            <div style={fieldGroupStyle}>
+              <Field label="Revision number">
+                <input name="revision_number" type="number" min={0} defaultValue={file.revision_number ?? ''} style={inputStyle} />
+              </Field>
+              <Field label="Version label">
+                <input name="version_label" type="text" defaultValue={file.version_label ?? ''} style={inputStyle} />
+              </Field>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>Notes</p>
+            <Field label="Notes">
+              <textarea name="notes" rows={3} defaultValue={file.notes ?? ''} placeholder="Additional notes…" style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }} />
+            </Field>
+          </div>
+          <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
+        </div>
+      </form>
+    )
+  }
+
   return (
     <form action={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
-        {/* Section: File Info */}
         <div>
           <p style={sectionTitleStyle}>File Information</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -126,7 +360,6 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
           </div>
         </div>
 
-        {/* Section: Project & Linkage */}
         <div>
           <p style={sectionTitleStyle}>Project & Linkage</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -165,7 +398,6 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
           </div>
         </div>
 
-        {/* Section: Link / Drive */}
         <div>
           <p style={sectionTitleStyle}>
             {provider === 'google_drive' ? 'Google Drive Details' : 'External Link'}
@@ -215,7 +447,6 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
           </div>
         </div>
 
-        {/* Section: Revision */}
         <div>
           <p style={sectionTitleStyle}>Revision</p>
           <div style={fieldGroupStyle}>
@@ -228,7 +459,6 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
           </div>
         </div>
 
-        {/* Section: Notes */}
         <div>
           <p style={sectionTitleStyle}>Notes</p>
           <Field label="Notes">
@@ -236,46 +466,7 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
           </Field>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div role="alert" style={{
-            padding: '10px 12px',
-            backgroundColor: 'var(--color-danger-subtle)',
-            border: '1px solid var(--color-border-strong)',
-            borderRadius: 'var(--radius-control)',
-            color: 'var(--color-danger)',
-            fontSize: '0.8125rem',
-          }}>
-            {error}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
-          <button type="submit" disabled={isPending} style={{
-            padding: '9px 20px',
-            backgroundColor: isPending ? 'var(--color-primary-hover)' : 'var(--color-primary)',
-            color: 'var(--color-primary-fg)',
-            border: 'none',
-            borderRadius: 'var(--radius-control)',
-            fontSize: '0.8125rem',
-            fontWeight: 500,
-            cursor: isPending ? 'not-allowed' : 'pointer',
-          }}>
-            {isPending ? 'Saving…' : mode === 'create' ? 'Add File' : 'Save Changes'}
-          </button>
-          <button type="button" onClick={() => router.back()} disabled={isPending} style={{
-            padding: '9px 16px',
-            backgroundColor: 'var(--color-surface)',
-            color: 'var(--color-text-secondary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: '0.8125rem',
-            cursor: 'pointer',
-          }}>
-            Cancel
-          </button>
-        </div>
+        <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
       </div>
     </form>
   )

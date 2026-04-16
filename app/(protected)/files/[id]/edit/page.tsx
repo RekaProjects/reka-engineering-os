@@ -4,6 +4,7 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { FileForm } from '@/components/modules/files/FileForm'
 import { getSessionProfile } from '@/lib/auth/session'
 import { requireFileEditPage } from '@/lib/auth/access-surface'
+import { getFileEditFormScope } from '@/lib/auth/edit-form-scopes'
 import { getFileById } from '@/lib/files/queries'
 import { projectOptionsForMutationForms } from '@/lib/auth/query-scope'
 import { getTasksByProjectId } from '@/lib/tasks/queries'
@@ -27,6 +28,8 @@ export default async function EditFilePage({ params }: PageProps) {
   if (!file) notFound()
   await requireFileEditPage(profile, file)
 
+  const fileEditScope = getFileEditFormScope(profile, file)
+
   const [projectsRaw, fileCategoryOptions] = await Promise.all([
     projectOptionsForMutationForms(profile, file.project_id),
     getSettingOptions('file_category'),
@@ -46,7 +49,15 @@ export default async function EditFilePage({ params }: PageProps) {
     <div>
       <PageHeader title={`Edit: ${file.file_name}`} subtitle={file.projects ? file.projects.project_code : ''} />
       <SectionCard>
-        <FileForm mode="edit" file={file} projects={projects} tasks={tasks} deliverables={deliverables} fileCategoryOptions={fileCategoryOptions} />
+        <FileForm
+          mode="edit"
+          file={file}
+          projects={projects}
+          tasks={tasks}
+          deliverables={deliverables}
+          fileCategoryOptions={fileCategoryOptions}
+          fileEditScope={fileEditScope}
+        />
       </SectionCard>
     </div>
   )

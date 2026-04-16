@@ -51,7 +51,7 @@ export default function AccessDeniedPage() {
           marginBottom: '28px',
         }}
       >
-        You do not have permission to view this page. If you believe this is a mistake,
+        You do not have permission to view this page or perform that action. If you believe this is a mistake,
         contact your admin.
       </p>
 

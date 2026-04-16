@@ -5,8 +5,8 @@ import { DeliverableForm } from '@/components/modules/deliverables/DeliverableFo
 import { getSessionProfile } from '@/lib/auth/session'
 import { requireDeliverableEditPage } from '@/lib/auth/access-surface'
 import { getDeliverableById } from '@/lib/deliverables/queries'
-import { projectOptionsForMutationForms } from '@/lib/auth/query-scope'
-import { getUsersForSelect } from '@/lib/users/queries'
+import { projectOptionsForMutationForms, usersForAssignmentPickers } from '@/lib/auth/query-scope'
+import { getDeliverableEditFormScope } from '@/lib/auth/edit-form-scopes'
 import { getTasksByProjectId } from '@/lib/tasks/queries'
 import { getSettingOptions } from '@/lib/settings/queries'
 
@@ -27,9 +27,13 @@ export default async function EditDeliverablePage({ params }: PageProps) {
   if (!deliverable) notFound()
   await requireDeliverableEditPage(profile, deliverable)
 
+  const deliverableEditScope = await getDeliverableEditFormScope(profile, deliverable)
+
   const [projectsRaw, users, deliverableTypeOptions] = await Promise.all([
     projectOptionsForMutationForms(profile, deliverable.project_id),
-    getUsersForSelect(),
+    deliverableEditScope === 'full'
+      ? usersForAssignmentPickers(profile, { mode: 'edit', lockedProjectId: deliverable.project_id })
+      : Promise.resolve([]),
     getSettingOptions('deliverable_type'),
   ])
 
@@ -54,6 +58,7 @@ export default async function EditDeliverablePage({ params }: PageProps) {
           users={users}
           tasks={tasks}
           deliverableTypeOptions={deliverableTypeOptions}
+          deliverableEditScope={deliverableEditScope}
         />
       </SectionCard>
     </div>

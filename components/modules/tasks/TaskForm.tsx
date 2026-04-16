@@ -8,17 +8,20 @@ import {
   TASK_CATEGORY_OPTIONS,
   PRIORITY_OPTIONS,
 } from '@/lib/constants/options'
-import type { Task } from '@/types/database'
+import type { TaskEditFormScope } from '@/lib/auth/edit-form-scopes'
+import type { TaskWithRelations } from '@/lib/tasks/queries'
 
 type OptionPair = { value: string; label: string }
 
 interface TaskFormProps {
   mode: 'create' | 'edit'
-  task?: Task
+  task?: TaskWithRelations
   projects: { id: string; name: string; project_code: string }[]
   users: { id: string; full_name: string; email: string; discipline: string | null }[]
   defaultProjectId?: string
   taskCategoryOptions?: OptionPair[]
+  /** When mode is edit, aligns visible fields with server partial-update rules. */
+  taskEditScope?: TaskEditFormScope
 }
 
 const inputStyle: React.CSSProperties = {
@@ -57,6 +60,25 @@ const sectionTitleStyle: React.CSSProperties = {
   borderBottom: '1px solid var(--color-border)',
 }
 
+const noticeStyle: React.CSSProperties = {
+  padding: '10px 12px',
+  backgroundColor: 'var(--color-info-subtle)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-control)',
+  fontSize: '0.8125rem',
+  color: 'var(--color-text-secondary)',
+  lineHeight: 1.5,
+}
+
+const readOnlyBoxStyle: React.CSSProperties = {
+  ...inputStyle,
+  opacity: 0.85,
+  cursor: 'default',
+  minHeight: '38px',
+  display: 'flex',
+  alignItems: 'center',
+}
+
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
@@ -68,10 +90,74 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-export function TaskForm({ mode, task, projects, users, defaultProjectId, taskCategoryOptions }: TaskFormProps) {
+function FormChrome({
+  error,
+  isPending,
+  mode,
+  onCancel,
+}: {
+  error: string | null
+  isPending: boolean
+  mode: 'create' | 'edit'
+  onCancel: () => void
+}) {
+  return (
+    <>
+      {error && (
+        <div role="alert" style={{
+          padding: '10px 12px',
+          backgroundColor: 'var(--color-danger-subtle)',
+          border: '1px solid var(--color-border-strong)',
+          borderRadius: 'var(--radius-control)',
+          color: 'var(--color-danger)',
+          fontSize: '0.8125rem',
+        }}>
+          {error}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+        <button type="submit" disabled={isPending} style={{
+          padding: '9px 20px',
+          backgroundColor: isPending ? 'var(--color-primary-hover)' : 'var(--color-primary)',
+          color: 'var(--color-primary-fg)',
+          border: 'none',
+          borderRadius: 'var(--radius-control)',
+          fontSize: '0.8125rem',
+          fontWeight: 500,
+          cursor: isPending ? 'not-allowed' : 'pointer',
+        }}>
+          {isPending ? 'Saving…' : mode === 'create' ? 'Create Task' : 'Save Changes'}
+        </button>
+        <button type="button" onClick={onCancel} disabled={isPending} style={{
+          padding: '9px 16px',
+          backgroundColor: 'var(--color-surface)',
+          color: 'var(--color-text-secondary)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-control)',
+          fontSize: '0.8125rem',
+          cursor: 'pointer',
+        }}>
+          Cancel
+        </button>
+      </div>
+    </>
+  )
+}
+
+export function TaskForm({
+  mode,
+  task,
+  projects,
+  users,
+  defaultProjectId,
+  taskCategoryOptions,
+  taskEditScope,
+}: TaskFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+
+  const scope: TaskEditFormScope = mode === 'create' ? 'full' : (taskEditScope ?? 'full')
 
   function handleSubmit(formData: FormData) {
     setError(null)
@@ -83,11 +169,169 @@ export function TaskForm({ mode, task, projects, users, defaultProjectId, taskCa
     })
   }
 
+  if (mode === 'edit' && scope === 'reviewer' && task) {
+    return (
+      <form action={handleSubmit}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <p style={noticeStyle}>
+            Review updates: only status, notes, blocked reason, and optional completion date are saved.
+            Other task fields are managed by coordinators and admins.
+          </p>
+          <div>
+            <p style={sectionTitleStyle}>Task</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <Field label="Title">
+                <div style={readOnlyBoxStyle}>{task.title}</div>
+              </Field>
+              {task.projects && (
+                <Field label="Project">
+                  <div style={readOnlyBoxStyle}>
+                    {task.projects.name} ({task.projects.project_code})
+                  </div>
+                </Field>
+              )}
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>Review</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={fieldGroupStyle}>
+                <Field label="Status" required>
+                  <select name="status" defaultValue={task.status ?? 'to_do'} style={inputStyle} required>
+                    {TASK_STATUS_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Completion date (optional)">
+                  <input name="completed_date" type="date" defaultValue={task.completed_date ?? ''} style={inputStyle} />
+                </Field>
+              </div>
+              <Field label="Blocked reason">
+                <input name="blocked_reason" type="text" defaultValue={task.blocked_reason ?? ''} placeholder="Why is this task blocked?" style={inputStyle} />
+              </Field>
+              <Field label="Notes">
+                <textarea name="notes" rows={3} defaultValue={task.notes ?? ''} placeholder="Review notes…" style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }} />
+              </Field>
+            </div>
+          </div>
+          <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
+        </div>
+      </form>
+    )
+  }
+
+  if (mode === 'edit' && scope === 'assignee' && task) {
+    const cats = taskCategoryOptions ?? TASK_CATEGORY_OPTIONS
+    const catLabel = cats.find(c => c.value === (task.category ?? ''))?.label ?? task.category ?? '—'
+
+    return (
+      <form action={handleSubmit}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <p style={noticeStyle}>
+            You can update execution fields only (status, progress, links, hours, notes). Project and assignment are locked.
+          </p>
+          <div>
+            <p style={sectionTitleStyle}>Task (read-only)</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <Field label="Title">
+                <div style={readOnlyBoxStyle}>{task.title}</div>
+              </Field>
+              <Field label="Description">
+                <div style={{ ...readOnlyBoxStyle, whiteSpace: 'pre-wrap', minHeight: '72px', alignItems: 'flex-start', paddingTop: '8px' }}>
+                  {task.description?.trim() ? task.description : '—'}
+                </div>
+              </Field>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>Project & assignment (read-only)</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {task.projects && (
+                <Field label="Project">
+                  <div style={readOnlyBoxStyle}>{task.projects.name} ({task.projects.project_code})</div>
+                </Field>
+              )}
+              <div style={fieldGroupStyle}>
+                <Field label="Category">
+                  <div style={readOnlyBoxStyle}>{catLabel}</div>
+                </Field>
+                <Field label="Phase">
+                  <div style={readOnlyBoxStyle}>{task.phase?.trim() ? task.phase : '—'}</div>
+                </Field>
+              </div>
+              <div style={fieldGroupStyle}>
+                <Field label="Assigned to">
+                  <div style={readOnlyBoxStyle}>{task.assignee?.full_name ?? '—'}</div>
+                </Field>
+                <Field label="Reviewer">
+                  <div style={readOnlyBoxStyle}>{task.reviewer?.full_name ?? '—'}</div>
+                </Field>
+              </div>
+              <div style={fieldGroupStyle}>
+                <Field label="Start date">
+                  <div style={readOnlyBoxStyle}>{task.start_date ?? '—'}</div>
+                </Field>
+                <Field label="Due date">
+                  <div style={readOnlyBoxStyle}>{task.due_date ?? '—'}</div>
+                </Field>
+              </div>
+              <div style={fieldGroupStyle}>
+                <Field label="Estimated hours">
+                  <div style={readOnlyBoxStyle}>{task.estimated_hours != null ? String(task.estimated_hours) : '—'}</div>
+                </Field>
+                <Field label="Priority">
+                  <div style={readOnlyBoxStyle}>
+                    {(PRIORITY_OPTIONS.find(p => p.value === task.priority)?.label) ?? task.priority}
+                  </div>
+                </Field>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>Your updates</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={fieldGroupStyle}>
+                <Field label="Status" required>
+                  <select name="status" defaultValue={task.status ?? 'to_do'} style={inputStyle} required>
+                    {TASK_STATUS_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Completion date (optional)">
+                  <input name="completed_date" type="date" defaultValue={task.completed_date ?? ''} style={inputStyle} />
+                </Field>
+              </div>
+              <div style={fieldGroupStyle}>
+                <Field label="Progress (%)">
+                  <input name="progress_percent" type="number" min={0} max={100} defaultValue={task.progress_percent ?? 0} style={inputStyle} />
+                </Field>
+                <Field label="Actual hours">
+                  <input name="actual_hours" type="number" step="0.5" min="0" defaultValue={task.actual_hours ?? ''} style={inputStyle} />
+                </Field>
+              </div>
+              <Field label="Blocked reason">
+                <input name="blocked_reason" type="text" defaultValue={task.blocked_reason ?? ''} placeholder="Why is this task blocked?" style={inputStyle} />
+              </Field>
+              <Field label="Drive link">
+                <input name="drive_link" type="url" defaultValue={task.drive_link ?? ''} placeholder="https://…" style={inputStyle} />
+              </Field>
+              <Field label="Notes">
+                <textarea name="notes" rows={3} defaultValue={task.notes ?? ''} placeholder="Additional notes…" style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }} />
+              </Field>
+            </div>
+          </div>
+          <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
+        </div>
+      </form>
+    )
+  }
+
   return (
     <form action={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
-        {/* Section: Task Info */}
         <div>
           <p style={sectionTitleStyle}>Task Information</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -113,7 +357,6 @@ export function TaskForm({ mode, task, projects, users, defaultProjectId, taskCa
           </div>
         </div>
 
-        {/* Section: Project & Classification */}
         <div>
           <p style={sectionTitleStyle}>Project & Classification</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -160,7 +403,6 @@ export function TaskForm({ mode, task, projects, users, defaultProjectId, taskCa
           </div>
         </div>
 
-        {/* Section: Assignment */}
         <div>
           <p style={sectionTitleStyle}>Assignment</p>
           <div style={fieldGroupStyle}>
@@ -196,7 +438,6 @@ export function TaskForm({ mode, task, projects, users, defaultProjectId, taskCa
           </div>
         </div>
 
-        {/* Section: Timeline */}
         <div>
           <p style={sectionTitleStyle}>Timeline</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -221,7 +462,6 @@ export function TaskForm({ mode, task, projects, users, defaultProjectId, taskCa
           </div>
         </div>
 
-        {/* Section: Status & Priority */}
         <div>
           <p style={sectionTitleStyle}>Status & Priority</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -252,7 +492,6 @@ export function TaskForm({ mode, task, projects, users, defaultProjectId, taskCa
           </div>
         </div>
 
-        {/* Section: Links & Notes */}
         <div>
           <p style={sectionTitleStyle}>Links & Notes</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -265,46 +504,7 @@ export function TaskForm({ mode, task, projects, users, defaultProjectId, taskCa
           </div>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div role="alert" style={{
-            padding: '10px 12px',
-            backgroundColor: 'var(--color-danger-subtle)',
-            border: '1px solid var(--color-border-strong)',
-            borderRadius: 'var(--radius-control)',
-            color: 'var(--color-danger)',
-            fontSize: '0.8125rem',
-          }}>
-            {error}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
-          <button type="submit" disabled={isPending} style={{
-            padding: '9px 20px',
-            backgroundColor: isPending ? 'var(--color-primary-hover)' : 'var(--color-primary)',
-            color: 'var(--color-primary-fg)',
-            border: 'none',
-            borderRadius: 'var(--radius-control)',
-            fontSize: '0.8125rem',
-            fontWeight: 500,
-            cursor: isPending ? 'not-allowed' : 'pointer',
-          }}>
-            {isPending ? 'Saving…' : mode === 'create' ? 'Create Task' : 'Save Changes'}
-          </button>
-          <button type="button" onClick={() => router.back()} disabled={isPending} style={{
-            padding: '9px 16px',
-            backgroundColor: 'var(--color-surface)',
-            color: 'var(--color-text-secondary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: '0.8125rem',
-            cursor: 'pointer',
-          }}>
-            Cancel
-          </button>
-        </div>
+        <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
       </div>
     </form>
   )

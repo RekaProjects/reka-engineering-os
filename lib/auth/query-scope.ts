@@ -6,6 +6,12 @@ import { effectiveRole } from '@/lib/auth/permissions'
 import type { SessionProfile } from '@/lib/auth/session'
 import { userCanEditProjectMetadata, userCanViewProject } from '@/lib/auth/access-surface'
 import { getProjectById, getProjects, type ProjectWithRelations } from '@/lib/projects/queries'
+import {
+  getUsersForCoordinatorProjectPortfolio,
+  getUsersForProjectAssignment,
+  getUsersForSelect,
+  type UserSelectRow,
+} from '@/lib/users/queries'
 
 /**
  * Projects shown in task/deliverable/file forms.
@@ -38,4 +44,26 @@ export async function projectOptionsForMutationForms(
   }
 
   return []
+}
+
+/**
+ * Profiles for task/deliverable assignment dropdowns (lead, reviewer, team on a project).
+ * - Admin: all active profiles
+ * - Coordinator (edit, known project): roster for that project only
+ * - Coordinator (create or no project yet): union across assigned portfolio
+ * - Other roles: full list (only admin/coordinator reach assignment pickers in practice)
+ */
+export async function usersForAssignmentPickers(
+  profile: SessionProfile,
+  opts: { mode: 'create' | 'edit'; lockedProjectId: string | null },
+): Promise<UserSelectRow[]> {
+  const r = effectiveRole(profile.system_role)
+  if (r === 'admin') return getUsersForSelect()
+  if (r === 'coordinator') {
+    if (opts.mode === 'edit' && opts.lockedProjectId) {
+      return getUsersForProjectAssignment(opts.lockedProjectId)
+    }
+    return getUsersForCoordinatorProjectPortfolio(profile.id)
+  }
+  return getUsersForSelect()
 }

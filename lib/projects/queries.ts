@@ -14,7 +14,7 @@ export type ProjectWithRelations = Project & {
 // ─── Scoping helper ──────────────────────────────────────────
 // Returns project IDs that a user is assigned to via project_team_assignments.
 
-async function getAssignedProjectIds(userId: string): Promise<string[]> {
+export async function getAssignedProjectIdsForUser(userId: string): Promise<string[]> {
   const supabase = await createServerClient()
   const { data } = await supabase
     .from('project_team_assignments')
@@ -75,7 +75,7 @@ export async function getProjects(opts?: {
 
   // Role-scoped filters
   if (opts?.assignedUserId) {
-    const ids = await getAssignedProjectIds(opts.assignedUserId)
+    const ids = await getAssignedProjectIdsForUser(opts.assignedUserId)
     if (ids.length === 0) return []
     query = query.in('id', ids)
   }

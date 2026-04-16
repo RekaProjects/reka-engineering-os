@@ -1,7 +1,9 @@
 import type { CSSProperties } from 'react'
+import { redirect } from 'next/navigation'
 import { Wallet } from 'lucide-react'
 
 import { getSessionProfile } from '@/lib/auth/session'
+import { effectiveRole } from '@/lib/auth/permissions'
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState }  from '@/components/shared/EmptyState'
@@ -33,6 +35,9 @@ const TD: CSSProperties = {
 
 export default async function MyPaymentsPage() {
   const profile = await getSessionProfile()
+  const r = effectiveRole(profile.system_role)
+  if (r === 'admin' || r === 'coordinator') redirect('/dashboard')
+
   const records = await getPaymentsByMember(profile.id)
 
   const totalDue  = records.reduce((s, r) => s + Number(r.total_due), 0)

@@ -7,18 +7,20 @@ import {
   DELIVERABLE_STATUS_OPTIONS,
   DELIVERABLE_TYPE_OPTIONS,
 } from '@/lib/constants/options'
-import type { Deliverable } from '@/types/database'
+import type { DeliverableEditFormScope } from '@/lib/auth/edit-form-scopes'
+import type { DeliverableWithRelations } from '@/lib/deliverables/queries'
 
 type OptionPair = { value: string; label: string }
 
 interface DeliverableFormProps {
   mode: 'create' | 'edit'
-  deliverable?: Deliverable
+  deliverable?: DeliverableWithRelations
   projects: { id: string; name: string; project_code: string }[]
   users: { id: string; full_name: string; email: string; discipline: string | null }[]
   tasks?: { id: string; title: string }[]
   defaultProjectId?: string
   deliverableTypeOptions?: OptionPair[]
+  deliverableEditScope?: DeliverableEditFormScope
 }
 
 const inputStyle: React.CSSProperties = {
@@ -57,6 +59,25 @@ const sectionTitleStyle: React.CSSProperties = {
   borderBottom: '1px solid var(--color-border)',
 }
 
+const noticeStyle: React.CSSProperties = {
+  padding: '10px 12px',
+  backgroundColor: 'var(--color-info-subtle)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-control)',
+  fontSize: '0.8125rem',
+  color: 'var(--color-text-secondary)',
+  lineHeight: 1.5,
+}
+
+const readOnlyBoxStyle: React.CSSProperties = {
+  ...inputStyle,
+  opacity: 0.85,
+  cursor: 'default',
+  minHeight: '38px',
+  display: 'flex',
+  alignItems: 'center',
+}
+
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
@@ -68,10 +89,75 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-export function DeliverableForm({ mode, deliverable, projects, users, tasks, defaultProjectId, deliverableTypeOptions }: DeliverableFormProps) {
+function FormChrome({
+  error,
+  isPending,
+  mode,
+  onCancel,
+}: {
+  error: string | null
+  isPending: boolean
+  mode: 'create' | 'edit'
+  onCancel: () => void
+}) {
+  return (
+    <>
+      {error && (
+        <div role="alert" style={{
+          padding: '10px 12px',
+          backgroundColor: 'var(--color-danger-subtle)',
+          border: '1px solid var(--color-border-strong)',
+          borderRadius: 'var(--radius-control)',
+          color: 'var(--color-danger)',
+          fontSize: '0.8125rem',
+        }}>
+          {error}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+        <button type="submit" disabled={isPending} style={{
+          padding: '9px 20px',
+          backgroundColor: isPending ? 'var(--color-primary-hover)' : 'var(--color-primary)',
+          color: 'var(--color-primary-fg)',
+          border: 'none',
+          borderRadius: 'var(--radius-control)',
+          fontSize: '0.8125rem',
+          fontWeight: 500,
+          cursor: isPending ? 'not-allowed' : 'pointer',
+        }}>
+          {isPending ? 'Saving…' : mode === 'create' ? 'Create Deliverable' : 'Save Changes'}
+        </button>
+        <button type="button" onClick={onCancel} disabled={isPending} style={{
+          padding: '9px 16px',
+          backgroundColor: 'var(--color-surface)',
+          color: 'var(--color-text-secondary)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-control)',
+          fontSize: '0.8125rem',
+          cursor: 'pointer',
+        }}>
+          Cancel
+        </button>
+      </div>
+    </>
+  )
+}
+
+export function DeliverableForm({
+  mode,
+  deliverable,
+  projects,
+  users,
+  tasks,
+  defaultProjectId,
+  deliverableTypeOptions,
+  deliverableEditScope,
+}: DeliverableFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+
+  const scope: DeliverableEditFormScope = mode === 'create' ? 'full' : (deliverableEditScope ?? 'full')
 
   function handleSubmit(formData: FormData) {
     setError(null)
@@ -83,11 +169,245 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
     })
   }
 
+  const typeOpts = deliverableTypeOptions ?? DELIVERABLE_TYPE_OPTIONS
+
+  if (mode === 'edit' && scope === 'reviewer' && deliverable) {
+    const typeLabel = typeOpts.find(t => t.value === deliverable.type)?.label ?? deliverable.type
+    return (
+      <form action={handleSubmit}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <p style={noticeStyle}>
+            Review updates: status, client-facing dates, and client feedback summary are saved. Other fields are managed by coordinators and admins.
+          </p>
+          <div>
+            <p style={sectionTitleStyle}>Deliverable (read-only)</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <Field label="Name">
+                <div style={readOnlyBoxStyle}>{deliverable.name}</div>
+              </Field>
+              {deliverable.projects && (
+                <Field label="Project">
+                  <div style={readOnlyBoxStyle}>
+                    {deliverable.projects.name} ({deliverable.projects.project_code})
+                  </div>
+                </Field>
+              )}
+              <div style={fieldGroupStyle}>
+                <Field label="Type">
+                  <div style={readOnlyBoxStyle}>{typeLabel}</div>
+                </Field>
+                <Field label="Prepared by">
+                  <div style={readOnlyBoxStyle}>{deliverable.preparer?.full_name ?? '—'}</div>
+                </Field>
+              </div>
+              {deliverable.file_link && (
+                <Field label="File link">
+                  <div style={readOnlyBoxStyle}>
+                    <a href={deliverable.file_link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)' }}>
+                      {deliverable.file_link}
+                    </a>
+                  </div>
+                </Field>
+              )}
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>Review</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ maxWidth: '50%' }}>
+                <Field label="Status" required>
+                  <select name="status" defaultValue={deliverable.status ?? 'draft'} style={inputStyle} required>
+                    {DELIVERABLE_STATUS_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <div style={fieldGroupStyle}>
+                <Field label="Submitted to client date">
+                  <input
+                    name="submitted_to_client_date"
+                    type="date"
+                    defaultValue={deliverable.submitted_to_client_date ?? ''}
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label="Approved date">
+                  <input
+                    name="approved_date"
+                    type="date"
+                    defaultValue={deliverable.approved_date ?? ''}
+                    style={inputStyle}
+                  />
+                </Field>
+              </div>
+              <Field label="Client feedback summary">
+                <textarea
+                  name="client_feedback_summary"
+                  rows={3}
+                  defaultValue={deliverable.client_feedback_summary ?? ''}
+                  placeholder="Summary of client feedback, revision requests…"
+                  style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }}
+                />
+              </Field>
+            </div>
+          </div>
+          <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
+        </div>
+      </form>
+    )
+  }
+
+  if (mode === 'edit' && scope === 'preparer' && deliverable) {
+    return (
+      <form action={handleSubmit}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <p style={noticeStyle}>
+            You can update this deliverable&apos;s definition and submission fields. Assignment and client feedback summary are locked (reviewers update feedback).
+          </p>
+          <div>
+            <p style={sectionTitleStyle}>Context (read-only)</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {deliverable.projects && (
+                <Field label="Project">
+                  <div style={readOnlyBoxStyle}>
+                    {deliverable.projects.name} ({deliverable.projects.project_code})
+                  </div>
+                </Field>
+              )}
+              <div style={fieldGroupStyle}>
+                <Field label="Prepared by">
+                  <div style={readOnlyBoxStyle}>{deliverable.preparer?.full_name ?? '—'}</div>
+                </Field>
+                <Field label="Reviewed by">
+                  <div style={readOnlyBoxStyle}>{deliverable.reviewer_profile?.full_name ?? '—'}</div>
+                </Field>
+              </div>
+              <Field label="Client feedback summary">
+                <div style={{ ...readOnlyBoxStyle, whiteSpace: 'pre-wrap', minHeight: '72px', alignItems: 'flex-start', paddingTop: '8px' }}>
+                  {deliverable.client_feedback_summary?.trim() ? deliverable.client_feedback_summary : '—'}
+                </div>
+              </Field>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>Deliverable information</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <Field label="Name" required>
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  defaultValue={deliverable.name}
+                  style={inputStyle}
+                />
+              </Field>
+              <Field label="Description">
+                <textarea
+                  name="description"
+                  rows={3}
+                  defaultValue={deliverable.description ?? ''}
+                  style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }}
+                />
+              </Field>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>Classification</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={fieldGroupStyle}>
+                <Field label="Type" required>
+                  <select name="type" defaultValue={deliverable.type} style={inputStyle} required>
+                    <option value="">Select type…</option>
+                    {typeOpts.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </Field>
+                {tasks && tasks.length > 0 && (
+                  <Field label="Linked task (optional)">
+                    <select name="linked_task_id" defaultValue={deliverable.linked_task_id ?? ''} style={inputStyle}>
+                      <option value="">No linked task</option>
+                      {tasks.map((t) => (
+                        <option key={t.id} value={t.id}>{t.title}</option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
+              </div>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>Revision</p>
+            <div style={fieldGroupStyle}>
+              <Field label="Revision number" required>
+                <input
+                  name="revision_number"
+                  type="number"
+                  min={0}
+                  defaultValue={deliverable.revision_number ?? 0}
+                  style={inputStyle}
+                  required
+                />
+              </Field>
+              <Field label="Version label">
+                <input
+                  name="version_label"
+                  type="text"
+                  defaultValue={deliverable.version_label ?? ''}
+                  style={inputStyle}
+                />
+              </Field>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>Status & dates</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ maxWidth: '50%' }}>
+                <Field label="Status" required>
+                  <select name="status" defaultValue={deliverable.status ?? 'draft'} style={inputStyle} required>
+                    {DELIVERABLE_STATUS_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <div style={fieldGroupStyle}>
+                <Field label="Submitted to client date">
+                  <input
+                    name="submitted_to_client_date"
+                    type="date"
+                    defaultValue={deliverable.submitted_to_client_date ?? ''}
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label="Approved date">
+                  <input
+                    name="approved_date"
+                    type="date"
+                    defaultValue={deliverable.approved_date ?? ''}
+                    style={inputStyle}
+                  />
+                </Field>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p style={sectionTitleStyle}>File</p>
+            <Field label="File link">
+              <input name="file_link" type="url" defaultValue={deliverable.file_link ?? ''} style={inputStyle} />
+            </Field>
+          </div>
+          <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
+        </div>
+      </form>
+    )
+  }
+
   return (
     <form action={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
-        {/* Section: Deliverable Info */}
         <div>
           <p style={sectionTitleStyle}>Deliverable Information</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -113,7 +433,6 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
           </div>
         </div>
 
-        {/* Section: Project & Classification */}
         <div>
           <p style={sectionTitleStyle}>Project & Classification</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -136,7 +455,7 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
               <Field label="Type" required>
                 <select name="type" defaultValue={deliverable?.type ?? ''} style={inputStyle} required>
                   <option value="">Select type…</option>
-                  {(deliverableTypeOptions ?? DELIVERABLE_TYPE_OPTIONS).map(o => (
+                  {typeOpts.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
@@ -161,7 +480,6 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
           </div>
         </div>
 
-        {/* Section: Revision */}
         <div>
           <p style={sectionTitleStyle}>Revision</p>
           <div style={fieldGroupStyle}>
@@ -186,7 +504,6 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
           </div>
         </div>
 
-        {/* Section: Assignment */}
         <div>
           <p style={sectionTitleStyle}>Assignment</p>
           <div style={fieldGroupStyle}>
@@ -222,7 +539,6 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
           </div>
         </div>
 
-        {/* Section: Status & Dates */}
         <div>
           <p style={sectionTitleStyle}>Status & Dates</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -258,7 +574,6 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
           </div>
         </div>
 
-        {/* Section: Client Feedback & File */}
         <div>
           <p style={sectionTitleStyle}>Client Feedback & File</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -283,46 +598,7 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
           </div>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div role="alert" style={{
-            padding: '10px 12px',
-            backgroundColor: 'var(--color-danger-subtle)',
-            border: '1px solid var(--color-border-strong)',
-            borderRadius: 'var(--radius-control)',
-            color: 'var(--color-danger)',
-            fontSize: '0.8125rem',
-          }}>
-            {error}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
-          <button type="submit" disabled={isPending} style={{
-            padding: '9px 20px',
-            backgroundColor: isPending ? 'var(--color-primary-hover)' : 'var(--color-primary)',
-            color: 'var(--color-primary-fg)',
-            border: 'none',
-            borderRadius: 'var(--radius-control)',
-            fontSize: '0.8125rem',
-            fontWeight: 500,
-            cursor: isPending ? 'not-allowed' : 'pointer',
-          }}>
-            {isPending ? 'Saving…' : mode === 'create' ? 'Create Deliverable' : 'Save Changes'}
-          </button>
-          <button type="button" onClick={() => router.back()} disabled={isPending} style={{
-            padding: '9px 16px',
-            backgroundColor: 'var(--color-surface)',
-            color: 'var(--color-text-secondary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: '0.8125rem',
-            cursor: 'pointer',
-          }}>
-            Cancel
-          </button>
-        </div>
+        <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
       </div>
     </form>
   )

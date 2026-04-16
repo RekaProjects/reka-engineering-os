@@ -1,5 +1,6 @@
 // Server-side query helpers for the Clients module
 import { createServerClient } from '@/lib/supabase/server'
+import { getAssignedProjectIdsForUser } from '@/lib/projects/queries'
 import type { Client } from '@/types/database'
 
 export async function getClients(opts?: {
@@ -37,6 +38,35 @@ export async function getClientsForSelect(): Promise<{ id: string; client_name: 
   const { data, error } = await supabase
     .from('clients')
     .select('id, client_name, client_code')
+    .in('status', ['lead', 'active'])
+    .order('client_name', { ascending: true })
+
+  if (error) return []
+  return data ?? []
+}
+
+/** Clients linked to projects the coordinator is assigned to (project edit / scoped ops). */
+export async function getClientsForCoordinatorScopedSelect(
+  coordinatorUserId: string,
+): Promise<{ id: string; client_name: string; client_code: string }[]> {
+  const projectIds = await getAssignedProjectIdsForUser(coordinatorUserId)
+  if (projectIds.length === 0) return []
+
+  const supabase = await createServerClient()
+  const { data: projects, error: pe } = await supabase
+    .from('projects')
+    .select('client_id')
+    .in('id', projectIds)
+
+  if (pe || !projects?.length) return []
+
+  const clientIds = [...new Set(projects.map((p) => p.client_id).filter(Boolean))] as string[]
+  if (clientIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id, client_name, client_code')
+    .in('id', clientIds)
     .in('status', ['lead', 'active'])
     .order('client_name', { ascending: true })
 

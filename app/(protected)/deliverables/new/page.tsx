@@ -3,8 +3,7 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { DeliverableForm } from '@/components/modules/deliverables/DeliverableForm'
 import { getSessionProfile } from '@/lib/auth/session'
 import { requireTasksDeliverablesFilesNewPageAccess } from '@/lib/auth/access-surface'
-import { getUsersForSelect } from '@/lib/users/queries'
-import { projectOptionsForMutationForms } from '@/lib/auth/query-scope'
+import { projectOptionsForMutationForms, usersForAssignmentPickers } from '@/lib/auth/query-scope'
 import { getTasksByProjectId } from '@/lib/tasks/queries'
 import { getSettingOptions } from '@/lib/settings/queries'
 
@@ -21,7 +20,7 @@ export default async function NewDeliverablePage({ searchParams }: PageProps) {
   const params = await searchParams
   const [projectsRaw, users, deliverableTypeOptions] = await Promise.all([
     projectOptionsForMutationForms(profile, params.project_id ?? null),
-    getUsersForSelect(),
+    usersForAssignmentPickers(profile, { mode: 'create', lockedProjectId: params.project_id ?? null }),
     getSettingOptions('deliverable_type'),
   ])
 
