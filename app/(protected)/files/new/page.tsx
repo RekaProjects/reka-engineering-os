@@ -4,6 +4,7 @@ import { FileForm } from '@/components/modules/files/FileForm'
 import { getProjects } from '@/lib/projects/queries'
 import { getTasksByProjectId } from '@/lib/tasks/queries'
 import { getDeliverablesByProjectId } from '@/lib/deliverables/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'Add File — Engineering Agency OS' }
 
@@ -13,7 +14,10 @@ interface PageProps {
 
 export default async function NewFilePage({ searchParams }: PageProps) {
   const params = await searchParams
-  const projectsRaw = await getProjects()
+  const [projectsRaw, fileCategoryOptions] = await Promise.all([
+    getProjects(),
+    getSettingOptions('file_category'),
+  ])
   const projects = projectsRaw.map(p => ({ id: p.id, name: p.name, project_code: p.project_code }))
 
   const tasks = params.project_id
@@ -34,6 +38,7 @@ export default async function NewFilePage({ searchParams }: PageProps) {
           tasks={tasks}
           deliverables={deliverables}
           defaultProjectId={params.project_id}
+          fileCategoryOptions={fileCategoryOptions}
         />
       </SectionCard>
     </div>

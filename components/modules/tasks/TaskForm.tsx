@@ -10,12 +10,15 @@ import {
 } from '@/lib/constants/options'
 import type { Task } from '@/types/database'
 
+type OptionPair = { value: string; label: string }
+
 interface TaskFormProps {
   mode: 'create' | 'edit'
   task?: Task
   projects: { id: string; name: string; project_code: string }[]
   users: { id: string; full_name: string; email: string; discipline: string | null }[]
   defaultProjectId?: string
+  taskCategoryOptions?: OptionPair[]
 }
 
 const inputStyle: React.CSSProperties = {
@@ -65,7 +68,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-export function TaskForm({ mode, task, projects, users, defaultProjectId }: TaskFormProps) {
+export function TaskForm({ mode, task, projects, users, defaultProjectId, taskCategoryOptions }: TaskFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -137,7 +140,7 @@ export function TaskForm({ mode, task, projects, users, defaultProjectId }: Task
                   style={inputStyle}
                 >
                   <option value="">No category</option>
-                  {TASK_CATEGORY_OPTIONS.map(o => (
+                  {(taskCategoryOptions ?? TASK_CATEGORY_OPTIONS).map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>

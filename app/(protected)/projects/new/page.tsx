@@ -3,13 +3,16 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { ProjectForm } from '@/components/modules/projects/ProjectForm'
 import { getClientsForSelect } from '@/lib/clients/queries'
 import { getUsersForSelect } from '@/lib/users/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'New Project — Engineering Agency OS' }
 
 export default async function NewProjectPage() {
-  const [clients, users] = await Promise.all([
+  const [clients, users, disciplineOptions, projectTypeOptions] = await Promise.all([
     getClientsForSelect(),
     getUsersForSelect(),
+    getSettingOptions('discipline'),
+    getSettingOptions('project_type'),
   ])
 
   return (
@@ -19,7 +22,7 @@ export default async function NewProjectPage() {
         subtitle="Create a new engineering project."
       />
       <SectionCard>
-        <ProjectForm mode="create" clients={clients} users={users} />
+        <ProjectForm mode="create" clients={clients} users={users} disciplineOptions={disciplineOptions} projectTypeOptions={projectTypeOptions} />
       </SectionCard>
     </div>
   )

@@ -5,12 +5,14 @@ import type { CSSProperties } from 'react'
 import { PAYMENT_METHOD_OPTIONS } from '@/lib/constants/options'
 
 type MemberOption = { id: string; full_name: string }
+type OptionPair = { value: string; label: string }
 
 interface Props {
   members: MemberOption[]
   defaultValues?: Record<string, string | number | null>
   action: (formData: FormData) => Promise<{ error: string } | void>
   submitLabel: string
+  paymentMethodOptions?: OptionPair[]
 }
 
 const LABEL: CSSProperties = {
@@ -37,7 +39,7 @@ const GRID2: CSSProperties = {
   gap: '14px',
 }
 
-export function PaymentForm({ members, defaultValues: dv = {}, action, submitLabel }: Props) {
+export function PaymentForm({ members, defaultValues: dv = {}, action, submitLabel, paymentMethodOptions }: Props) {
   async function clientAction(_prev: { error: string } | null, formData: FormData) {
     const result = await action(formData)
     if (result && 'error' in result) return result
@@ -115,7 +117,7 @@ export function PaymentForm({ members, defaultValues: dv = {}, action, submitLab
               <label style={LABEL}>Payment Method</label>
               <select name="payment_method" defaultValue={(dv.payment_method as string) ?? ''} style={INPUT}>
                 <option value="">Select…</option>
-                {PAYMENT_METHOD_OPTIONS.map((o) => (
+                {(paymentMethodOptions ?? PAYMENT_METHOD_OPTIONS).map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>

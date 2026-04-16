@@ -6,6 +6,7 @@ import { getFileById } from '@/lib/files/queries'
 import { getProjects } from '@/lib/projects/queries'
 import { getTasksByProjectId } from '@/lib/tasks/queries'
 import { getDeliverablesByProjectId } from '@/lib/deliverables/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -19,9 +20,10 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function EditFilePage({ params }: PageProps) {
   const { id } = await params
-  const [file, projectsRaw] = await Promise.all([
+  const [file, projectsRaw, fileCategoryOptions] = await Promise.all([
     getFileById(id),
     getProjects(),
+    getSettingOptions('file_category'),
   ])
 
   if (!file) notFound()
@@ -40,7 +42,7 @@ export default async function EditFilePage({ params }: PageProps) {
     <div>
       <PageHeader title={`Edit: ${file.file_name}`} subtitle={file.projects ? file.projects.project_code : ''} />
       <SectionCard>
-        <FileForm mode="edit" file={file} projects={projects} tasks={tasks} deliverables={deliverables} />
+        <FileForm mode="edit" file={file} projects={projects} tasks={tasks} deliverables={deliverables} fileCategoryOptions={fileCategoryOptions} />
       </SectionCard>
     </div>
   )

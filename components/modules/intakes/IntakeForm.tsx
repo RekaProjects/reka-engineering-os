@@ -12,10 +12,14 @@ import {
 } from '@/lib/constants/options'
 import type { Intake } from '@/types/database'
 
+type OptionPair = { value: string; label: string }
+
 interface IntakeFormProps {
   mode: 'create' | 'edit'
   intake?: Intake
   clients: { id: string; client_name: string; client_code: string }[]
+  disciplineOptions?: OptionPair[]
+  projectTypeOptions?: OptionPair[]
 }
 
 const inputStyle: React.CSSProperties = {
@@ -65,7 +69,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-export function IntakeForm({ mode, intake, clients }: IntakeFormProps) {
+export function IntakeForm({ mode, intake, clients, disciplineOptions, projectTypeOptions }: IntakeFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -216,14 +220,14 @@ export function IntakeForm({ mode, intake, clients }: IntakeFormProps) {
             <div style={fieldGroupStyle}>
               <Field label="Discipline" required>
                 <select name="discipline" defaultValue={intake?.discipline ?? 'mechanical'} style={inputStyle} required>
-                  {DISCIPLINES.map(o => (
+                  {(disciplineOptions ?? DISCIPLINES).map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </Field>
               <Field label="Project Type" required>
                 <select name="project_type" defaultValue={intake?.project_type ?? 'design'} style={inputStyle} required>
-                  {PROJECT_TYPES.map(o => (
+                  {(projectTypeOptions ?? PROJECT_TYPES).map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>

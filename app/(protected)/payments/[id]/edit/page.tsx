@@ -7,6 +7,7 @@ import { PaymentForm } from '@/components/modules/payments/PaymentForm'
 import { getPaymentById } from '@/lib/payments/queries'
 import { updatePayment } from '@/lib/payments/actions'
 import { getMemberOptions } from '@/lib/compensation/helpers'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps { params: Promise<{ id: string }> }
 
@@ -21,9 +22,10 @@ export default async function EditPaymentPage({ params }: PageProps) {
   requireRole(_sp.system_role, ['admin'])
 
   const { id } = await params
-  const [record, members] = await Promise.all([
+  const [record, members, paymentMethodOptions] = await Promise.all([
     getPaymentById(id),
     getMemberOptions(),
+    getSettingOptions('payment_method'),
   ])
 
   if (!record) notFound()
@@ -53,6 +55,7 @@ export default async function EditPaymentPage({ params }: PageProps) {
           defaultValues={dv}
           action={updatePayment.bind(null, id)}
           submitLabel="Save Changes"
+          paymentMethodOptions={paymentMethodOptions}
         />
       </SectionCard>
     </div>

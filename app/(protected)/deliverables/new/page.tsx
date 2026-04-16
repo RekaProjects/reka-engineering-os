@@ -4,6 +4,7 @@ import { DeliverableForm } from '@/components/modules/deliverables/DeliverableFo
 import { getUsersForSelect } from '@/lib/users/queries'
 import { getProjects } from '@/lib/projects/queries'
 import { getTasksByProjectId } from '@/lib/tasks/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'New Deliverable — Engineering Agency OS' }
 
@@ -13,9 +14,10 @@ interface PageProps {
 
 export default async function NewDeliverablePage({ searchParams }: PageProps) {
   const params = await searchParams
-  const [projectsRaw, users] = await Promise.all([
+  const [projectsRaw, users, deliverableTypeOptions] = await Promise.all([
     getProjects(),
     getUsersForSelect(),
+    getSettingOptions('deliverable_type'),
   ])
 
   const projects = projectsRaw.map(p => ({ id: p.id, name: p.name, project_code: p.project_code }))
@@ -38,6 +40,7 @@ export default async function NewDeliverablePage({ searchParams }: PageProps) {
           users={users}
           tasks={tasks}
           defaultProjectId={params.project_id}
+          deliverableTypeOptions={deliverableTypeOptions}
         />
       </SectionCard>
     </div>

@@ -13,13 +13,12 @@ import { getTeamMembers }    from '@/lib/team/queries'
 import { getPendingInvites } from '@/lib/invites/queries'
 import { revokeInvite as _revokeInvite } from '@/lib/invites/actions'
 import { formatDate }        from '@/lib/utils/formatters'
-import { FUNCTIONAL_ROLES, SYSTEM_ROLES, WORKER_TYPES } from '@/lib/constants/options'
+import { SYSTEM_ROLES } from '@/lib/constants/options'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'Team — Engineering Agency OS' }
 
-const FUNCTIONAL_LABEL = Object.fromEntries(FUNCTIONAL_ROLES.map((r) => [r.value, r.label]))
 const SYSTEM_ROLE_LABEL = Object.fromEntries(SYSTEM_ROLES.map((r) => [r.value, r.label]))
-const WORKER_TYPE_LABEL = Object.fromEntries(WORKER_TYPES.map((r) => [r.value, r.label]))
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
@@ -57,10 +56,14 @@ export default async function TeamPage({
   requireRole(_sp.system_role, ['admin'])
 
   const { invited } = await searchParams
-  const [members, pendingInvites] = await Promise.all([
+  const [members, pendingInvites, funcOpts, wtOpts] = await Promise.all([
     getTeamMembers(),
     getPendingInvites(),
+    getSettingOptions('functional_role'),
+    getSettingOptions('worker_type'),
   ])
+  const FUNCTIONAL_LABEL = Object.fromEntries(funcOpts.map((r) => [r.value, r.label]))
+  const WORKER_TYPE_LABEL = Object.fromEntries(wtOpts.map((r) => [r.value, r.label]))
 
   return (
     <div>

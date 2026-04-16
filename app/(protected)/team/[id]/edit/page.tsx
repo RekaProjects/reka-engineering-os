@@ -5,6 +5,7 @@ import { PageHeader }     from '@/components/layout/PageHeader'
 import { SectionCard }    from '@/components/shared/SectionCard'
 import { TeamMemberForm } from '@/components/modules/team/TeamMemberForm'
 import { getMemberById }  from '@/lib/team/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -21,7 +22,12 @@ export default async function EditTeamMemberPage({ params }: PageProps) {
   requireRole(_sp.system_role, ['admin'])
 
   const { id } = await params
-  const member = await getMemberById(id)
+  const [member, functionalRoleOptions, disciplineOptions, workerTypeOptions] = await Promise.all([
+    getMemberById(id),
+    getSettingOptions('functional_role'),
+    getSettingOptions('discipline'),
+    getSettingOptions('worker_type'),
+  ])
   if (!member) notFound()
 
   return (
@@ -31,7 +37,7 @@ export default async function EditTeamMemberPage({ params }: PageProps) {
         subtitle="Update profile, role, availability, and rate information."
       />
       <SectionCard>
-        <TeamMemberForm mode="edit" member={member} />
+        <TeamMemberForm mode="edit" member={member} functionalRoleOptions={functionalRoleOptions} disciplineOptions={disciplineOptions} workerTypeOptions={workerTypeOptions} />
       </SectionCard>
     </div>
   )

@@ -9,6 +9,8 @@ import {
 } from '@/lib/constants/options'
 import type { ProjectFile } from '@/types/database'
 
+type OptionPair = { value: string; label: string }
+
 interface FileFormProps {
   mode: 'create' | 'edit'
   file?: ProjectFile
@@ -16,6 +18,7 @@ interface FileFormProps {
   tasks?: { id: string; title: string }[]
   deliverables?: { id: string; name: string }[]
   defaultProjectId?: string
+  fileCategoryOptions?: OptionPair[]
 }
 
 const inputStyle: React.CSSProperties = {
@@ -65,7 +68,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-export function FileForm({ mode, file, projects, tasks, deliverables, defaultProjectId }: FileFormProps) {
+export function FileForm({ mode, file, projects, tasks, deliverables, defaultProjectId, fileCategoryOptions }: FileFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -102,7 +105,7 @@ export function FileForm({ mode, file, projects, tasks, deliverables, defaultPro
             <div style={fieldGroupStyle}>
               <Field label="Category" required>
                 <select name="file_category" defaultValue={file?.file_category ?? 'working_file'} style={inputStyle}>
-                  {FILE_CATEGORY_OPTIONS.map(o => (
+                  {(fileCategoryOptions ?? FILE_CATEGORY_OPTIONS).map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>

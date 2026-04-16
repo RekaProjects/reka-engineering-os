@@ -5,6 +5,7 @@ import { TaskForm } from '@/components/modules/tasks/TaskForm'
 import { getTaskById } from '@/lib/tasks/queries'
 import { getProjects } from '@/lib/projects/queries'
 import { getUsersForSelect } from '@/lib/users/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -18,10 +19,11 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function EditTaskPage({ params }: PageProps) {
   const { id } = await params
-  const [task, projectsRaw, users] = await Promise.all([
+  const [task, projectsRaw, users, taskCategoryOptions] = await Promise.all([
     getTaskById(id),
     getProjects(),
     getUsersForSelect(),
+    getSettingOptions('task_category'),
   ])
 
   if (!task) notFound()
@@ -35,7 +37,7 @@ export default async function EditTaskPage({ params }: PageProps) {
         subtitle={task.projects ? `${task.projects.project_code}` : ''}
       />
       <SectionCard>
-        <TaskForm mode="edit" task={task} projects={projects} users={users} />
+        <TaskForm mode="edit" task={task} projects={projects} users={users} taskCategoryOptions={taskCategoryOptions} />
       </SectionCard>
     </div>
   )

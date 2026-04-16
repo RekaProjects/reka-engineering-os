@@ -2,12 +2,15 @@ import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { InviteForm }  from '@/components/modules/team/InviteForm'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'Invite Member — Engineering Agency OS' }
 
 export default async function InviteMemberPage() {
   const profile = await getSessionProfile()
   requireRole(profile.system_role, ['admin'])
+
+  const workerTypeOptions = await getSettingOptions('worker_type')
 
   return (
     <div>
@@ -16,7 +19,7 @@ export default async function InviteMemberPage() {
         subtitle="Create an invite link to send to a new team member or freelancer."
       />
       <SectionCard>
-        <InviteForm />
+        <InviteForm workerTypeOptions={workerTypeOptions} />
       </SectionCard>
     </div>
   )

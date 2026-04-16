@@ -11,12 +11,16 @@ import {
 } from '@/lib/constants/options'
 import type { Intake } from '@/types/database'
 
+type OptionPair = { value: string; label: string }
+
 interface ConvertIntakeFormProps {
   intake: Intake & {
     clients: { id: string; client_name: string; client_code: string } | null
   }
   clients: { id: string; client_name: string; client_code: string }[]
   users: { id: string; full_name: string; email: string; discipline: string | null }[]
+  disciplineOptions?: OptionPair[]
+  projectTypeOptions?: OptionPair[]
 }
 
 const inputStyle: React.CSSProperties = {
@@ -66,7 +70,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-export function ConvertIntakeForm({ intake, clients, users }: ConvertIntakeFormProps) {
+export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, projectTypeOptions }: ConvertIntakeFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -226,14 +230,14 @@ export function ConvertIntakeForm({ intake, clients, users }: ConvertIntakeFormP
             <div style={fieldGroupStyle}>
               <Field label="Discipline" required>
                 <select name="discipline" defaultValue={intake.discipline} style={inputStyle} required>
-                  {DISCIPLINES.map(o => (
+                  {(disciplineOptions ?? DISCIPLINES).map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </Field>
               <Field label="Project Type" required>
                 <select name="project_type" defaultValue={intake.project_type} style={inputStyle} required>
-                  {PROJECT_TYPES.map(o => (
+                  {(projectTypeOptions ?? PROJECT_TYPES).map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>

@@ -4,6 +4,7 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { PaymentForm } from '@/components/modules/payments/PaymentForm'
 import { getMemberOptions } from '@/lib/compensation/helpers'
 import { createPayment } from '@/lib/payments/actions'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'New Payment — Engineering Agency OS' }
 
@@ -11,7 +12,10 @@ export default async function NewPaymentPage() {
   const _sp = await getSessionProfile()
   requireRole(_sp.system_role, ['admin'])
 
-  const members = await getMemberOptions()
+  const [members, paymentMethodOptions] = await Promise.all([
+    getMemberOptions(),
+    getSettingOptions('payment_method'),
+  ])
 
   return (
     <div>
@@ -24,6 +28,7 @@ export default async function NewPaymentPage() {
           members={members}
           action={createPayment}
           submitLabel="Create Payment"
+          paymentMethodOptions={paymentMethodOptions}
         />
       </SectionCard>
     </div>

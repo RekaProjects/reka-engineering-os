@@ -13,11 +13,15 @@ import {
 } from '@/lib/constants/options'
 import type { Project } from '@/types/database'
 
+type OptionPair = { value: string; label: string }
+
 interface ProjectFormProps {
   mode: 'create' | 'edit'
   project?: Project
   clients: { id: string; client_name: string; client_code: string }[]
   users: { id: string; full_name: string; email: string; discipline: string | null }[]
+  disciplineOptions?: OptionPair[]
+  projectTypeOptions?: OptionPair[]
 }
 
 const inputStyle: React.CSSProperties = {
@@ -67,7 +71,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-export function ProjectForm({ mode, project, clients, users }: ProjectFormProps) {
+export function ProjectForm({ mode, project, clients, users, disciplineOptions, projectTypeOptions }: ProjectFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -173,14 +177,14 @@ export function ProjectForm({ mode, project, clients, users }: ProjectFormProps)
             <div style={fieldGroupStyle}>
               <Field label="Discipline" required>
                 <select name="discipline" defaultValue={project?.discipline ?? 'mechanical'} style={inputStyle} required>
-                  {DISCIPLINES.map(o => (
+                  {(disciplineOptions ?? DISCIPLINES).map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </Field>
               <Field label="Project Type" required>
                 <select name="project_type" defaultValue={project?.project_type ?? 'design'} style={inputStyle} required>
-                  {PROJECT_TYPES.map(o => (
+                  {(projectTypeOptions ?? PROJECT_TYPES).map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>

@@ -10,7 +10,7 @@ import { PaymentStatusBadge } from '@/components/modules/payments/PaymentStatusB
 import { getPaymentById } from '@/lib/payments/queries'
 import { deletePayment as _deletePayment } from '@/lib/payments/actions'
 import { formatDate, formatIDR } from '@/lib/utils/formatters'
-import { PAYMENT_METHOD_OPTIONS } from '@/lib/constants/options'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps { params: Promise<{ id: string }> }
 
@@ -25,7 +25,7 @@ async function handleDelete(id: string) {
   await _deletePayment(id)
 }
 
-const METHOD_LABEL = Object.fromEntries(PAYMENT_METHOD_OPTIONS.map((o) => [o.value, o.label]))
+// METHOD_LABEL built dynamically inside the component
 
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -43,8 +43,12 @@ export default async function PaymentDetailPage({ params }: PageProps) {
   requireRole(_sp.system_role, ['admin'])
 
   const { id } = await params
-  const r = await getPaymentById(id)
+  const [r, pmOpts] = await Promise.all([
+    getPaymentById(id),
+    getSettingOptions('payment_method'),
+  ])
   if (!r) notFound()
+  const METHOD_LABEL = Object.fromEntries(pmOpts.map((o) => [o.value, o.label]))
 
   return (
     <div>

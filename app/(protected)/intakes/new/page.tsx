@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { IntakeForm } from '@/components/modules/intakes/IntakeForm'
 import { getClientsForSelect } from '@/lib/clients/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'New Intake — Engineering Agency OS' }
 
@@ -10,7 +11,11 @@ export default async function NewIntakePage() {
   const _sp = await getSessionProfile()
   requireRole(_sp.system_role, ['admin', 'coordinator'])
 
-  const clients = await getClientsForSelect()
+  const [clients, disciplineOptions, projectTypeOptions] = await Promise.all([
+    getClientsForSelect(),
+    getSettingOptions('discipline'),
+    getSettingOptions('project_type'),
+  ])
 
   return (
     <div style={{ maxWidth: '720px' }}>
@@ -19,7 +24,7 @@ export default async function NewIntakePage() {
         subtitle="Log an incoming lead or project opportunity."
       />
       <SectionCard>
-        <IntakeForm mode="create" clients={clients} />
+        <IntakeForm mode="create" clients={clients} disciplineOptions={disciplineOptions} projectTypeOptions={projectTypeOptions} />
       </SectionCard>
     </div>
   )

@@ -36,7 +36,9 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-export function InviteForm() {
+type OptionPair = { value: string; label: string }
+
+export function InviteForm({ workerTypeOptions }: { workerTypeOptions?: OptionPair[] } = {}) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -85,7 +87,7 @@ export function InviteForm() {
           <Field label="Worker Type">
             <select style={inputStyle} name="worker_type" defaultValue="">
               <option value="">— Select —</option>
-              {WORKER_TYPES.map((t) => (
+              {(workerTypeOptions ?? WORKER_TYPES).map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>

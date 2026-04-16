@@ -6,6 +6,7 @@ import { getDeliverableById } from '@/lib/deliverables/queries'
 import { getProjects } from '@/lib/projects/queries'
 import { getUsersForSelect } from '@/lib/users/queries'
 import { getTasksByProjectId } from '@/lib/tasks/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -19,10 +20,11 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function EditDeliverablePage({ params }: PageProps) {
   const { id } = await params
-  const [deliverable, projectsRaw, users] = await Promise.all([
+  const [deliverable, projectsRaw, users, deliverableTypeOptions] = await Promise.all([
     getDeliverableById(id),
     getProjects(),
     getUsersForSelect(),
+    getSettingOptions('deliverable_type'),
   ])
 
   if (!deliverable) notFound()
@@ -47,6 +49,7 @@ export default async function EditDeliverablePage({ params }: PageProps) {
           projects={projects}
           users={users}
           tasks={tasks}
+          deliverableTypeOptions={deliverableTypeOptions}
         />
       </SectionCard>
     </div>

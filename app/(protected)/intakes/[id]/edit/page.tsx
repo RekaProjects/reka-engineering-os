@@ -5,6 +5,7 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { IntakeForm } from '@/components/modules/intakes/IntakeForm'
 import { getIntakeById } from '@/lib/intakes/queries'
 import { getClientsForSelect } from '@/lib/clients/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -21,9 +22,11 @@ export default async function EditIntakePage({ params }: PageProps) {
   requireRole(_sp.system_role, ['admin', 'coordinator'])
 
   const { id } = await params
-  const [intake, clients] = await Promise.all([
+  const [intake, clients, disciplineOptions, projectTypeOptions] = await Promise.all([
     getIntakeById(id),
     getClientsForSelect(),
+    getSettingOptions('discipline'),
+    getSettingOptions('project_type'),
   ])
   if (!intake) notFound()
 
@@ -34,7 +37,7 @@ export default async function EditIntakePage({ params }: PageProps) {
         subtitle={intake.intake_code}
       />
       <SectionCard>
-        <IntakeForm mode="edit" intake={intake} clients={clients} />
+        <IntakeForm mode="edit" intake={intake} clients={clients} disciplineOptions={disciplineOptions} projectTypeOptions={projectTypeOptions} />
       </SectionCard>
     </div>
   )

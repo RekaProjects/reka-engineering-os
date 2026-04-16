@@ -79,6 +79,20 @@ export async function createMember(formData: FormData) {
   redirect(`/team/${newUserId}`)
 }
 
+// ── Fields only admin can set ────────────────────────────────
+
+const ADMIN_ONLY_FIELDS = [
+  'system_role',
+  'worker_type',
+  'active_status',
+  'joined_date',
+  'rate_type',
+  'currency_code',
+  'expected_rate',
+  'approved_rate',
+  'notes_internal',
+] as const
+
 // ── Update member ──────────────────────────────────────────────
 
 export async function updateMember(id: string, formData: FormData) {
@@ -89,7 +103,25 @@ export async function updateMember(id: string, formData: FormData) {
   const profile = buildProfilePayload(formData)
   if (!profile.full_name) return { error: 'Full name is required.' }
 
-  // Use admin client to bypass RLS for cross-user updates
+  const isSelf = user.id === id
+  const { data: callerProfile } = await supabase
+    .from('profiles')
+    .select('system_role')
+    .eq('id', user.id)
+    .single()
+  const callerRole = callerProfile?.system_role ?? 'member'
+  const callerIsAdmin = callerRole === 'admin'
+
+  if (isSelf && !callerIsAdmin) {
+    for (const field of ADMIN_ONLY_FIELDS) {
+      delete (profile as Record<string, unknown>)[field]
+    }
+  }
+
+  if (!isSelf && !callerIsAdmin) {
+    return { error: 'Only admin can edit other members.' }
+  }
+
   const admin = createAdminClient()
   const { error } = await admin
     .from('profiles')
@@ -100,5 +132,9 @@ export async function updateMember(id: string, formData: FormData) {
 
   revalidatePath('/team')
   revalidatePath(`/team/${id}`)
+
+  if (isSelf) {
+    redirect('/my-profile')
+  }
   redirect(`/team/${id}`)
 }

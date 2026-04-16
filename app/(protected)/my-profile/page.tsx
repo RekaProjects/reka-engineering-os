@@ -4,6 +4,7 @@ import { getMemberById }  from '@/lib/team/queries'
 import { PageHeader }     from '@/components/layout/PageHeader'
 import { SectionCard }    from '@/components/shared/SectionCard'
 import { TeamMemberForm } from '@/components/modules/team/TeamMemberForm'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'My Profile — Engineering Agency OS' }
 
@@ -12,9 +13,15 @@ export default async function MyProfilePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const member = await getMemberById(user.id)
+  const [member, functionalRoleOptions, disciplineOptions, workerTypeOptions] = await Promise.all([
+    getMemberById(user.id),
+    getSettingOptions('functional_role'),
+    getSettingOptions('discipline'),
+    getSettingOptions('worker_type'),
+  ])
 
-  // If no profile record yet (edge case), fall back gracefully
+  const userIsAdmin = member?.system_role === 'admin'
+
   if (!member) {
     return (
       <div>
@@ -38,7 +45,7 @@ export default async function MyProfilePage() {
         subtitle={`${member.email} · Edit your profile and availability.`}
       />
       <SectionCard>
-        <TeamMemberForm mode="edit" member={member} />
+        <TeamMemberForm mode="edit" member={member} functionalRoleOptions={functionalRoleOptions} disciplineOptions={disciplineOptions} workerTypeOptions={workerTypeOptions} isAdmin={userIsAdmin} />
       </SectionCard>
     </div>
   )

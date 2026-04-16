@@ -9,6 +9,8 @@ import {
 } from '@/lib/constants/options'
 import type { Deliverable } from '@/types/database'
 
+type OptionPair = { value: string; label: string }
+
 interface DeliverableFormProps {
   mode: 'create' | 'edit'
   deliverable?: Deliverable
@@ -16,6 +18,7 @@ interface DeliverableFormProps {
   users: { id: string; full_name: string; email: string; discipline: string | null }[]
   tasks?: { id: string; title: string }[]
   defaultProjectId?: string
+  deliverableTypeOptions?: OptionPair[]
 }
 
 const inputStyle: React.CSSProperties = {
@@ -65,7 +68,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-export function DeliverableForm({ mode, deliverable, projects, users, tasks, defaultProjectId }: DeliverableFormProps) {
+export function DeliverableForm({ mode, deliverable, projects, users, tasks, defaultProjectId, deliverableTypeOptions }: DeliverableFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -133,7 +136,7 @@ export function DeliverableForm({ mode, deliverable, projects, users, tasks, def
               <Field label="Type" required>
                 <select name="type" defaultValue={deliverable?.type ?? ''} style={inputStyle} required>
                   <option value="">Select type…</option>
-                  {DELIVERABLE_TYPE_OPTIONS.map(o => (
+                  {(deliverableTypeOptions ?? DELIVERABLE_TYPE_OPTIONS).map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>

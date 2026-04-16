@@ -14,7 +14,8 @@ import { getMemberById }     from '@/lib/team/queries'
 import { getCompensationByMember } from '@/lib/compensation/queries'
 import { getPaymentsByMember }     from '@/lib/payments/queries'
 import { formatDate, formatIDR }   from '@/lib/utils/formatters'
-import { FUNCTIONAL_ROLES, RATE_TYPE_OPTIONS, SYSTEM_ROLES, WORK_BASIS_OPTIONS } from '@/lib/constants/options'
+import { RATE_TYPE_OPTIONS, SYSTEM_ROLES, WORK_BASIS_OPTIONS } from '@/lib/constants/options'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -28,7 +29,6 @@ export async function generateMetadata({ params }: PageProps) {
 
 // ── Lookup maps ───────────────────────────────────────────────
 
-const FUNC_LABEL  = Object.fromEntries(FUNCTIONAL_ROLES.map((r) => [r.value, r.label]))
 const RATE_LABEL  = Object.fromEntries(RATE_TYPE_OPTIONS.map((r) => [r.value, r.label]))
 const ROLE_LABEL  = Object.fromEntries(SYSTEM_ROLES.map((r) => [r.value, r.label]))
 const WORK_LABEL  = Object.fromEntries(WORK_BASIS_OPTIONS.map((o) => [o.value, o.label]))
@@ -82,10 +82,12 @@ export default async function TeamMemberDetailPage({ params }: PageProps) {
   const member = await getMemberById(id)
   if (!member) notFound()
 
-  const [compRecords, payRecords] = await Promise.all([
+  const [compRecords, payRecords, funcOpts] = await Promise.all([
     getCompensationByMember(id),
     getPaymentsByMember(id),
+    getSettingOptions('functional_role'),
   ])
+  const FUNC_LABEL = Object.fromEntries(funcOpts.map((r) => [r.value, r.label]))
 
   const activeColor =
     member.active_status === 'active'   ? 'var(--color-success)' :

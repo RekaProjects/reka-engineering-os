@@ -9,11 +9,9 @@ import { EmptyState }  from '@/components/shared/EmptyState'
 import { PaymentStatusBadge } from '@/components/modules/payments/PaymentStatusBadge'
 import { getPaymentRecords } from '@/lib/payments/queries'
 import { formatDate, formatIDR } from '@/lib/utils/formatters'
-import { PAYMENT_METHOD_OPTIONS } from '@/lib/constants/options'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'Payments — Engineering Agency OS' }
-
-const METHOD_LABEL = Object.fromEntries(PAYMENT_METHOD_OPTIONS.map((o) => [o.value, o.label]))
 
 const TH: CSSProperties = {
   padding: '9px 14px',
@@ -39,7 +37,11 @@ export default async function PaymentsListPage() {
   const _sp = await getSessionProfile()
   requireRole(_sp.system_role, ['admin'])
 
-  const records = await getPaymentRecords()
+  const [records, pmOpts] = await Promise.all([
+    getPaymentRecords(),
+    getSettingOptions('payment_method'),
+  ])
+  const METHOD_LABEL = Object.fromEntries(pmOpts.map((o) => [o.value, o.label]))
 
   return (
     <div>

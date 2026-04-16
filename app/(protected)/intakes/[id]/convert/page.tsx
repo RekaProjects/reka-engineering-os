@@ -6,6 +6,7 @@ import { ConvertIntakeForm } from '@/components/modules/intakes/ConvertIntakeFor
 import { getIntakeById } from '@/lib/intakes/queries'
 import { getClientsForSelect } from '@/lib/clients/queries'
 import { getUsersForSelect } from '@/lib/users/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -34,9 +35,11 @@ export default async function ConvertIntakePage({ params }: PageProps) {
     redirect(`/intakes/${id}`)
   }
 
-  const [clients, users] = await Promise.all([
+  const [clients, users, disciplineOptions, projectTypeOptions] = await Promise.all([
     getClientsForSelect(),
     getUsersForSelect(),
+    getSettingOptions('discipline'),
+    getSettingOptions('project_type'),
   ])
 
   return (
@@ -46,7 +49,7 @@ export default async function ConvertIntakePage({ params }: PageProps) {
         subtitle={`${intake.intake_code} · ${intake.title}`}
       />
       <SectionCard>
-        <ConvertIntakeForm intake={intake} clients={clients} users={users} />
+        <ConvertIntakeForm intake={intake} clients={clients} users={users} disciplineOptions={disciplineOptions} projectTypeOptions={projectTypeOptions} />
       </SectionCard>
     </div>
   )

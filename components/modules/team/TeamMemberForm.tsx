@@ -14,9 +14,15 @@ import {
 } from '@/lib/constants/options'
 import type { TeamMember } from '@/lib/team/queries'
 
+type OptionPair = { value: string; label: string }
+
 interface TeamMemberFormProps {
   mode: 'create' | 'edit'
   member?: TeamMember
+  functionalRoleOptions?: OptionPair[]
+  disciplineOptions?: OptionPair[]
+  workerTypeOptions?: OptionPair[]
+  isAdmin?: boolean
 }
 
 // ── Shared style constants ────────────────────────────────────
@@ -79,7 +85,7 @@ function Field({
 
 // ── Component ─────────────────────────────────────────────────
 
-export function TeamMemberForm({ mode, member }: TeamMemberFormProps) {
+export function TeamMemberForm({ mode, member, functionalRoleOptions, disciplineOptions, workerTypeOptions, isAdmin = true }: TeamMemberFormProps) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -171,29 +177,31 @@ export function TeamMemberForm({ mode, member }: TeamMemberFormProps) {
         <section>
           <p style={sectionTitleStyle}>Role &amp; Work</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={twoColGrid}>
-              <Field label="System Role">
-                <select style={inputStyle} name="system_role" defaultValue={v?.system_role ?? ''}>
-                  <option value="">— Select —</option>
-                  {SYSTEM_ROLES.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Worker Type">
-                <select style={inputStyle} name="worker_type" defaultValue={v?.worker_type ?? ''}>
-                  <option value="">— Select —</option>
-                  {WORKER_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </Field>
-            </div>
+            {isAdmin && (
+              <div style={twoColGrid}>
+                <Field label="System Role">
+                  <select style={inputStyle} name="system_role" defaultValue={v?.system_role ?? ''}>
+                    <option value="">— Select —</option>
+                    {SYSTEM_ROLES.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Worker Type">
+                  <select style={inputStyle} name="worker_type" defaultValue={v?.worker_type ?? ''}>
+                    <option value="">— Select —</option>
+                    {(workerTypeOptions ?? WORKER_TYPES).map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            )}
             <div style={twoColGrid}>
               <Field label="Discipline">
                 <select style={inputStyle} name="discipline" defaultValue={v?.discipline ?? ''}>
                   <option value="">— Select —</option>
-                  {DISCIPLINES.map((d) => (
+                  {(disciplineOptions ?? DISCIPLINES).map((d) => (
                     <option key={d.value} value={d.value}>{d.label}</option>
                   ))}
                 </select>
@@ -201,7 +209,7 @@ export function TeamMemberForm({ mode, member }: TeamMemberFormProps) {
               <Field label="Functional Role">
                 <select style={inputStyle} name="functional_role" defaultValue={v?.functional_role ?? ''}>
                   <option value="">— Select —</option>
-                  {FUNCTIONAL_ROLES.map((r) => (
+                  {(functionalRoleOptions ?? FUNCTIONAL_ROLES).map((r) => (
                     <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
                 </select>
@@ -212,15 +220,17 @@ export function TeamMemberForm({ mode, member }: TeamMemberFormProps) {
 
         {/* ── Status & Availability ──────────────────────────────── */}
         <section>
-          <p style={sectionTitleStyle}>Status &amp; Availability</p>
+          <p style={sectionTitleStyle}>{isAdmin ? 'Status & Availability' : 'Availability'}</p>
           <div style={twoColGrid}>
-            <Field label="Active Status">
-              <select style={inputStyle} name="active_status" defaultValue={v?.active_status ?? 'active'}>
-                {ACTIVE_STATUS_OPTIONS.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
-            </Field>
+            {isAdmin && (
+              <Field label="Active Status">
+                <select style={inputStyle} name="active_status" defaultValue={v?.active_status ?? 'active'}>
+                  {ACTIVE_STATUS_OPTIONS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field label="Availability">
               <select style={inputStyle} name="availability_status" defaultValue={v?.availability_status ?? 'available'}>
                 {AVAILABILITY_STATUS_OPTIONS.map((s) => (
@@ -228,78 +238,84 @@ export function TeamMemberForm({ mode, member }: TeamMemberFormProps) {
                 ))}
               </select>
             </Field>
-            <Field label="Joined Date">
-              <input
-                style={inputStyle}
-                name="joined_date"
-                type="date"
-                defaultValue={v?.joined_date ?? ''}
+            {isAdmin && (
+              <Field label="Joined Date">
+                <input
+                  style={inputStyle}
+                  name="joined_date"
+                  type="date"
+                  defaultValue={v?.joined_date ?? ''}
+                />
+              </Field>
+            )}
+          </div>
+        </section>
+
+        {/* ── Rate Info (admin only) ─────────────────────────────── */}
+        {isAdmin && (
+          <section>
+            <p style={sectionTitleStyle}>Rate Info</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={twoColGrid}>
+                <Field label="Rate Type">
+                  <select style={inputStyle} name="rate_type" defaultValue={v?.rate_type ?? ''}>
+                    <option value="">— Select —</option>
+                    {RATE_TYPE_OPTIONS.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Currency">
+                  <input
+                    style={inputStyle}
+                    name="currency_code"
+                    defaultValue={v?.currency_code ?? 'IDR'}
+                    placeholder="IDR"
+                  />
+                </Field>
+              </div>
+              <div style={twoColGrid}>
+                <Field label="Expected Rate">
+                  <input
+                    style={inputStyle}
+                    name="expected_rate"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    defaultValue={v?.expected_rate ?? ''}
+                    placeholder="0"
+                  />
+                </Field>
+                <Field label="Approved Rate">
+                  <input
+                    style={inputStyle}
+                    name="approved_rate"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    defaultValue={v?.approved_rate ?? ''}
+                    placeholder="0"
+                  />
+                </Field>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Notes (admin only) ─────────────────────────────────── */}
+        {isAdmin && (
+          <section>
+            <p style={sectionTitleStyle}>Internal Notes</p>
+            <Field label="Notes (internal only)">
+              <textarea
+                style={{ ...inputStyle, minHeight: '90px', resize: 'vertical' }}
+                name="notes_internal"
+                defaultValue={v?.notes_internal ?? ''}
+                placeholder="Notes visible only to admin…"
               />
             </Field>
-          </div>
-        </section>
-
-        {/* ── Rate Info ──────────────────────────────────────────── */}
-        <section>
-          <p style={sectionTitleStyle}>Rate Info</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={twoColGrid}>
-              <Field label="Rate Type">
-                <select style={inputStyle} name="rate_type" defaultValue={v?.rate_type ?? ''}>
-                  <option value="">— Select —</option>
-                  {RATE_TYPE_OPTIONS.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Currency">
-                <input
-                  style={inputStyle}
-                  name="currency_code"
-                  defaultValue={v?.currency_code ?? 'IDR'}
-                  placeholder="IDR"
-                />
-              </Field>
-            </div>
-            <div style={twoColGrid}>
-              <Field label="Expected Rate">
-                <input
-                  style={inputStyle}
-                  name="expected_rate"
-                  type="number"
-                  min="0"
-                  step="1000"
-                  defaultValue={v?.expected_rate ?? ''}
-                  placeholder="0"
-                />
-              </Field>
-              <Field label="Approved Rate">
-                <input
-                  style={inputStyle}
-                  name="approved_rate"
-                  type="number"
-                  min="0"
-                  step="1000"
-                  defaultValue={v?.approved_rate ?? ''}
-                  placeholder="0"
-                />
-              </Field>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Notes ─────────────────────────────────────────────── */}
-        <section>
-          <p style={sectionTitleStyle}>Internal Notes</p>
-          <Field label="Notes (internal only)">
-            <textarea
-              style={{ ...inputStyle, minHeight: '90px', resize: 'vertical' }}
-              name="notes_internal"
-              defaultValue={v?.notes_internal ?? ''}
-              placeholder="Notes visible only to admin…"
-            />
-          </Field>
-        </section>
+          </section>
+        )}
 
         {/* ── Actions ───────────────────────────────────────────── */}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '4px' }}>

@@ -3,6 +3,7 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { TaskForm } from '@/components/modules/tasks/TaskForm'
 import { getUsersForSelect } from '@/lib/users/queries'
 import { getProjects } from '@/lib/projects/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'New Task — Engineering Agency OS' }
 
@@ -12,9 +13,10 @@ interface PageProps {
 
 export default async function NewTaskPage({ searchParams }: PageProps) {
   const params = await searchParams
-  const [projectsRaw, users] = await Promise.all([
+  const [projectsRaw, users, taskCategoryOptions] = await Promise.all([
     getProjects(),
     getUsersForSelect(),
+    getSettingOptions('task_category'),
   ])
 
   const projects = projectsRaw.map(p => ({ id: p.id, name: p.name, project_code: p.project_code }))
@@ -31,6 +33,7 @@ export default async function NewTaskPage({ searchParams }: PageProps) {
           projects={projects}
           users={users}
           defaultProjectId={params.project_id}
+          taskCategoryOptions={taskCategoryOptions}
         />
       </SectionCard>
     </div>

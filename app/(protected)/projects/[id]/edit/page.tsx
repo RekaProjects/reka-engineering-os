@@ -5,6 +5,7 @@ import { ProjectForm } from '@/components/modules/projects/ProjectForm'
 import { getProjectById } from '@/lib/projects/queries'
 import { getClientsForSelect } from '@/lib/clients/queries'
 import { getUsersForSelect } from '@/lib/users/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -18,10 +19,12 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function EditProjectPage({ params }: PageProps) {
   const { id } = await params
-  const [project, clients, users] = await Promise.all([
+  const [project, clients, users, disciplineOptions, projectTypeOptions] = await Promise.all([
     getProjectById(id),
     getClientsForSelect(),
     getUsersForSelect(),
+    getSettingOptions('discipline'),
+    getSettingOptions('project_type'),
   ])
 
   if (!project) notFound()
@@ -33,7 +36,7 @@ export default async function EditProjectPage({ params }: PageProps) {
         subtitle={`${project.project_code}`}
       />
       <SectionCard>
-        <ProjectForm mode="edit" project={project} clients={clients} users={users} />
+        <ProjectForm mode="edit" project={project} clients={clients} users={users} disciplineOptions={disciplineOptions} projectTypeOptions={projectTypeOptions} />
       </SectionCard>
     </div>
   )
