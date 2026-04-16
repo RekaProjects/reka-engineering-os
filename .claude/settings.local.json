@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(grep -n \"STATUS_CONFIG\\\\|LOAD_COLOR\\\\|STATUS_PILL\\\\|WeekRow\\\\|KIND_COLORS\" components/modules/dashboard/*.tsx)"
+    ]
+  }
+}
