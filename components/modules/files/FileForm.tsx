@@ -9,6 +9,7 @@ import {
 } from '@/lib/constants/options'
 import type { FileEditFormScope } from '@/lib/auth/edit-form-scopes'
 import type { ProjectFile } from '@/types/database'
+import { FormSection } from '@/components/shared/FormSection'
 
 type OptionPair = { value: string; label: string }
 
@@ -46,17 +47,6 @@ const fieldGroupStyle: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: '1fr 1fr',
   gap: '16px',
-}
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  color: 'var(--color-text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  marginBottom: '12px',
-  paddingBottom: '8px',
-  borderBottom: '1px solid var(--color-border)',
 }
 
 const noticeStyle: React.CSSProperties = {
@@ -193,12 +183,11 @@ export function FileForm({
         <input type="hidden" name="project_id" value={file.project_id} />
         <input type="hidden" name="task_id" value={file.task_id ?? ''} />
         <input type="hidden" name="deliverable_id" value={file.deliverable_id ?? ''} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-          <p style={noticeStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <p style={{ ...noticeStyle, marginBottom: '20px' }}>
             You can update file metadata and links. Project and task linkage are locked; ask a coordinator if those need to change.
           </p>
-          <div>
-            <p style={sectionTitleStyle}>Project & linkage (read-only)</p>
+          <FormSection title="Project & linkage (read-only)" first>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <Field label="Project">
                 <div style={readOnlyBoxStyle}>{projectLine}</div>
@@ -212,9 +201,8 @@ export function FileForm({
                 </Field>
               </div>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>File information</p>
+          </FormSection>
+          <FormSection title="File information">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <Field label="File name" required>
                 <input
@@ -247,11 +235,8 @@ export function FileForm({
                 </Field>
               </div>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>
-              {provider === 'google_drive' ? 'Google Drive details' : 'External link'}
-            </p>
+          </FormSection>
+          <FormSection title={provider === 'google_drive' ? 'Google Drive details' : 'External link'}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {provider === 'manual' && (
                 <Field label="Link URL">
@@ -295,9 +280,8 @@ export function FileForm({
                 </Field>
               </div>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>Revision</p>
+          </FormSection>
+          <FormSection title="Revision">
             <div style={fieldGroupStyle}>
               <Field label="Revision number">
                 <input name="revision_number" type="number" min={0} defaultValue={file.revision_number ?? ''} style={inputStyle} />
@@ -306,13 +290,12 @@ export function FileForm({
                 <input name="version_label" type="text" defaultValue={file.version_label ?? ''} style={inputStyle} />
               </Field>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>Notes</p>
+          </FormSection>
+          <FormSection title="Notes">
             <Field label="Notes">
               <textarea name="notes" rows={3} defaultValue={file.notes ?? ''} placeholder="Additional notes…" style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }} />
             </Field>
-          </div>
+          </FormSection>
           <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
         </div>
       </form>
@@ -321,10 +304,9 @@ export function FileForm({
 
   return (
     <form action={handleSubmit}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-        <div>
-          <p style={sectionTitleStyle}>File Information</p>
+        <FormSection title="File Information" first>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <Field label="File Name" required>
               <input
@@ -358,10 +340,9 @@ export function FileForm({
               </Field>
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Project & Linkage</p>
+        <FormSection title="Project & Linkage">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ maxWidth: '50%' }}>
               <Field label="Project" required>
@@ -396,12 +377,9 @@ export function FileForm({
               )}
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>
-            {provider === 'google_drive' ? 'Google Drive Details' : 'External Link'}
-          </p>
+        <FormSection title={provider === 'google_drive' ? 'Google Drive Details' : 'External Link'}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {provider === 'manual' && (
               <Field label="Link URL">
@@ -445,10 +423,9 @@ export function FileForm({
               </Field>
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Revision</p>
+        <FormSection title="Revision">
           <div style={fieldGroupStyle}>
             <Field label="Revision Number">
               <input name="revision_number" type="number" min={0} defaultValue={file?.revision_number ?? ''} style={inputStyle} />
@@ -457,14 +434,13 @@ export function FileForm({
               <input name="version_label" type="text" defaultValue={file?.version_label ?? ''} placeholder="e.g. Rev A, P01" style={inputStyle} />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Notes</p>
+        <FormSection title="Notes">
           <Field label="Notes">
             <textarea name="notes" rows={3} defaultValue={file?.notes ?? ''} placeholder="Additional notes…" style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }} />
           </Field>
-        </div>
+        </FormSection>
 
         <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
       </div>

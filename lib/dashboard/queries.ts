@@ -485,26 +485,39 @@ export type PaymentSnapshot = {
   unpaidCount: number
   partialCount: number
   paidCount: number
+  /** Sum of balances on unpaid + partial rows only (operational exposure). */
   totalOutstanding: number
+  outstandingUnpaidAmount: number
+  outstandingPartialAmount: number
 }
 
 export async function getPaymentSnapshot(): Promise<PaymentSnapshot> {
   const supabase = await createServerClient()
-  const [unpaid, partial, paid, withBalance] = await Promise.all([
+  const [unpaid, partial, paid, openRows] = await Promise.all([
     supabase.from('payment_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'unpaid'),
     supabase.from('payment_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'partial'),
     supabase.from('payment_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'paid'),
-    supabase.from('payment_records').select('balance').gt('balance', 0),
+    supabase.from('payment_records').select('balance, payment_status').in('payment_status', ['unpaid', 'partial']),
   ])
 
-  const rows = withBalance.data ?? []
-  const totalOutstanding = rows.reduce((s, r) => s + Number(r.balance), 0)
+  const rows = openRows.data ?? []
+  let outstandingUnpaidAmount = 0
+  let outstandingPartialAmount = 0
+  for (const r of rows) {
+    const b = Number(r.balance)
+    if (Number.isNaN(b)) continue
+    if (r.payment_status === 'unpaid') outstandingUnpaidAmount += b
+    else if (r.payment_status === 'partial') outstandingPartialAmount += b
+  }
+  const totalOutstanding = outstandingUnpaidAmount + outstandingPartialAmount
 
   return {
     unpaidCount: unpaid.count ?? 0,
     partialCount: partial.count ?? 0,
     paidCount: paid.count ?? 0,
     totalOutstanding,
+    outstandingUnpaidAmount,
+    outstandingPartialAmount,
   }
 }
 

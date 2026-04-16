@@ -11,6 +11,7 @@ import {
   INTAKE_STATUS_OPTIONS,
 } from '@/lib/constants/options'
 import type { Intake } from '@/types/database'
+import { FormSection } from '@/components/shared/FormSection'
 
 type OptionPair = { value: string; label: string }
 
@@ -47,17 +48,6 @@ const fieldGroupStyle: React.CSSProperties = {
   gap: '16px',
 }
 
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  color: 'var(--color-text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  marginBottom: '12px',
-  paddingBottom: '8px',
-  borderBottom: '1px solid var(--color-border)',
-}
-
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
@@ -92,11 +82,9 @@ export function IntakeForm({ mode, intake, clients, disciplineOptions, projectTy
 
   return (
     <form action={handleSubmit}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-        {/* Section: Lead Info */}
-        <div>
-          <p style={sectionTitleStyle}>Lead Information</p>
+        <FormSection title="Lead Information" first>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <Field label="Title" required>
               <input
@@ -118,11 +106,9 @@ export function IntakeForm({ mode, intake, clients, disciplineOptions, projectTy
               />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Client / Prospect */}
-        <div>
-          <p style={sectionTitleStyle}>Client / Prospect</p>
+        <FormSection title="Client / Prospect">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {/* Toggle */}
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -193,11 +179,9 @@ export function IntakeForm({ mode, intake, clients, disciplineOptions, projectTy
               </Field>
             )}
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Source & Classification */}
-        <div>
-          <p style={sectionTitleStyle}>Source & Classification</p>
+        <FormSection title="Source & Classification">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={fieldGroupStyle}>
               <Field label="Source" required>
@@ -234,11 +218,9 @@ export function IntakeForm({ mode, intake, clients, disciplineOptions, projectTy
               </Field>
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Timeline & Budget */}
-        <div>
-          <p style={sectionTitleStyle}>Timeline & Budget</p>
+        <FormSection title="Timeline & Budget">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={fieldGroupStyle}>
               <Field label="Received Date" required>
@@ -281,11 +263,9 @@ export function IntakeForm({ mode, intake, clients, disciplineOptions, projectTy
               </Field>
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Qualification */}
-        <div>
-          <p style={sectionTitleStyle}>Qualification & Status</p>
+        <FormSection title="Qualification & Status">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ maxWidth: '280px' }}>
               <Field label="Status" required>
@@ -306,7 +286,7 @@ export function IntakeForm({ mode, intake, clients, disciplineOptions, projectTy
               />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
         {/* Error */}
         {error && (

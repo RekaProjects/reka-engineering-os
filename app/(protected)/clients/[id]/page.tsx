@@ -4,6 +4,7 @@ import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { canAccessProjectsNewRoute } from '@/lib/auth/permissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
+import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { ClientStatusBadge } from '@/components/modules/clients/ClientStatusBadge'
 import { IntakeStatusBadge } from '@/components/modules/intakes/IntakeStatusBadge'
 import { ProjectStatusBadge } from '@/components/modules/projects/ProjectStatusBadge'
@@ -73,6 +74,15 @@ export default async function ClientDetailPage({ params }: PageProps) {
         }
       />
 
+      <EntityStatusStrip
+        statusBadge={<ClientStatusBadge status={client.status} />}
+        extraBadge={
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'capitalize' }}>
+            Source: {client.source_default}
+          </span>
+        }
+      />
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px', alignItems: 'start' }}>
 
         {/* Left column */}
@@ -81,9 +91,6 @@ export default async function ClientDetailPage({ params }: PageProps) {
           {/* Overview */}
           <SectionCard title="Overview">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <DetailRow label="Status">
-                <ClientStatusBadge status={client.status} />
-              </DetailRow>
               <DetailRow label="Source">
                 <span style={{ textTransform: 'capitalize' }}>{client.source_default}</span>
               </DetailRow>

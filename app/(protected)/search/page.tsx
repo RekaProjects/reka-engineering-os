@@ -12,6 +12,7 @@ import {
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState }  from '@/components/shared/EmptyState'
+import { StatusBadge } from '@/components/shared/StatusBadge'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { ClientStatusBadge }      from '@/components/modules/clients/ClientStatusBadge'
 import { IntakeStatusBadge }      from '@/components/modules/intakes/IntakeStatusBadge'
@@ -20,6 +21,7 @@ import { TaskStatusBadge }        from '@/components/modules/tasks/TaskStatusBad
 import { DeliverableStatusBadge } from '@/components/modules/deliverables/DeliverableStatusBadge'
 import { formatDate } from '@/lib/utils/formatters'
 
+import { getSessionProfile } from '@/lib/auth/session'
 import {
   globalSearch,
   type ClientResult,
@@ -74,21 +76,7 @@ const ICON_STYLE: CSSProperties = {
 // ── Section header badge ──────────────────────────────────────────────────────
 
 function CountBadge({ n }: { n: number }) {
-  return (
-    <span
-      style={{
-        fontSize:        '0.6875rem',
-        fontWeight:      600,
-        color:           'var(--color-text-muted)',
-        backgroundColor: 'var(--color-surface-subtle)',
-        border:          '1px solid var(--color-border)',
-        borderRadius:    '9999px',
-        padding:         '1px 7px',
-      }}
-    >
-      {n}
-    </span>
-  )
+  return <StatusBadge label={String(n)} variant="neutral" />
 }
 
 // ── Divider between rows ──────────────────────────────────────────────────────
@@ -258,6 +246,7 @@ function DeliverablesSection({ results }: { results: DeliverableResult[] }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function SearchPage({ searchParams }: PageProps) {
+  const profile = await getSessionProfile()
   const { q } = await searchParams
   const query  = q?.trim() ?? ''
 
@@ -285,7 +274,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   }
 
   // ── Run search ────────────────────────────────────────────────────────────
-  const results = await globalSearch(query)
+  const results = await globalSearch(profile, query)
 
   // ── No results ────────────────────────────────────────────────────────────
   if (results.total === 0) {

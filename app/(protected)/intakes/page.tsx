@@ -5,6 +5,8 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { FilterBar } from '@/components/shared/FilterBar'
+import { DataTable } from '@/components/shared/DataTable'
+import type { Column } from '@/components/shared/DataTable'
 import { IntakeStatusBadge } from '@/components/modules/intakes/IntakeStatusBadge'
 import { getIntakes } from '@/lib/intakes/queries'
 import type { IntakeWithClient } from '@/lib/intakes/queries'
@@ -22,6 +24,102 @@ interface PageProps {
   searchParams: Promise<{ search?: string; status?: string; source?: string; discipline?: string }>
 }
 
+function intakeColumns(): Column<IntakeWithClient>[] {
+  return [
+    {
+      key: 'intake_code',
+      header: 'Intake Code',
+      render: (intake) => (
+        <Link href={`/intakes/${intake.id}`} style={{ textDecoration: 'none' }}>
+          <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+            {intake.intake_code}
+          </span>
+        </Link>
+      ),
+    },
+    {
+      key: 'client',
+      header: 'Client / Prospect',
+      render: (intake) => {
+        const clientDisplay = intake.clients
+          ? intake.clients.client_name
+          : intake.temp_client_name ?? '—'
+        const clientSub = intake.clients?.client_code ?? null
+        return (
+          <Link href={`/intakes/${intake.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+            <p style={{ fontWeight: 500, color: 'var(--color-text-primary)', fontSize: '0.8125rem' }}>
+              {clientDisplay}
+            </p>
+            {clientSub && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{clientSub}</p>
+            )}
+          </Link>
+        )
+      },
+    },
+    {
+      key: 'title',
+      header: 'Title',
+      render: (intake) => (
+        <Link href={`/intakes/${intake.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+          <p style={{
+            fontWeight: 500,
+            color: 'var(--color-text-primary)',
+            fontSize: '0.8125rem',
+            maxWidth: '280px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {intake.title}
+          </p>
+        </Link>
+      ),
+    },
+    {
+      key: 'source',
+      header: 'Source',
+      render: (intake) => (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
+          {intake.source}
+        </span>
+      ),
+    },
+    {
+      key: 'discipline',
+      header: 'Discipline',
+      render: (intake) => (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
+          {intake.discipline}
+        </span>
+      ),
+    },
+    {
+      key: 'deadline',
+      header: 'Proposed Deadline',
+      render: (intake) => (
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+          {formatDate(intake.proposed_deadline)}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (intake) => <IntakeStatusBadge status={intake.status} />,
+    },
+    {
+      key: 'received',
+      header: 'Received',
+      render: (intake) => (
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+          {formatDate(intake.received_date)}
+        </span>
+      ),
+    },
+  ]
+}
+
 export default async function IntakesPage({ searchParams }: PageProps) {
   const _sp = await getSessionProfile()
   requireRole(_sp.system_role, ['admin', 'coordinator'])
@@ -33,6 +131,8 @@ export default async function IntakesPage({ searchParams }: PageProps) {
     source: params.source,
     discipline: params.discipline,
   }).catch(() => [] as IntakeWithClient[])
+
+  const hasActiveFilters = Boolean(params.search || params.status || params.source || params.discipline)
 
   return (
     <div>
@@ -61,7 +161,6 @@ export default async function IntakesPage({ searchParams }: PageProps) {
         }
       />
 
-      {/* Filters */}
       <form method="GET">
         <FilterBar>
           <input name="search" type="search" defaultValue={params.search ?? ''} placeholder="Search intakes…" style={FI} />
@@ -90,22 +189,32 @@ export default async function IntakesPage({ searchParams }: PageProps) {
             <option value="other">Other</option>
           </select>
           <button type="submit" style={FB}>Filter</button>
-          {(params.search || params.status || params.source || params.discipline) && (
+          {hasActiveFilters && (
             <Link href="/intakes" style={FC}>Clear filters</Link>
           )}
         </FilterBar>
       </form>
 
-      {/* Table */}
       <SectionCard noPadding>
-        <IntakesTable intakes={intakes} />
+        <IntakesTable intakes={intakes} hasActiveFilters={hasActiveFilters} />
       </SectionCard>
     </div>
   )
 }
 
-function IntakesTable({ intakes }: { intakes: IntakeWithClient[] }) {
+function IntakesTable({ intakes, hasActiveFilters }: { intakes: IntakeWithClient[]; hasActiveFilters: boolean }) {
   if (intakes.length === 0) {
+    if (hasActiveFilters) {
+      return (
+        <EmptyState
+          compact
+          icon={<ClipboardList size={16} aria-hidden="true" />}
+          title="No intakes match your filters"
+          description="Try different criteria or clear filters to see all intakes."
+          action={<Link href="/intakes" style={{ ...FC, display: 'inline-flex', alignItems: 'center' }}>Clear filters</Link>}
+        />
+      )
+    }
     return (
       <EmptyState
         icon={<ClipboardList size={22} />}
@@ -131,102 +240,5 @@ function IntakesTable({ intakes }: { intakes: IntakeWithClient[] }) {
     )
   }
 
-  const headers = ['Intake Code', 'Client / Prospect', 'Title', 'Source', 'Discipline', 'Proposed Deadline', 'Status', 'Received']
-
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-            {headers.map(h => (
-              <th
-                key={h}
-                style={{
-                  padding: '10px 14px',
-                  textAlign: 'left',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: 'var(--color-text-muted)',
-                  backgroundColor: 'var(--color-surface-subtle)',
-                  letterSpacing: '0.02em',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {intakes.map((intake, idx) => {
-            const clientDisplay = intake.clients
-              ? intake.clients.client_name
-              : intake.temp_client_name ?? '—'
-            const clientSub = intake.clients?.client_code ?? null
-
-            return (
-              <tr
-                key={intake.id}
-                style={{
-                  borderBottom: idx < intakes.length - 1 ? '1px solid var(--color-border)' : undefined,
-                  backgroundColor: 'var(--color-surface)',
-                  cursor: 'pointer',
-                }}
-                className="hover:bg-[var(--color-surface-muted)] transition-colors"
-              >
-                <td style={{ padding: '10px 14px' }}>
-                  <Link href={`/intakes/${intake.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                      {intake.intake_code}
-                    </span>
-                  </Link>
-                </td>
-                <td style={{ padding: '10px 14px' }}>
-                  <Link href={`/intakes/${intake.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-                    <p style={{ fontWeight: 500, color: 'var(--color-text-primary)', fontSize: '0.8125rem' }}>
-                      {clientDisplay}
-                    </p>
-                    {clientSub && (
-                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{clientSub}</p>
-                    )}
-                  </Link>
-                </td>
-                <td style={{ padding: '10px 14px' }}>
-                  <Link href={`/intakes/${intake.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-                    <p style={{
-                      fontWeight: 500,
-                      color: 'var(--color-text-primary)',
-                      fontSize: '0.8125rem',
-                      maxWidth: '280px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {intake.title}
-                    </p>
-                  </Link>
-                </td>
-                <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
-                  {intake.source}
-                </td>
-                <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
-                  {intake.discipline}
-                </td>
-                <td style={{ padding: '10px 14px', fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-                  {formatDate(intake.proposed_deadline)}
-                </td>
-                <td style={{ padding: '10px 14px' }}>
-                  <IntakeStatusBadge status={intake.status} />
-                </td>
-                <td style={{ padding: '10px 14px', fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-                  {formatDate(intake.received_date)}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
+  return <DataTable columns={intakeColumns()} data={intakes} />
 }

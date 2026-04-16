@@ -1,30 +1,36 @@
-'use client'
-
 import { cn } from '@/lib/utils/cn'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 export interface Column<T> {
-  key:      string
-  header:   string
-  width?:   string
-  align?:   'left' | 'center' | 'right'
-  render:   (row: T) => ReactNode
+  key:     string
+  header:  string
+  width?:  string
+  align?:  'left' | 'center' | 'right'
+  render:  (row: T) => ReactNode
 }
 
 interface DataTableProps<T> {
-  columns:      Column<T>[]
-  data:         T[]
-  onRowClick?:  (row: T) => void
-  emptyState?:  ReactNode
-  className?:   string
+  columns:           Column<T>[]
+  data:              T[]
+  emptyState?:       ReactNode
+  className?:        string
+  /** Subtle row hover when rows contain in-cell links (default true). */
+  interactiveRows?: boolean
+  /** Per-row layout accents (e.g. overdue / blocked inset border). */
+  getRowStyle?:      (row: T, index: number) => CSSProperties | undefined
 }
 
+/**
+ * DataTable — shared list table shell (server-compatible).
+ * Define columns in the parent page; keep business-specific rendering there.
+ */
 export function DataTable<T extends { id: string }>({
   columns,
   data,
-  onRowClick,
   emptyState,
   className,
+  interactiveRows = true,
+  getRowStyle,
 }: DataTableProps<T>) {
   if (data.length === 0 && emptyState) {
     return <div>{emptyState}</div>
@@ -60,18 +66,11 @@ export function DataTable<T extends { id: string }>({
           {data.map((row, idx) => (
             <tr
               key={row.id}
-              onClick={() => onRowClick?.(row)}
+              className={interactiveRows ? 'transition-colors hover:bg-[var(--color-surface-muted)]' : undefined}
               style={{
                 borderBottom:    idx < data.length - 1 ? '1px solid var(--color-border)' : undefined,
-                cursor:          onRowClick ? 'pointer' : undefined,
                 backgroundColor: 'var(--color-surface)',
-                transition:      'background-color 0.1s',
-              }}
-              onMouseEnter={(e) => {
-                if (onRowClick) e.currentTarget.style.backgroundColor = 'var(--color-surface-subtle)'
-              }}
-              onMouseLeave={(e) => {
-                if (onRowClick) e.currentTarget.style.backgroundColor = 'var(--color-surface)'
+                ...getRowStyle?.(row, idx),
               }}
             >
               {columns.map((col) => (

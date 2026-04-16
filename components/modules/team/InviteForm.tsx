@@ -4,6 +4,7 @@ import { useTransition, type FormEvent, type CSSProperties, type ReactNode } fro
 import { useRouter } from 'next/navigation'
 import { createInvite } from '@/lib/invites/actions'
 import { SYSTEM_ROLES, WORKER_TYPES } from '@/lib/constants/options'
+import { FormSection } from '@/components/shared/FormSection'
 
 const inputStyle: CSSProperties = {
   width:           '100%',
@@ -53,48 +54,52 @@ export function InviteForm({ workerTypeOptions }: { workerTypeOptions?: OptionPa
 
   return (
     <form onSubmit={handleSubmit}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          <Field label="Email address" required>
-            <input
-              style={inputStyle}
-              name="email"
-              type="email"
-              required
-              placeholder="freelancer@example.com"
-              autoComplete="off"
-            />
-          </Field>
-          <Field label="Full name (optional — pre-fills activation form)">
-            <input
-              style={inputStyle}
-              name="full_name"
-              placeholder="e.g. Budi Santoso"
-            />
-          </Field>
-        </div>
+        <FormSection title="Invite details" first>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <Field label="Email address" required>
+              <input
+                style={inputStyle}
+                name="email"
+                type="email"
+                required
+                placeholder="freelancer@example.com"
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="Full name (optional — pre-fills activation form)">
+              <input
+                style={inputStyle}
+                name="full_name"
+                placeholder="e.g. Budi Santoso"
+              />
+            </Field>
+          </div>
+        </FormSection>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          <Field label="System Role">
-            <select style={inputStyle} name="system_role" defaultValue="member">
-              <option value="">— Select —</option>
-              {SYSTEM_ROLES.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Worker Type">
-            <select style={inputStyle} name="worker_type" defaultValue="">
-              <option value="">— Select —</option>
-              {(workerTypeOptions ?? WORKER_TYPES).map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-          </Field>
-        </div>
+        <FormSection title="Role & access">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <Field label="System Role">
+              <select style={inputStyle} name="system_role" defaultValue="member">
+                <option value="">— Select —</option>
+                {SYSTEM_ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Worker Type">
+              <select style={inputStyle} name="worker_type" defaultValue="">
+                <option value="">— Select —</option>
+                {(workerTypeOptions ?? WORKER_TYPES).map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        </FormSection>
 
-        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', lineHeight: 1.5, marginTop: '4px' }}>
           An invite link will be generated. Copy it and share manually with the invited person. They will use it to set their password and complete their profile.
         </p>
 

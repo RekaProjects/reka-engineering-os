@@ -13,6 +13,7 @@ import {
   FUNCTIONAL_ROLES,
 } from '@/lib/constants/options'
 import type { TeamMember } from '@/lib/team/queries'
+import { FormSection } from '@/components/shared/FormSection'
 
 type OptionPair = { value: string; label: string }
 
@@ -44,17 +45,6 @@ const labelStyle: CSSProperties = {
   fontWeight:   500,
   color:        'var(--color-text-secondary)',
   marginBottom: '5px',
-}
-
-const sectionTitleStyle: CSSProperties = {
-  fontSize:      '0.75rem',
-  fontWeight:    600,
-  color:         'var(--color-text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  marginBottom:  '14px',
-  paddingBottom: '8px',
-  borderBottom:  '1px solid var(--color-border)',
 }
 
 const twoColGrid: CSSProperties = {
@@ -107,11 +97,9 @@ export function TeamMemberForm({ mode, member, functionalRoleOptions, discipline
 
   return (
     <form onSubmit={handleSubmit}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-        {/* ── Basic Info ─────────────────────────────────────────── */}
-        <section>
-          <p style={sectionTitleStyle}>Basic Info</p>
+        <FormSection title="Basic Info" first>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={twoColGrid}>
               <Field label="Full Name" required>
@@ -171,11 +159,9 @@ export function TeamMemberForm({ mode, member, functionalRoleOptions, discipline
               />
             </Field>
           </div>
-        </section>
+        </FormSection>
 
-        {/* ── Role & Work ────────────────────────────────────────── */}
-        <section>
-          <p style={sectionTitleStyle}>Role &amp; Work</p>
+        <FormSection title="Role & Work">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {isAdmin && (
               <div style={twoColGrid}>
@@ -216,11 +202,9 @@ export function TeamMemberForm({ mode, member, functionalRoleOptions, discipline
               </Field>
             </div>
           </div>
-        </section>
+        </FormSection>
 
-        {/* ── Status & Availability ──────────────────────────────── */}
-        <section>
-          <p style={sectionTitleStyle}>{isAdmin ? 'Status & Availability' : 'Availability'}</p>
+        <FormSection title={isAdmin ? 'Status & Availability' : 'Availability'}>
           <div style={twoColGrid}>
             {isAdmin && (
               <Field label="Active Status">
@@ -249,12 +233,10 @@ export function TeamMemberForm({ mode, member, functionalRoleOptions, discipline
               </Field>
             )}
           </div>
-        </section>
+        </FormSection>
 
-        {/* ── Rate Info (admin only) ─────────────────────────────── */}
         {isAdmin && (
-          <section>
-            <p style={sectionTitleStyle}>Rate Info</p>
+          <FormSection title="Rate Info">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={twoColGrid}>
                 <Field label="Rate Type">
@@ -299,13 +281,11 @@ export function TeamMemberForm({ mode, member, functionalRoleOptions, discipline
                 </Field>
               </div>
             </div>
-          </section>
+          </FormSection>
         )}
 
-        {/* ── Notes (admin only) ─────────────────────────────────── */}
         {isAdmin && (
-          <section>
-            <p style={sectionTitleStyle}>Internal Notes</p>
+          <FormSection title="Internal Notes">
             <Field label="Notes (internal only)">
               <textarea
                 style={{ ...inputStyle, minHeight: '90px', resize: 'vertical' }}
@@ -314,7 +294,7 @@ export function TeamMemberForm({ mode, member, functionalRoleOptions, discipline
                 placeholder="Notes visible only to admin…"
               />
             </Field>
-          </section>
+          </FormSection>
         )}
 
         {/* ── Actions ───────────────────────────────────────────── */}

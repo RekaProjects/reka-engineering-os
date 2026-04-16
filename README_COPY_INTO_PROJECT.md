@@ -1,52 +1,36 @@
-# Agency OS — Role & Permission Hardening Pack for Cursor
+# Pre-Stage-7 Readiness Pack — Copy Into Project
 
-## Purpose
-This pack is for fixing **role confusion and permission leaks** in Agency OS.
+Copy this pack into the **root of your project**.
 
-Current known problem examples:
-- members / freelancers can still access create actions like **New Project** and **New Task**
-- role behavior is inconsistent between navigation, page access, action visibility, and server-side enforcement
-- role definitions are not yet clear enough across admin / coordinator / reviewer / member
+Recommended workflow in Cursor desktop:
 
-This pack is **not** for UI polish.
-This pack is **not** for new features.
-This pack is only for:
-- role clarification
-- permission matrix definition
-- route protection
-- action visibility
-- server-side permission enforcement
-- scoped query protection
+1. Commit your current work before starting any pre-Stage-7 pass.
+2. Work in **one pass per chat/session**.
+3. Use **Agent** mode.
+4. Turn **Plan mode ON** if available.
+5. Start with the matching `docs/*.md` briefing and `prompts/*.md` prompt file.
+6. Do **not** let Cursor jump to another pass.
+7. Stop after each pass and review the completion report.
+8. Commit and push after each completed pass.
 
-## Copy into project
-Copy these folders into your project root:
-- `docs/`
-- `prompts/`
-- `.cursor/rules/`
+Suggested order before Stage 7:
 
-## Recommended workflow in Cursor
-### Session 1 — Audit only
-Use:
-- `docs/ROLE_PERMISSION_HARDENING_BRIEFING.md`
-- `prompts/STAGE_RBAC_01_AUDIT_PLAN.md`
+1. UI Completeness Pass
+2. RBAC QA Pass
+3. Payments / Compensation Sanity Pass
+4. Dashboard Payment Snapshot Pass
+5. Manual pre-deploy checklist
+6. Stage 7
 
-### Session 2 — Implement role matrix + UI/route guards
-Use:
-- `docs/ROLE_PERMISSION_HARDENING_BRIEFING.md`
-- `prompts/STAGE_RBAC_02_IMPLEMENT_ACCESS_SURFACE.md`
+Files included:
 
-### Session 3 — Implement server-side permission enforcement + scoped query checks
-Use:
-- `docs/ROLE_PERMISSION_HARDENING_BRIEFING.md`
-- `prompts/STAGE_RBAC_03_IMPLEMENT_SERVER_ENFORCEMENT.md`
-
-### Session 4 — QA / cleanup / consistency sweep
-Use:
-- `docs/ROLE_PERMISSION_HARDENING_BRIEFING.md`
-- `prompts/STAGE_RBAC_04_QA_SWEEP.md`
-
-## Important
-- Work in a **new Cursor chat/session for each stage**
-- Review the "Before coding" response before allowing implementation
-- Commit and push after each stage
-- Do not let Cursor jump ahead to later stages
+- `docs/PRE_STAGE7_MASTER_CHECKLIST.md`
+- `docs/PRE_STAGE7_UI_COMPLETENESS_BRIEFING.md`
+- `prompts/PRE_STAGE7_UI_COMPLETENESS_PROMPT.md`
+- `docs/PRE_STAGE7_RBAC_QA_BRIEFING.md`
+- `prompts/PRE_STAGE7_RBAC_QA_PROMPT.md`
+- `docs/PRE_STAGE7_PAYMENTS_COMP_SANITY_BRIEFING.md`
+- `prompts/PRE_STAGE7_PAYMENTS_COMP_SANITY_PROMPT.md`
+- `docs/PRE_STAGE7_DASHBOARD_PAYMENT_SNAPSHOT_BRIEFING.md`
+- `prompts/PRE_STAGE7_DASHBOARD_PAYMENT_SNAPSHOT_PROMPT.md`
+- `.cursor/rules/pre-stage7-readiness.mdc`

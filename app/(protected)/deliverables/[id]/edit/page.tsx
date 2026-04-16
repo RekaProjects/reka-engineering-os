@@ -27,7 +27,7 @@ export default async function EditDeliverablePage({ params }: PageProps) {
   if (!deliverable) notFound()
   await requireDeliverableEditPage(profile, deliverable)
 
-  const deliverableEditScope = await getDeliverableEditFormScope(profile, deliverable)
+  const deliverableEditScope = getDeliverableEditFormScope(profile, deliverable)
 
   const [projectsRaw, users, deliverableTypeOptions] = await Promise.all([
     projectOptionsForMutationForms(profile, deliverable.project_id),

@@ -1,7 +1,10 @@
-// Global search — runs five parallel ilike queries across core entities.
+// Global search — role-scoped ilike queries across core entities.
 // Called from the /search server component.
 
 import { createServerClient } from '@/lib/supabase/server'
+import { effectiveRole } from '@/lib/auth/permissions'
+import type { SessionProfile } from '@/lib/auth/session'
+import { getViewableProjectIdsForUser } from '@/lib/projects/queries'
 
 // ── Result types ──────────────────────────────────────────────────────────────
 
@@ -64,7 +67,7 @@ export type SearchResults = {
 
 const RESULTS_PER_ENTITY = 6
 
-export async function globalSearch(rawQuery: string): Promise<SearchResults> {
+export async function globalSearch(profile: SessionProfile, rawQuery: string): Promise<SearchResults> {
   const q = rawQuery.trim()
 
   const empty: SearchResults = {
@@ -77,47 +80,98 @@ export async function globalSearch(rawQuery: string): Promise<SearchResults> {
   if (!q || q.length < 2) return empty
 
   const supabase = await createServerClient()
+  const r = effectiveRole(profile.system_role)
+  const includeClientsAndIntakes = r === 'admin' || r === 'coordinator'
+  const viewableProjectIds = await getViewableProjectIdsForUser(profile.id, profile.system_role)
+
+  const clientsPromise = includeClientsAndIntakes
+    ? supabase
+        .from('clients')
+        .select('id, client_code, client_name, client_type, status')
+        .or(`client_name.ilike.%${q}%,client_code.ilike.%${q}%,primary_contact_name.ilike.%${q}%`)
+        .order('client_name', { ascending: true })
+        .limit(RESULTS_PER_ENTITY)
+    : Promise.resolve({ data: [] as ClientResult[] })
+
+  const intakesPromise = includeClientsAndIntakes
+    ? supabase
+        .from('intakes')
+        .select('id, intake_code, title, status, source, temp_client_name, clients(client_name)')
+        .or(`title.ilike.%${q}%,intake_code.ilike.%${q}%,temp_client_name.ilike.%${q}%`)
+        .order('created_at', { ascending: false })
+        .limit(RESULTS_PER_ENTITY)
+    : Promise.resolve({ data: [] as IntakeResult[] })
+
+  let projectsQuery = supabase
+    .from('projects')
+    .select('id, project_code, name, status, priority, target_due_date, clients(client_name)')
+    .or(`name.ilike.%${q}%,project_code.ilike.%${q}%`)
+    .order('created_at', { ascending: false })
+    .limit(RESULTS_PER_ENTITY)
+
+  if (r === 'reviewer') {
+    projectsQuery = projectsQuery.eq('reviewer_user_id', profile.id)
+  } else if (viewableProjectIds !== null) {
+    if (viewableProjectIds.length === 0) {
+      projectsQuery = supabase
+        .from('projects')
+        .select('id, project_code, name, status, priority, target_due_date, clients(client_name)')
+        .limit(0)
+    } else {
+      projectsQuery = projectsQuery.in('id', viewableProjectIds)
+    }
+  }
+
+  let tasksQuery = supabase
+    .from('tasks')
+    .select('id, title, status, priority, due_date, projects(id, project_code, name)')
+    .ilike('title', `%${q}%`)
+    .order('created_at', { ascending: false })
+    .limit(RESULTS_PER_ENTITY)
+
+  if (r === 'member') {
+    tasksQuery = tasksQuery.eq('assigned_to_user_id', profile.id)
+  } else if (r === 'reviewer') {
+    tasksQuery = tasksQuery.eq('reviewer_user_id', profile.id)
+  } else if (viewableProjectIds !== null) {
+    if (viewableProjectIds.length === 0) {
+      tasksQuery = supabase
+        .from('tasks')
+        .select('id, title, status, priority, due_date, projects(id, project_code, name)')
+        .limit(0)
+    } else {
+      tasksQuery = tasksQuery.in('project_id', viewableProjectIds)
+    }
+  }
+
+  let deliverablesQuery = supabase
+    .from('deliverables')
+    .select('id, name, status, type, projects(id, project_code, name)')
+    .ilike('name', `%${q}%`)
+    .order('created_at', { ascending: false })
+    .limit(RESULTS_PER_ENTITY)
+
+  if (r === 'member') {
+    deliverablesQuery = deliverablesQuery.eq('prepared_by_user_id', profile.id)
+  } else if (r === 'reviewer') {
+    deliverablesQuery = deliverablesQuery.eq('reviewed_by_user_id', profile.id)
+  } else if (viewableProjectIds !== null) {
+    if (viewableProjectIds.length === 0) {
+      deliverablesQuery = supabase
+        .from('deliverables')
+        .select('id, name, status, type, projects(id, project_code, name)')
+        .limit(0)
+    } else {
+      deliverablesQuery = deliverablesQuery.in('project_id', viewableProjectIds)
+    }
+  }
 
   const [clients, intakes, projects, tasks, deliverables] = await Promise.all([
-    // Clients — name, code, or contact name
-    supabase
-      .from('clients')
-      .select('id, client_code, client_name, client_type, status')
-      .or(`client_name.ilike.%${q}%,client_code.ilike.%${q}%,primary_contact_name.ilike.%${q}%`)
-      .order('client_name', { ascending: true })
-      .limit(RESULTS_PER_ENTITY),
-
-    // Intakes — title, code, or temp client name
-    supabase
-      .from('intakes')
-      .select('id, intake_code, title, status, source, temp_client_name, clients(client_name)')
-      .or(`title.ilike.%${q}%,intake_code.ilike.%${q}%,temp_client_name.ilike.%${q}%`)
-      .order('created_at', { ascending: false })
-      .limit(RESULTS_PER_ENTITY),
-
-    // Projects — name or code
-    supabase
-      .from('projects')
-      .select('id, project_code, name, status, priority, target_due_date, clients(client_name)')
-      .or(`name.ilike.%${q}%,project_code.ilike.%${q}%`)
-      .order('created_at', { ascending: false })
-      .limit(RESULTS_PER_ENTITY),
-
-    // Tasks — title only (description search would need full-text index)
-    supabase
-      .from('tasks')
-      .select('id, title, status, priority, due_date, projects(id, project_code, name)')
-      .ilike('title', `%${q}%`)
-      .order('created_at', { ascending: false })
-      .limit(RESULTS_PER_ENTITY),
-
-    // Deliverables — name only
-    supabase
-      .from('deliverables')
-      .select('id, name, status, type, projects(id, project_code, name)')
-      .ilike('name', `%${q}%`)
-      .order('created_at', { ascending: false })
-      .limit(RESULTS_PER_ENTITY),
+    clientsPromise,
+    intakesPromise,
+    projectsQuery,
+    tasksQuery,
+    deliverablesQuery,
   ])
 
   const results: SearchResults = {

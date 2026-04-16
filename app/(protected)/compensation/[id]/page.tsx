@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
+import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { CompensationStatusBadge } from '@/components/modules/compensation/CompensationStatusBadge'
 import { getCompensationById } from '@/lib/compensation/queries'
 import { deleteCompensation as _deleteCompensation } from '@/lib/compensation/actions'
@@ -83,6 +84,15 @@ export default async function CompensationDetailPage({ params }: PageProps) {
         }
       />
 
+      <EntityStatusStrip
+        statusBadge={<CompensationStatusBadge status={r.status} />}
+        extraBadge={
+          <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+            {formatIDR(r.subtotal_amount)}
+          </span>
+        }
+      />
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <SectionCard title="Work Context">
           <div style={GRID2}>
@@ -111,7 +121,6 @@ export default async function CompensationDetailPage({ params }: PageProps) {
           <div style={GRID2}>
             <DetailRow label="Period Label">{r.period_label ?? '—'}</DetailRow>
             <DetailRow label="Work Date">{formatDate(r.work_date)}</DetailRow>
-            <DetailRow label="Status"><CompensationStatusBadge status={r.status} /></DetailRow>
             <DetailRow label="Created">{formatDate(r.created_at)}</DetailRow>
           </div>
         </SectionCard>

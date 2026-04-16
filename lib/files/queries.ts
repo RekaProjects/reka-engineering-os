@@ -17,6 +17,11 @@ export async function getFiles(opts?: {
   file_category?: string
   project_id?: string
   provider?: string
+  /**
+   * Non-admin list pages: files the user uploaded or attached to a project they can view
+   * (matches userCanViewFile). Omitted for admin-wide lists.
+   */
+  restrictToUserPortfolio?: { userId: string; projectIds: string[] }
 }): Promise<FileWithRelations[]> {
   const supabase = await createServerClient()
 
@@ -38,6 +43,15 @@ export async function getFiles(opts?: {
   }
   if (opts?.search) {
     query = query.or(`file_name.ilike.%${opts.search}%`)
+  }
+
+  if (opts?.restrictToUserPortfolio) {
+    const { userId, projectIds } = opts.restrictToUserPortfolio
+    if (projectIds.length === 0) {
+      query = query.eq('uploaded_by_user_id', userId)
+    } else {
+      query = query.or(`uploaded_by_user_id.eq.${userId},project_id.in.(${projectIds.join(',')})`)
+    }
   }
 
   const { data, error } = await query

@@ -11,17 +11,6 @@ export type DeliverableWithRelations = Deliverable & {
   linked_task: { id: string; title: string } | null
 }
 
-// ─── Scoping helper ──────────────────────────────────────────
-
-async function getAssignedProjectIds(userId: string): Promise<string[]> {
-  const supabase = await createServerClient()
-  const { data } = await supabase
-    .from('project_team_assignments')
-    .select('project_id')
-    .eq('user_id', userId)
-  return (data ?? []).map((r) => r.project_id)
-}
-
 // ─── List (all deliverables, cross-project) ───────────────────
 
 export async function getDeliverables(opts?: {
@@ -33,8 +22,8 @@ export async function getDeliverables(opts?: {
   scopePreparerId?: string
   /** Reviewer scope: only deliverables where this user is reviewer */
   scopeReviewerId?: string
-  /** Coordinator scope: only deliverables in projects this user is assigned to */
-  scopeProjectUserId?: string
+  /** Portfolio scope: only deliverables in these projects (e.g. coordinator) */
+  scopeProjectIds?: string[]
 }): Promise<DeliverableWithRelations[]> {
   const supabase = await createServerClient()
 
@@ -65,10 +54,9 @@ export async function getDeliverables(opts?: {
   if (opts?.scopeReviewerId) {
     query = query.eq('reviewed_by_user_id', opts.scopeReviewerId)
   }
-  if (opts?.scopeProjectUserId) {
-    const ids = await getAssignedProjectIds(opts.scopeProjectUserId)
-    if (ids.length === 0) return []
-    query = query.in('project_id', ids)
+  if (opts?.scopeProjectIds !== undefined) {
+    if (opts.scopeProjectIds.length === 0) return []
+    query = query.in('project_id', opts.scopeProjectIds)
   }
 
   const { data, error } = await query

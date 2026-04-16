@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { CSSProperties } from 'react'
 import { WORK_BASIS_OPTIONS, COMPENSATION_STATUS_OPTIONS } from '@/lib/constants/options'
+import { FormSection } from '@/components/shared/FormSection'
 
 type MemberOption = { id: string; full_name: string }
 type ProjectOption = { id: string; name: string }
@@ -56,12 +57,8 @@ export function CompensationForm({ members, projects, defaultValues: dv = {}, ac
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Section: Work Context */}
-        <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-          <legend style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '12px' }}>
-            Work Context
-          </legend>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <FormSection title="Work Context" first>
           <div style={GRID2}>
             <div>
               <label style={LABEL}>Member *</label>
@@ -90,13 +87,9 @@ export function CompensationForm({ members, projects, defaultValues: dv = {}, ac
               <input name="deliverable_id" defaultValue={(dv.deliverable_id as string) ?? ''} placeholder="Deliverable UUID" style={INPUT} />
             </div>
           </div>
-        </fieldset>
+        </FormSection>
 
-        {/* Section: Rate & Amount */}
-        <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-          <legend style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '12px' }}>
-            Rate &amp; Amount
-          </legend>
+        <FormSection title="Rate & Amount">
           <div style={GRID2}>
             <div>
               <label style={LABEL}>Rate Type *</label>
@@ -120,13 +113,9 @@ export function CompensationForm({ members, projects, defaultValues: dv = {}, ac
               <input name="rate_amount" type="number" step="1" min="0" required defaultValue={dv.rate_amount ?? ''} style={INPUT} placeholder="e.g. 500000" />
             </div>
           </div>
-        </fieldset>
+        </FormSection>
 
-        {/* Section: Period & Status */}
-        <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-          <legend style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '12px' }}>
-            Period &amp; Status
-          </legend>
+        <FormSection title="Period & Status">
           <div style={GRID2}>
             <div>
               <label style={LABEL}>Period Label</label>
@@ -145,13 +134,12 @@ export function CompensationForm({ members, projects, defaultValues: dv = {}, ac
               </select>
             </div>
           </div>
-        </fieldset>
+        </FormSection>
 
-        {/* Notes */}
-        <div>
+        <FormSection title="Notes">
           <label style={LABEL}>Notes</label>
           <textarea name="notes" rows={3} defaultValue={(dv.notes as string) ?? ''} style={{ ...INPUT, resize: 'vertical' }} placeholder="Optional notes…" />
-        </div>
+        </FormSection>
       </div>
 
       <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>

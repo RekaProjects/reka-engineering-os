@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
+import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { IntakeStatusBadge } from '@/components/modules/intakes/IntakeStatusBadge'
 import { ConvertToProjectButton } from '@/components/modules/intakes/ConvertToProjectButton'
 import { getIntakeById } from '@/lib/intakes/queries'
@@ -74,6 +75,11 @@ export default async function IntakeDetailPage({ params }: PageProps) {
         }
       />
 
+      <EntityStatusStrip
+        statusBadge={<IntakeStatusBadge status={intake.status} />}
+        dueDate={intake.proposed_deadline}
+      />
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px', alignItems: 'start' }}>
 
         {/* Left column */}
@@ -82,9 +88,6 @@ export default async function IntakeDetailPage({ params }: PageProps) {
           {/* Overview */}
           <SectionCard title="Overview">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <DetailRow label="Status">
-                <IntakeStatusBadge status={intake.status} />
-              </DetailRow>
               <DetailRow label="Source">
                 <span style={{ textTransform: 'capitalize' }}>{intake.source}</span>
               </DetailRow>
@@ -203,9 +206,6 @@ export default async function IntakeDetailPage({ params }: PageProps) {
           {/* Timeline & Budget */}
           <SectionCard title="Timeline & Budget">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <DetailRow label="Proposed Deadline">
-                {formatDate(intake.proposed_deadline)}
-              </DetailRow>
               <DetailRow label="Budget Estimate">
                 {intake.budget_estimate
                   ? `$${Number(intake.budget_estimate).toLocaleString('en-US', { minimumFractionDigits: 2 })}`

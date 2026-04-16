@@ -682,7 +682,7 @@ export default async function DashboardPage() {
         </SectionCard>
         <SectionCard
           title="Payment snapshot"
-          description="Outstanding exposure and record status — not full finance."
+          description="Balance still owed on unpaid and partial rows, status mix, and link to Payments — not full finance."
         >
           <PaymentSnapshotCard snapshot={paymentSnapshot} />
         </SectionCard>

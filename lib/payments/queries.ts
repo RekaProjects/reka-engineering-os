@@ -49,6 +49,7 @@ export async function getPaymentById(id: string): Promise<PaymentRow | null> {
   return data as unknown as PaymentRow
 }
 
+/** Payment rows for one member (admin team hub, or caller must pass the signed-in user on My Payments). */
 export async function getPaymentsByMember(memberId: string): Promise<PaymentRow[]> {
   const supabase = await createServerClient()
   const { data, error } = await supabase

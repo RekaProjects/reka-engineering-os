@@ -3,14 +3,22 @@ import { formatIDR } from '@/lib/utils/formatters'
 import Link from 'next/link'
 
 const STATUS_PILL: Record<string, { color: string; bg: string; label: string }> = {
-  unpaid:  { color: '#851E1E', bg: '#F5E8E8', label: 'Unpaid'  },
-  partial: { color: '#8A4A08', bg: '#FDF3E7', label: 'Partial' },
-  paid:    { color: '#1A6340', bg: '#E8F5EE', label: 'Paid'    },
+  unpaid:  { color: 'var(--color-danger)', bg: 'var(--color-danger-subtle)', label: 'Unpaid' },
+  partial: { color: 'var(--color-warning)', bg: 'var(--color-warning-subtle)', label: 'Partial' },
+  paid:    { color: 'var(--color-success)', bg: 'var(--color-success-subtle)', label: 'Paid' },
 }
 
 export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot }) {
-  const { unpaidCount, partialCount, paidCount, totalOutstanding } = snapshot
+  const {
+    unpaidCount,
+    partialCount,
+    paidCount,
+    totalOutstanding,
+    outstandingUnpaidAmount,
+    outstandingPartialAmount,
+  } = snapshot
   const recordTotal = unpaidCount + partialCount + paidCount
+  const notFullyPaid = unpaidCount + partialCount
 
   if (recordTotal === 0) {
     return (
@@ -29,7 +37,8 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
         }}
       >
         <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0, textAlign: 'center' }}>
-          No payment records yet. Outstanding balances will appear here once payments exist.
+          No payment records yet. When you add periods in Payments, this card will show unpaid / partial / paid
+          counts and total balance still owed on open rows.
         </p>
         <Link
           href="/payments"
@@ -42,36 +51,62 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
   }
 
   const barTotal = Math.max(1, recordTotal)
+  const showExposureSplit =
+    totalOutstanding > 0 && (outstandingUnpaidAmount > 0 || outstandingPartialAmount > 0)
 
   return (
     <div>
+      <p
+        style={{
+          fontSize:      '0.6875rem',
+          color:         'var(--color-text-muted)',
+          margin:        '0 0 12px',
+          lineHeight:    1.45,
+        }}
+      >
+        <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>{recordTotal}</span> payment
+        {recordTotal === 1 ? '' : 's'} on file
+        {notFullyPaid > 0 ? (
+          <>
+            {' · '}
+            <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>{notFullyPaid}</span> not fully
+            paid
+          </>
+        ) : (
+          ' · all settled'
+        )}
+      </p>
+
       {/* Outstanding amount — headline figure */}
       <div
         style={{
           marginBottom:    '14px',
           padding:         '12px 14px',
           borderRadius:    'var(--radius-control)',
-          backgroundColor: totalOutstanding > 0 ? '#F5E8E8' : 'var(--color-surface-subtle)',
-          border:          totalOutstanding > 0 ? '1px solid rgba(133,30,30,0.18)' : '1px solid var(--color-border)',
+          backgroundColor: totalOutstanding > 0 ? 'var(--color-danger-subtle)' : 'var(--color-surface-subtle)',
+          border:
+            totalOutstanding > 0
+              ? '1px solid color-mix(in srgb, var(--color-danger) 18%, transparent)'
+              : '1px solid var(--color-border)',
         }}
       >
         <p
           style={{
             fontSize:      '0.625rem',
             fontWeight:    600,
-            color:         totalOutstanding > 0 ? '#851E1E' : 'var(--color-text-muted)',
+            color:         totalOutstanding > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
             margin:        '0 0 5px',
           }}
         >
-          Outstanding balance
+          Outstanding on unpaid / partial
         </p>
         <p
           style={{
             fontSize:           '1.375rem',
             fontWeight:         700,
-            color:              totalOutstanding > 0 ? '#851E1E' : 'var(--color-text-primary)',
+            color:              totalOutstanding > 0 ? 'var(--color-danger)' : 'var(--color-text-primary)',
             margin:             0,
             fontVariantNumeric: 'tabular-nums',
             letterSpacing:      '-0.01em',
@@ -80,6 +115,25 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
         >
           {formatIDR(totalOutstanding)}
         </p>
+        {showExposureSplit ? (
+          <p
+            style={{
+              fontSize:           '0.6875rem',
+              color:              'var(--color-text-secondary)',
+              margin:             '8px 0 0',
+              fontVariantNumeric: 'tabular-nums',
+              lineHeight:         1.4,
+            }}
+          >
+            {outstandingUnpaidAmount > 0 && (
+              <>
+                Unpaid {formatIDR(outstandingUnpaidAmount)}
+                {outstandingPartialAmount > 0 ? ' · ' : ''}
+              </>
+            )}
+            {outstandingPartialAmount > 0 && <>Partial {formatIDR(outstandingPartialAmount)}</>}
+          </p>
+        ) : null}
       </div>
 
       {/* Status counts — horizontal pills */}
@@ -100,7 +154,7 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
                 padding:         '6px 10px',
                 borderRadius:    'var(--radius-control)',
                 backgroundColor: cfg.bg,
-                border:          `1px solid ${cfg.color}22`,
+                border:          `1px solid color-mix(in srgb, ${cfg.color} 13%, transparent)`,
                 opacity:         count === 0 ? 0.45 : 1,
               }}
             >
@@ -149,7 +203,7 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
           <div
             style={{
               width:           `${(unpaidCount / barTotal) * 100}%`,
-              backgroundColor: '#851E1E',
+              backgroundColor: 'var(--color-danger)',
               minWidth:        4,
             }}
           />
@@ -158,7 +212,7 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
           <div
             style={{
               width:           `${(partialCount / barTotal) * 100}%`,
-              backgroundColor: '#8A4A08',
+              backgroundColor: 'var(--color-warning)',
               minWidth:        4,
             }}
           />
@@ -167,7 +221,7 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
           <div
             style={{
               width:           `${(paidCount / barTotal) * 100}%`,
-              backgroundColor: '#1A6340',
+              backgroundColor: 'var(--color-success)',
               minWidth:        4,
             }}
           />

@@ -9,6 +9,7 @@ import {
 } from '@/lib/constants/options'
 import type { DeliverableEditFormScope } from '@/lib/auth/edit-form-scopes'
 import type { DeliverableWithRelations } from '@/lib/deliverables/queries'
+import { FormSection } from '@/components/shared/FormSection'
 
 type OptionPair = { value: string; label: string }
 
@@ -46,17 +47,6 @@ const fieldGroupStyle: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: '1fr 1fr',
   gap: '16px',
-}
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  color: 'var(--color-text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  marginBottom: '12px',
-  paddingBottom: '8px',
-  borderBottom: '1px solid var(--color-border)',
 }
 
 const noticeStyle: React.CSSProperties = {
@@ -175,12 +165,11 @@ export function DeliverableForm({
     const typeLabel = typeOpts.find(t => t.value === deliverable.type)?.label ?? deliverable.type
     return (
       <form action={handleSubmit}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-          <p style={noticeStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <p style={{ ...noticeStyle, marginBottom: '20px' }}>
             Review updates: status, client-facing dates, and client feedback summary are saved. Other fields are managed by coordinators and admins.
           </p>
-          <div>
-            <p style={sectionTitleStyle}>Deliverable (read-only)</p>
+          <FormSection title="Deliverable (read-only)" first>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <Field label="Name">
                 <div style={readOnlyBoxStyle}>{deliverable.name}</div>
@@ -210,9 +199,8 @@ export function DeliverableForm({
                 </Field>
               )}
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>Review</p>
+          </FormSection>
+          <FormSection title="Review">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ maxWidth: '50%' }}>
                 <Field label="Status" required>
@@ -251,7 +239,7 @@ export function DeliverableForm({
                 />
               </Field>
             </div>
-          </div>
+          </FormSection>
           <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
         </div>
       </form>
@@ -261,12 +249,11 @@ export function DeliverableForm({
   if (mode === 'edit' && scope === 'preparer' && deliverable) {
     return (
       <form action={handleSubmit}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-          <p style={noticeStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <p style={{ ...noticeStyle, marginBottom: '20px' }}>
             You can update this deliverable&apos;s definition and submission fields. Assignment and client feedback summary are locked (reviewers update feedback).
           </p>
-          <div>
-            <p style={sectionTitleStyle}>Context (read-only)</p>
+          <FormSection title="Context (read-only)" first>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {deliverable.projects && (
                 <Field label="Project">
@@ -289,9 +276,8 @@ export function DeliverableForm({
                 </div>
               </Field>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>Deliverable information</p>
+          </FormSection>
+          <FormSection title="Deliverable information">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <Field label="Name" required>
                 <input
@@ -311,9 +297,8 @@ export function DeliverableForm({
                 />
               </Field>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>Classification</p>
+          </FormSection>
+          <FormSection title="Classification">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={fieldGroupStyle}>
                 <Field label="Type" required>
@@ -336,9 +321,8 @@ export function DeliverableForm({
                 )}
               </div>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>Revision</p>
+          </FormSection>
+          <FormSection title="Revision">
             <div style={fieldGroupStyle}>
               <Field label="Revision number" required>
                 <input
@@ -359,9 +343,8 @@ export function DeliverableForm({
                 />
               </Field>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>Status & dates</p>
+          </FormSection>
+          <FormSection title="Status & dates">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ maxWidth: '50%' }}>
                 <Field label="Status" required>
@@ -391,13 +374,12 @@ export function DeliverableForm({
                 </Field>
               </div>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>File</p>
+          </FormSection>
+          <FormSection title="File">
             <Field label="File link">
               <input name="file_link" type="url" defaultValue={deliverable.file_link ?? ''} style={inputStyle} />
             </Field>
-          </div>
+          </FormSection>
           <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
         </div>
       </form>
@@ -406,10 +388,9 @@ export function DeliverableForm({
 
   return (
     <form action={handleSubmit}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-        <div>
-          <p style={sectionTitleStyle}>Deliverable Information</p>
+        <FormSection title="Deliverable Information" first>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <Field label="Name" required>
               <input
@@ -431,10 +412,9 @@ export function DeliverableForm({
               />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Project & Classification</p>
+        <FormSection title="Project & Classification">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={fieldGroupStyle}>
               <Field label="Project" required>
@@ -478,10 +458,9 @@ export function DeliverableForm({
               </div>
             )}
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Revision</p>
+        <FormSection title="Revision">
           <div style={fieldGroupStyle}>
             <Field label="Revision Number" required>
               <input
@@ -502,10 +481,9 @@ export function DeliverableForm({
               />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Assignment</p>
+        <FormSection title="Assignment">
           <div style={fieldGroupStyle}>
             <Field label="Prepared By" required>
               <select
@@ -537,10 +515,9 @@ export function DeliverableForm({
               </select>
             </Field>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Status & Dates</p>
+        <FormSection title="Status & Dates">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ maxWidth: '50%' }}>
               <Field label="Status" required>
@@ -572,10 +549,9 @@ export function DeliverableForm({
               </div>
             )}
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Client Feedback & File</p>
+        <FormSection title="Client Feedback & File">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <Field label="Client Feedback Summary">
               <textarea
@@ -596,7 +572,7 @@ export function DeliverableForm({
               />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
         <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
       </div>

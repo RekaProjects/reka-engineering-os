@@ -10,17 +10,6 @@ export type TaskWithRelations = Task & {
   reviewer: { id: string; full_name: string } | null
 }
 
-// ─── Scoping helper ──────────────────────────────────────────
-
-async function getAssignedProjectIds(userId: string): Promise<string[]> {
-  const supabase = await createServerClient()
-  const { data } = await supabase
-    .from('project_team_assignments')
-    .select('project_id')
-    .eq('user_id', userId)
-  return (data ?? []).map((r) => r.project_id)
-}
-
 // ─── List (all tasks, cross-project) ──────────────────────────
 
 export async function getTasks(opts?: {
@@ -33,8 +22,11 @@ export async function getTasks(opts?: {
   scopeAssignedTo?: string
   /** Reviewer scope: only tasks where this user is the reviewer */
   scopeReviewerId?: string
-  /** Coordinator scope: only tasks in projects this user is assigned to */
-  scopeProjectUserId?: string
+  /**
+   * Coordinator (and similar) portfolio: only tasks in these projects.
+   * Pass [] when the user has no viewable projects to get an empty list.
+   */
+  scopeProjectIds?: string[]
 }): Promise<TaskWithRelations[]> {
   const supabase = await createServerClient()
 
@@ -70,10 +62,9 @@ export async function getTasks(opts?: {
   if (opts?.scopeReviewerId) {
     query = query.eq('reviewer_user_id', opts.scopeReviewerId)
   }
-  if (opts?.scopeProjectUserId) {
-    const ids = await getAssignedProjectIds(opts.scopeProjectUserId)
-    if (ids.length === 0) return []
-    query = query.in('project_id', ids)
+  if (opts?.scopeProjectIds !== undefined) {
+    if (opts.scopeProjectIds.length === 0) return []
+    query = query.in('project_id', opts.scopeProjectIds)
   }
 
   const { data, error } = await query

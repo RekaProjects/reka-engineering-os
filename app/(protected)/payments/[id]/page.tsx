@@ -6,7 +6,9 @@ import type { CSSProperties, ReactNode } from 'react'
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }  from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
+import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { PaymentStatusBadge } from '@/components/modules/payments/PaymentStatusBadge'
+import { safePaymentProofHref } from '@/lib/payments/proof-link'
 import { getPaymentById } from '@/lib/payments/queries'
 import { deletePayment as _deletePayment } from '@/lib/payments/actions'
 import { formatDate, formatIDR } from '@/lib/utils/formatters'
@@ -49,6 +51,7 @@ export default async function PaymentDetailPage({ params }: PageProps) {
   ])
   if (!r) notFound()
   const METHOD_LABEL = Object.fromEntries(pmOpts.map((o) => [o.value, o.label]))
+  const proofHref = r.proof_link ? safePaymentProofHref(r.proof_link) : null
 
   return (
     <div>
@@ -87,6 +90,27 @@ export default async function PaymentDetailPage({ params }: PageProps) {
         }
       />
 
+      <EntityStatusStrip
+        statusBadge={<PaymentStatusBadge status={r.payment_status} />}
+        priorityBadge={
+          r.period_label ? (
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+              {r.period_label}
+            </span>
+          ) : undefined
+        }
+        extraBadge={
+          <span style={{
+            fontFamily: 'monospace',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: Number(r.balance) > 0 ? 'var(--color-warning)' : 'var(--color-success)',
+          }}>
+            Balance {formatIDR(r.balance)}
+          </span>
+        }
+      />
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <SectionCard title="Member &amp; Period">
           <div style={GRID2}>
@@ -113,7 +137,6 @@ export default async function PaymentDetailPage({ params }: PageProps) {
                 {formatIDR(r.balance)}
               </span>
             </DetailRow>
-            <DetailRow label="Status"><PaymentStatusBadge status={r.payment_status} /></DetailRow>
           </div>
         </SectionCard>
 
@@ -125,16 +148,22 @@ export default async function PaymentDetailPage({ params }: PageProps) {
             </DetailRow>
             <DetailRow label="Payment Reference">{r.payment_reference ?? '—'}</DetailRow>
             <DetailRow label="Proof Link">
-              {r.proof_link ? (
+              {r.proof_link && proofHref ? (
                 <a
-                  href={r.proof_link}
+                  href={proofHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ color: 'var(--color-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                 >
                   View proof <ExternalLink size={11} />
                 </a>
-              ) : '—'}
+              ) : r.proof_link ? (
+                <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', color: 'var(--color-text-muted)' }}>
+                  {r.proof_link} (not a safe http(s) link)
+                </span>
+              ) : (
+                '—'
+              )}
             </DetailRow>
             <DetailRow label="Created">{formatDate(r.created_at)}</DetailRow>
           </div>

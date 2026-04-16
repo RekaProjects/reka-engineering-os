@@ -3,14 +3,16 @@ import Link from 'next/link'
 import { UserSquare2, Plus, Mail, Clock } from 'lucide-react'
 
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
-import { PageHeader }     from '@/components/layout/PageHeader'
-import { SectionCard }    from '@/components/shared/SectionCard'
-import { EmptyState }     from '@/components/shared/EmptyState'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { SectionCard } from '@/components/shared/SectionCard'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { DataTable } from '@/components/shared/DataTable'
+import type { Column } from '@/components/shared/DataTable'
 import { AvailabilityBadge } from '@/components/modules/team/AvailabilityBadge'
-import { WorkerTypeBadge }   from '@/components/modules/team/WorkerTypeBadge'
-import { CopyLinkButton }    from '@/components/modules/onboarding/CopyLinkButton'
-import { getTeamMembers }    from '@/lib/team/queries'
-import { getPendingInvites } from '@/lib/invites/queries'
+import { WorkerTypeBadge } from '@/components/modules/team/WorkerTypeBadge'
+import { CopyLinkButton } from '@/components/modules/onboarding/CopyLinkButton'
+import { getTeamMembers, type TeamMember } from '@/lib/team/queries'
+import { getPendingInvites, type InviteWithInviter } from '@/lib/invites/queries'
 import { revokeInvite as _revokeInvite } from '@/lib/invites/actions'
 import { formatDate, formatIDR } from '@/lib/utils/formatters'
 import { SYSTEM_ROLES, RATE_TYPE_OPTIONS } from '@/lib/constants/options'
@@ -23,32 +25,11 @@ const RATE_LABEL = Object.fromEntries(RATE_TYPE_OPTIONS.map((r) => [r.value, r.l
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-const TH: CSSProperties = {
-  padding:         '9px 14px',
-  textAlign:       'left',
-  fontSize:        '0.6875rem',
-  fontWeight:      600,
-  color:           'var(--color-text-muted)',
-  backgroundColor: 'var(--color-surface-subtle)',
-  letterSpacing:   '0.04em',
-  textTransform:   'uppercase',
-  whiteSpace:      'nowrap',
-  borderBottom:    '1px solid var(--color-border)',
-}
-
-const TD: CSSProperties = {
-  padding:   '10px 14px',
-  fontSize:  '0.8125rem',
-  color:     'var(--color-text-secondary)',
-  whiteSpace: 'nowrap',
-}
-
 async function handleRevokeInvite(id: string) {
   'use server'
   await _revokeInvite(id)
 }
 
-/** Prefer IDR via design-system formatter; other currencies use locale currency when valid */
 function formatRateAmount(n: number | null | undefined, currencyCode: string | null | undefined): string | null {
   if (n == null || n === undefined) return null
   const num = Number(n)
@@ -65,6 +46,197 @@ function formatRateAmount(n: number | null | undefined, currencyCode: string | n
   } catch {
     return `${num.toLocaleString('id-ID')} ${code}`
   }
+}
+
+function memberColumns(
+  FUNCTIONAL_LABEL: Record<string, string>,
+): Column<TeamMember>[] {
+  return [
+    {
+      key: 'name',
+      header: 'Name',
+      render: (m) => (
+        <div style={{ maxWidth: '200px' }}>
+          <Link
+            href={`/team/${m.id}`}
+            style={{
+              fontWeight: 500,
+              color: 'var(--color-text-primary)',
+              textDecoration: 'none',
+            }}
+            className="hover:underline"
+          >
+            {m.full_name}
+          </Link>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: '1px' }}>
+            {m.email}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'worker_type',
+      header: 'Type',
+      render: (m) => (
+        m.worker_type
+          ? <WorkerTypeBadge type={m.worker_type} />
+          : <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+      ),
+    },
+    {
+      key: 'system_role',
+      header: 'Role',
+      render: (m) => (
+        <span style={{ textTransform: 'capitalize' }}>{m.system_role ?? '—'}</span>
+      ),
+    },
+    {
+      key: 'function',
+      header: 'Discipline / Function',
+      render: (m) => {
+        const funcLabel = m.functional_role
+          ? FUNCTIONAL_LABEL[m.functional_role] ?? m.functional_role
+          : null
+        return (
+          <span>
+            <span style={{ textTransform: 'capitalize' }}>{m.discipline ?? ''}</span>
+            {m.discipline && funcLabel && <span style={{ color: 'var(--color-text-muted)' }}> · </span>}
+            {funcLabel}
+            {!m.discipline && !funcLabel && <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'availability',
+      header: 'Availability',
+      render: (m) => <AvailabilityBadge status={m.availability_status} />,
+    },
+    {
+      key: 'rate',
+      header: 'Rate',
+      render: (m) => {
+        const approved = formatRateAmount(m.approved_rate, m.currency_code)
+        const expected = formatRateAmount(m.expected_rate, m.currency_code)
+        const rateLabel = approved ?? (expected ? `~${expected}` : '—')
+        const rateType = m.rate_type
+          ? RATE_LABEL[m.rate_type] ?? m.rate_type.replace(/_/g, ' ')
+          : ''
+        return (
+          <div style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+            {rateLabel}
+            {(approved || expected) && rateType && (
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.6875rem', display: 'block', marginTop: '2px' }}>
+                {rateType}
+              </span>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      key: 'active_status',
+      header: 'Status',
+      render: (m) => {
+        const activeColor =
+          m.active_status === 'active'   ? 'var(--color-success)' :
+          m.active_status === 'inactive' ? 'var(--color-text-muted)' :
+          'var(--color-neutral)'
+        return (
+          <span style={{ color: activeColor, textTransform: 'capitalize', fontWeight: 500 }}>
+            {m.active_status}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '72px',
+      align: 'right',
+      render: (m) => (
+        <Link
+          href={`/team/${m.id}/edit`}
+          style={{
+            fontSize: '0.75rem',
+            color: 'var(--color-primary)',
+            textDecoration: 'none',
+            fontWeight: 500,
+          }}
+        >
+          Edit
+        </Link>
+      ),
+    },
+  ]
+}
+
+function inviteColumns(WORKER_TYPE_LABEL: Record<string, string>): Column<InviteWithInviter>[] {
+  return [
+    { key: 'email', header: 'Email', render: (inv) => inv.email },
+    {
+      key: 'name',
+      header: 'Name',
+      render: (inv) => <span style={{ color: 'var(--color-text-muted)' }}>{inv.full_name ?? '—'}</span>,
+    },
+    {
+      key: 'role',
+      header: 'Role',
+      render: (inv) => (
+        <span style={{ textTransform: 'capitalize' }}>
+          {inv.system_role ? SYSTEM_ROLE_LABEL[inv.system_role] ?? inv.system_role : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      render: (inv) => (
+        <span>{inv.worker_type ? WORKER_TYPE_LABEL[inv.worker_type] ?? inv.worker_type : '—'}</span>
+      ),
+    },
+    {
+      key: 'expires',
+      header: 'Expires',
+      render: (inv) => (
+        <span style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          <Clock size={11} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} aria-hidden="true" />
+          {formatDate(inv.expires_at)}
+        </span>
+      ),
+    },
+    {
+      key: 'link',
+      header: 'Invite Link',
+      width: '320px',
+      render: (inv) => <CopyLinkButton url={`${APP_URL}/onboarding/${inv.token}`} />,
+    },
+    {
+      key: 'revoke',
+      header: '',
+      width: '72px',
+      align: 'right',
+      render: (inv) => (
+        <form action={handleRevokeInvite.bind(null, inv.id)}>
+          <button
+            type="submit"
+            style={{
+              fontSize: '0.75rem',
+              color: 'var(--color-danger)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0',
+              fontWeight: 500,
+              fontFamily: 'inherit',
+            }}
+          >
+            Revoke
+          </button>
+        </form>
+      ),
+    },
+  ]
 }
 
 export default async function TeamPage({
@@ -95,17 +267,17 @@ export default async function TeamPage({
             <Link
               href="/team/invite"
               style={{
-                display:         'inline-flex',
-                alignItems:      'center',
-                gap:             '6px',
-                padding:         '8px 14px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
                 backgroundColor: 'var(--color-surface)',
-                border:          '1px solid var(--color-border)',
-                borderRadius:    'var(--radius-control)',
-                fontSize:        '0.8125rem',
-                fontWeight:      500,
-                color:           'var(--color-text-primary)',
-                textDecoration:  'none',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-control)',
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                color: 'var(--color-text-primary)',
+                textDecoration: 'none',
               }}
             >
               <Mail size={14} aria-hidden="true" />
@@ -114,16 +286,16 @@ export default async function TeamPage({
             <Link
               href="/team/new"
               style={{
-                display:         'inline-flex',
-                alignItems:      'center',
-                gap:             '6px',
-                padding:         '8px 14px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
                 backgroundColor: 'var(--color-primary)',
-                color:           'var(--color-primary-fg)',
-                borderRadius:    'var(--radius-control)',
-                fontSize:        '0.8125rem',
-                fontWeight:      500,
-                textDecoration:  'none',
+                color: 'var(--color-primary-fg)',
+                borderRadius: 'var(--radius-control)',
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                textDecoration: 'none',
               }}
             >
               <Plus size={14} aria-hidden="true" />
@@ -143,16 +315,16 @@ export default async function TeamPage({
               <Link
                 href="/team/new"
                 style={{
-                  display:         'inline-flex',
-                  alignItems:      'center',
-                  gap:             '6px',
-                  padding:         '8px 16px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
                   backgroundColor: 'var(--color-primary)',
-                  color:           'var(--color-primary-fg)',
-                  borderRadius:    'var(--radius-control)',
-                  fontSize:        '0.8125rem',
-                  fontWeight:      500,
-                  textDecoration:  'none',
+                  color: 'var(--color-primary-fg)',
+                  borderRadius: 'var(--radius-control)',
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                  textDecoration: 'none',
                 }}
               >
                 <Plus size={14} aria-hidden="true" />
@@ -161,123 +333,10 @@ export default async function TeamPage({
             }
           />
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  {['Name', 'Type', 'Role', 'Discipline / Function', 'Availability', 'Rate', 'Status', ''].map((h) => (
-                    <th key={h} style={TH}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((m, idx) => {
-                  const isLast = idx === members.length - 1
-                  const approved = formatRateAmount(m.approved_rate, m.currency_code)
-                  const expected = formatRateAmount(m.expected_rate, m.currency_code)
-                  const rateLabel = approved ?? (expected ? `~${expected}` : '—')
-
-                  const rateType = m.rate_type
-                    ? RATE_LABEL[m.rate_type] ?? m.rate_type.replace(/_/g, ' ')
-                    : ''
-
-                  const funcLabel = m.functional_role
-                    ? FUNCTIONAL_LABEL[m.functional_role] ?? m.functional_role
-                    : null
-
-                  const activeColor =
-                    m.active_status === 'active'   ? 'var(--color-success)' :
-                    m.active_status === 'inactive' ? 'var(--color-text-muted)' :
-                    'var(--color-neutral)'
-
-                  return (
-                    <tr
-                      key={m.id}
-                      style={{ borderBottom: isLast ? undefined : '1px solid var(--color-border)' }}
-                      className="hover:bg-[var(--color-surface-muted)] transition-colors"
-                    >
-                      {/* Name */}
-                      <td style={{ ...TD, maxWidth: '200px' }}>
-                        <Link
-                          href={`/team/${m.id}`}
-                          style={{
-                            fontWeight:     500,
-                            color:          'var(--color-text-primary)',
-                            textDecoration: 'none',
-                          }}
-                          className="hover:underline"
-                        >
-                          {m.full_name}
-                        </Link>
-                        <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: '1px' }}>
-                          {m.email}
-                        </div>
-                      </td>
-
-                      {/* Worker type */}
-                      <td style={TD}>
-                        {m.worker_type
-                          ? <WorkerTypeBadge type={m.worker_type} />
-                          : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
-                      </td>
-
-                      {/* System role */}
-                      <td style={{ ...TD, textTransform: 'capitalize' }}>
-                        {m.system_role ?? '—'}
-                      </td>
-
-                      {/* Discipline / function */}
-                      <td style={TD}>
-                        <span style={{ textTransform: 'capitalize' }}>{m.discipline ?? ''}</span>
-                        {m.discipline && funcLabel && <span style={{ color: 'var(--color-text-muted)' }}> · </span>}
-                        {funcLabel}
-                        {!m.discipline && !funcLabel && <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
-                      </td>
-
-                      {/* Availability */}
-                      <td style={TD}>
-                        <AvailabilityBadge status={m.availability_status} />
-                      </td>
-
-                      {/* Rate */}
-                      <td style={{ ...TD, fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                        {rateLabel}
-                        {(approved || expected) && rateType && (
-                          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.6875rem', display: 'block', marginTop: '2px' }}>
-                            {rateType}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Active status */}
-                      <td style={{ ...TD, color: activeColor, textTransform: 'capitalize', fontWeight: 500 }}>
-                        {m.active_status}
-                      </td>
-
-                      {/* Actions */}
-                      <td style={{ ...TD, textAlign: 'right' }}>
-                        <Link
-                          href={`/team/${m.id}/edit`}
-                          style={{
-                            fontSize:       '0.75rem',
-                            color:          'var(--color-primary)',
-                            textDecoration: 'none',
-                            fontWeight:     500,
-                          }}
-                        >
-                          Edit
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable columns={memberColumns(FUNCTIONAL_LABEL)} data={members} />
         )}
       </SectionCard>
 
-      {/* ── Pending Invites ──────────────────────────────────── */}
       {pendingInvites.length > 0 && (
         <SectionCard
           title="Pending Invites"
@@ -288,83 +347,25 @@ export default async function TeamPage({
           }
           noPadding
         >
-          {/* New invite banner */}
           {invited && (
             <div style={{
-              padding:      '10px 16px',
+              padding: '10px 16px',
               borderBottom: '1px solid var(--color-border)',
               backgroundColor: 'var(--color-info-subtle)',
-              display:      'flex',
-              alignItems:   'center',
-              gap:          '10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
             }}>
               <span style={{ fontSize: '0.8125rem', color: 'var(--color-info)', fontWeight: 500 }}>
                 Invite created. Copy the link below and share it with the invited person.
               </span>
             </div>
           )}
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  {['Email', 'Name', 'Role', 'Type', 'Expires', 'Invite Link', ''].map((h) => (
-                    <th key={h} style={TH}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {pendingInvites.map((inv, idx) => {
-                  const isLast = idx === pendingInvites.length - 1
-                  const inviteUrl = `${APP_URL}/onboarding/${inv.token}`
-                  const isHighlighted = invited === inv.token
-                  return (
-                    <tr
-                      key={inv.id}
-                      style={{
-                        borderBottom:    isLast ? undefined : '1px solid var(--color-border)',
-                        backgroundColor: isHighlighted ? 'var(--color-info-subtle)' : undefined,
-                      }}
-                    >
-                      <td style={TD}>{inv.email}</td>
-                      <td style={{ ...TD, color: 'var(--color-text-muted)' }}>{inv.full_name ?? '—'}</td>
-                      <td style={{ ...TD, textTransform: 'capitalize' }}>
-                        {inv.system_role ? SYSTEM_ROLE_LABEL[inv.system_role] ?? inv.system_role : '—'}
-                      </td>
-                      <td style={TD}>
-                        {inv.worker_type ? WORKER_TYPE_LABEL[inv.worker_type] ?? inv.worker_type : '—'}
-                      </td>
-                      <td style={{ ...TD, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Clock size={11} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
-                        {formatDate(inv.expires_at)}
-                      </td>
-                      <td style={{ ...TD, minWidth: '320px' }}>
-                        <CopyLinkButton url={inviteUrl} />
-                      </td>
-                      <td style={{ ...TD, textAlign: 'right' }}>
-                        <form action={handleRevokeInvite.bind(null, inv.id)}>
-                          <button
-                            type="submit"
-                            style={{
-                              fontSize:        '0.75rem',
-                              color:           'var(--color-danger)',
-                              background:      'none',
-                              border:          'none',
-                              cursor:          'pointer',
-                              padding:         '0',
-                              fontWeight:      500,
-                              fontFamily:      'inherit',
-                            }}
-                          >
-                            Revoke
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={inviteColumns(WORKER_TYPE_LABEL)}
+            data={pendingInvites}
+            getRowStyle={(inv) => (invited === inv.token ? { backgroundColor: 'var(--color-info-subtle)' } : undefined)}
+          />
         </SectionCard>
       )}
     </div>

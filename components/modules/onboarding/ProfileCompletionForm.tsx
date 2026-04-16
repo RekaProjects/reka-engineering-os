@@ -4,6 +4,7 @@ import { useTransition, type FormEvent, type CSSProperties, type ReactNode } fro
 import { completeProfile } from '@/lib/invites/actions'
 import { AVAILABILITY_STATUS_OPTIONS } from '@/lib/constants/options'
 import type { TeamMember } from '@/lib/team/queries'
+import { FormSection } from '@/components/shared/FormSection'
 
 interface Props {
   profile: TeamMember
@@ -26,17 +27,6 @@ const labelStyle: CSSProperties = {
   fontWeight:   500,
   color:        'var(--color-text-secondary)',
   marginBottom: '5px',
-}
-
-const sectionTitleStyle: CSSProperties = {
-  fontSize:      '0.75rem',
-  fontWeight:    600,
-  color:         'var(--color-text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  marginBottom:  '14px',
-  paddingBottom: '8px',
-  borderBottom:  '1px solid var(--color-border)',
 }
 
 const twoCol: CSSProperties = {
@@ -71,11 +61,9 @@ export function ProfileCompletionForm({ profile }: Props) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-        {/* ── Basic Info ─────────────────────────────────────── */}
-        <section>
-          <p style={sectionTitleStyle}>Basic Info</p>
+        <FormSection title="Basic Info" first>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={twoCol}>
               <Field label="Full Name">
@@ -124,11 +112,9 @@ export function ProfileCompletionForm({ profile }: Props) {
               />
             </Field>
           </div>
-        </section>
+        </FormSection>
 
-        {/* ── Availability ───────────────────────────────────── */}
-        <section>
-          <p style={sectionTitleStyle}>Availability</p>
+        <FormSection title="Availability">
           <div style={twoCol}>
             <Field label="Current Availability">
               <select
@@ -153,11 +139,9 @@ export function ProfileCompletionForm({ profile }: Props) {
               />
             </Field>
           </div>
-        </section>
+        </FormSection>
 
-        {/* ── Payment Info ───────────────────────────────────── */}
-        <section>
-          <p style={sectionTitleStyle}>Payment Info</p>
+        <FormSection title="Payment Info">
           <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '14px', lineHeight: 1.5 }}>
             Used for payment processing. All fields are optional and visible only to admin.
           </p>
@@ -192,7 +176,7 @@ export function ProfileCompletionForm({ profile }: Props) {
               </Field>
             </div>
           </div>
-        </section>
+        </FormSection>
 
         {/* ── Submit ─────────────────────────────────────────── */}
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

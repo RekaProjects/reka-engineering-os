@@ -6,6 +6,8 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { FilterBar } from '@/components/shared/FilterBar'
+import { DataTable } from '@/components/shared/DataTable'
+import type { Column } from '@/components/shared/DataTable'
 import { ProjectStatusBadge } from '@/components/modules/projects/ProjectStatusBadge'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
@@ -23,6 +25,110 @@ export const metadata = { title: 'Projects — Engineering Agency OS' }
 
 interface PageProps {
   searchParams: Promise<{ search?: string; status?: string; discipline?: string; priority?: string }>
+}
+
+function projectColumns(): Column<ProjectWithRelations>[] {
+  return [
+    {
+      key: 'project_code',
+      header: 'Project Code',
+      render: (project) => (
+        <Link href={`/projects/${project.id}`} style={{ textDecoration: 'none' }}>
+          <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+            {project.project_code}
+          </span>
+        </Link>
+      ),
+    },
+    {
+      key: 'name',
+      header: 'Project Name',
+      render: (project) => (
+        <Link href={`/projects/${project.id}`} style={{ textDecoration: 'none' }}>
+          <p style={{
+            fontWeight: 500,
+            color: 'var(--color-text-primary)',
+            fontSize: '0.8125rem',
+            maxWidth: '260px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {project.name}
+          </p>
+        </Link>
+      ),
+    },
+    {
+      key: 'client',
+      header: 'Client',
+      render: (project) => (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+          {project.clients?.client_name ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'discipline',
+      header: 'Discipline',
+      render: (project) => (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
+          {project.discipline}
+        </span>
+      ),
+    },
+    {
+      key: 'lead',
+      header: 'Lead',
+      render: (project) => (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+          {project.lead?.full_name ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'priority',
+      header: 'Priority',
+      render: (project) => (
+        <PriorityBadge priority={project.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'} />
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (project) => <ProjectStatusBadge status={project.status} />,
+    },
+    {
+      key: 'due',
+      header: 'Due Date',
+      render: (project) => (
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+          {formatDate(project.target_due_date)}
+        </span>
+      ),
+    },
+    {
+      key: 'progress',
+      header: 'Progress',
+      render: (project) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '90px' }}>
+          <ProgressBar value={project.progress_percent} height={5} />
+          <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+            {project.progress_percent}%
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'waiting_on',
+      header: 'Waiting On',
+      render: (project) => (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
+          {project.waiting_on === 'none' ? '—' : project.waiting_on}
+        </span>
+      ),
+    },
+  ]
 }
 
 export default async function ProjectsPage({ searchParams }: PageProps) {
@@ -53,13 +159,16 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
         ? 'Projects in your operational scope.'
         : 'Active and historical engineering project work.'
 
+  const hasActiveFilters = Boolean(params.search || params.status || params.discipline || params.priority)
+  const canCreate = canAccessProjectsNewRoute(profile.system_role)
+
   return (
     <div>
       <PageHeader
         title={pageTitle}
         subtitle={pageSubtitle}
         actions={
-          canAccessProjectsNewRoute(profile.system_role) ? <Link
+          canCreate ? <Link
             href="/projects/new"
             style={{
               display: 'inline-flex',
@@ -80,7 +189,6 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
         }
       />
 
-      {/* Filters */}
       <form method="GET">
         <FilterBar>
           <input name="search" type="search" defaultValue={params.search ?? ''} placeholder="Search projects…" style={FI} />
@@ -112,150 +220,70 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
             <option value="urgent">Urgent</option>
           </select>
           <button type="submit" style={FB}>Filter</button>
-          {(params.search || params.status || params.discipline || params.priority) && (
+          {hasActiveFilters && (
             <Link href="/projects" style={FC}>Clear filters</Link>
           )}
         </FilterBar>
       </form>
 
-      {/* Table */}
       <SectionCard noPadding>
-        <ProjectsTable projects={projects} />
+        <ProjectsTable
+          projects={projects}
+          hasActiveFilters={hasActiveFilters}
+          canCreate={canCreate}
+        />
       </SectionCard>
     </div>
   )
 }
 
-function ProjectsTable({ projects }: { projects: ProjectWithRelations[] }) {
+function ProjectsTable({
+  projects,
+  hasActiveFilters,
+  canCreate,
+}: {
+  projects: ProjectWithRelations[]
+  hasActiveFilters: boolean
+  canCreate: boolean
+}) {
   if (projects.length === 0) {
+    if (hasActiveFilters) {
+      return (
+        <EmptyState
+          compact
+          icon={<FolderKanban size={16} aria-hidden="true" />}
+          title="No projects match your filters"
+          description="Try different criteria or clear filters to see all projects in scope."
+          action={<Link href="/projects" style={{ ...FC, display: 'inline-flex', alignItems: 'center' }}>Clear filters</Link>}
+        />
+      )
+    }
     return (
       <EmptyState
         icon={<FolderKanban size={22} />}
         title="No projects yet"
         description="Create your first project to start tracking engineering work, deadlines, and team assignments."
         action={
-          <Link
-            href="/projects/new"
-            style={{
-              padding: '9px 18px',
-              backgroundColor: 'var(--color-primary)',
-              color: 'var(--color-primary-fg)',
-              borderRadius: 'var(--radius-control)',
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-            }}
-          >
-            Create first project
-          </Link>
+          canCreate ? (
+            <Link
+              href="/projects/new"
+              style={{
+                padding: '9px 18px',
+                backgroundColor: 'var(--color-primary)',
+                color: 'var(--color-primary-fg)',
+                borderRadius: 'var(--radius-control)',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              Create first project
+            </Link>
+          ) : undefined
         }
       />
     )
   }
 
-  const headers = ['Project Code', 'Project Name', 'Client', 'Discipline', 'Lead', 'Priority', 'Status', 'Due Date', 'Progress', 'Waiting On']
-
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-            {headers.map(h => (
-              <th
-                key={h}
-                style={{
-                  padding: '10px 14px',
-                  textAlign: 'left',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: 'var(--color-text-muted)',
-                  backgroundColor: 'var(--color-surface-subtle)',
-                  letterSpacing: '0.02em',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {projects.map((project, idx) => (
-            <tr
-              key={project.id}
-              style={{
-                borderBottom: idx < projects.length - 1 ? '1px solid var(--color-border)' : undefined,
-                backgroundColor: 'var(--color-surface)',
-                cursor: 'pointer',
-              }}
-              className="hover:bg-[var(--color-surface-muted)] transition-colors"
-            >
-              {/* Code */}
-              <td style={{ padding: '10px 14px' }}>
-                <Link href={`/projects/${project.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                    {project.project_code}
-                  </span>
-                </Link>
-              </td>
-              {/* Name */}
-              <td style={{ padding: '10px 14px' }}>
-                <Link href={`/projects/${project.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-                  <p style={{
-                    fontWeight: 500,
-                    color: 'var(--color-text-primary)',
-                    fontSize: '0.8125rem',
-                    maxWidth: '260px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {project.name}
-                  </p>
-                </Link>
-              </td>
-              {/* Client */}
-              <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
-                {project.clients?.client_name ?? '—'}
-              </td>
-              {/* Discipline */}
-              <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
-                {project.discipline}
-              </td>
-              {/* Lead */}
-              <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
-                {project.lead?.full_name ?? '—'}
-              </td>
-              {/* Priority */}
-              <td style={{ padding: '10px 14px' }}>
-                <PriorityBadge priority={project.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'} />
-              </td>
-              {/* Status */}
-              <td style={{ padding: '10px 14px' }}>
-                <ProjectStatusBadge status={project.status} />
-              </td>
-              {/* Due Date */}
-              <td style={{ padding: '10px 14px', fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-                {formatDate(project.target_due_date)}
-              </td>
-              {/* Progress */}
-              <td style={{ padding: '10px 14px', minWidth: '90px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <ProgressBar value={project.progress_percent} height={5} />
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-                    {project.progress_percent}%
-                  </span>
-                </div>
-              </td>
-              {/* Waiting On */}
-              <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
-                {project.waiting_on === 'none' ? '—' : project.waiting_on}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
+  return <DataTable columns={projectColumns()} data={projects} />
 }

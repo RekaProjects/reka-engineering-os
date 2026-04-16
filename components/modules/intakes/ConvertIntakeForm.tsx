@@ -10,6 +10,7 @@ import {
   PRIORITY_OPTIONS,
 } from '@/lib/constants/options'
 import type { Intake } from '@/types/database'
+import { FormSection } from '@/components/shared/FormSection'
 
 type OptionPair = { value: string; label: string }
 
@@ -48,17 +49,6 @@ const fieldGroupStyle: React.CSSProperties = {
   gap: '16px',
 }
 
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  color: 'var(--color-text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  marginBottom: '12px',
-  paddingBottom: '8px',
-  borderBottom: '1px solid var(--color-border)',
-}
-
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
@@ -93,12 +83,12 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
     <form action={handleSubmit}>
       <input type="hidden" name="intake_id" value={intake.id} />
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-        {/* Intake Context Banner */}
         <div
           style={{
             padding: '12px 16px',
+            marginBottom: '20px',
             backgroundColor: 'var(--color-primary-subtle)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-control)',
@@ -119,9 +109,7 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
           </p>
         </div>
 
-        {/* Section: Project Info */}
-        <div>
-          <p style={sectionTitleStyle}>Project Information</p>
+        <FormSection title="Project Information" first>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <Field label="Project Name" required>
               <input
@@ -143,11 +131,9 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
               />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Client */}
-        <div>
-          <p style={sectionTitleStyle}>Client</p>
+        <FormSection title="Client">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {needsClientSelection ? (
               <>
@@ -203,11 +189,9 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
               </>
             )}
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Source & Classification */}
-        <div>
-          <p style={sectionTitleStyle}>Source & Classification</p>
+        <FormSection title="Source & Classification">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={fieldGroupStyle}>
               <Field label="Source" required>
@@ -244,11 +228,9 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
               </Field>
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Timeline */}
-        <div>
-          <p style={sectionTitleStyle}>Timeline</p>
+        <FormSection title="Timeline">
           <div style={fieldGroupStyle}>
             <Field label="Start Date" required>
               <input
@@ -269,11 +251,9 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
               />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Assignment */}
-        <div>
-          <p style={sectionTitleStyle}>Assignment</p>
+        <FormSection title="Assignment">
           <div style={fieldGroupStyle}>
             <Field label="Project Lead" required>
               <select
@@ -305,11 +285,9 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
               </select>
             </Field>
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Priority & Notes */}
-        <div>
-          <p style={sectionTitleStyle}>Priority & Notes</p>
+        <FormSection title="Priority & Notes">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ maxWidth: '50%' }}>
               <Field label="Priority" required>
@@ -330,7 +308,7 @@ export function ConvertIntakeForm({ intake, clients, users, disciplineOptions, p
               />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
         {/* Error */}
         {error && (

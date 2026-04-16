@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient, updateClient } from '@/lib/clients/actions'
 import { CLIENT_TYPES, CLIENT_STATUSES_OPTIONS, SOURCE_PLATFORMS } from '@/lib/constants/options'
 import type { Client } from '@/types/database'
+import { FormSection } from '@/components/shared/FormSection'
 
 interface ClientFormProps {
   mode: 'create' | 'edit'
@@ -36,17 +37,6 @@ const fieldGroupStyle: React.CSSProperties = {
   gap: '16px',
 }
 
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  color: 'var(--color-text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  marginBottom: '12px',
-  paddingBottom: '8px',
-  borderBottom: '1px solid var(--color-border)',
-}
-
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
@@ -76,11 +66,9 @@ export function ClientForm({ mode, client }: ClientFormProps) {
 
   return (
     <form action={handleSubmit}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-        {/* Section: Basic Info */}
-        <div>
-          <p style={sectionTitleStyle}>Basic Information</p>
+        <FormSection title="Basic Information" first>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={fieldGroupStyle}>
               <Field label="Client Name" required>
@@ -129,11 +117,9 @@ export function ClientForm({ mode, client }: ClientFormProps) {
               </Field>
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Contact */}
-        <div>
-          <p style={sectionTitleStyle}>Primary Contact</p>
+        <FormSection title="Primary Contact">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <Field label="Contact Name">
               <input
@@ -165,11 +151,9 @@ export function ClientForm({ mode, client }: ClientFormProps) {
               </Field>
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        {/* Section: Notes */}
-        <div>
-          <p style={sectionTitleStyle}>Notes</p>
+        <FormSection title="Notes">
           <Field label="Internal Notes">
             <textarea
               name="notes"
@@ -179,7 +163,7 @@ export function ClientForm({ mode, client }: ClientFormProps) {
               style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }}
             />
           </Field>
-        </div>
+        </FormSection>
 
         {/* Error */}
         {error && (

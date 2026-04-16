@@ -1,6 +1,7 @@
 // Server-side query helpers for the Projects module
 import { createServerClient } from '@/lib/supabase/server'
-import type { Project } from '@/types/database'
+import { effectiveRole } from '@/lib/auth/permissions'
+import type { Project, SystemRole } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -35,6 +36,29 @@ export async function isUserAssignedToProject(userId: string, projectId: string)
     .maybeSingle()
   if (error) return false
   return data != null
+}
+
+/**
+ * Project IDs the user may open on the hub (mirrors userCanViewProject in access-surface).
+ * Admin: null (caller applies no project filter).
+ * Others: union of team assignments + projects where user is lead or project reviewer.
+ */
+export async function getViewableProjectIdsForUser(
+  userId: string,
+  systemRole: SystemRole | null | undefined,
+): Promise<string[] | null> {
+  if (effectiveRole(systemRole) === 'admin') return null
+
+  const assigned = await getAssignedProjectIdsForUser(userId)
+  const supabase = await createServerClient()
+  const { data: leadRev } = await supabase
+    .from('projects')
+    .select('id')
+    .or(`reviewer_user_id.eq.${userId},project_lead_user_id.eq.${userId}`)
+
+  const rows = (leadRev ?? []) as { id: string }[]
+  const set = new Set<string>([...assigned, ...rows.map((r) => r.id)])
+  return [...set]
 }
 
 // ─── List ─────────────────────────────────────────────────────

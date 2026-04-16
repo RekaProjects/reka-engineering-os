@@ -8,6 +8,7 @@ import {
   TASK_CATEGORY_OPTIONS,
   PRIORITY_OPTIONS,
 } from '@/lib/constants/options'
+import { FormSection } from '@/components/shared/FormSection'
 import type { TaskEditFormScope } from '@/lib/auth/edit-form-scopes'
 import type { TaskWithRelations } from '@/lib/tasks/queries'
 
@@ -47,17 +48,6 @@ const fieldGroupStyle: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: '1fr 1fr',
   gap: '16px',
-}
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  color: 'var(--color-text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  marginBottom: '12px',
-  paddingBottom: '8px',
-  borderBottom: '1px solid var(--color-border)',
 }
 
 const noticeStyle: React.CSSProperties = {
@@ -172,13 +162,12 @@ export function TaskForm({
   if (mode === 'edit' && scope === 'reviewer' && task) {
     return (
       <form action={handleSubmit}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-          <p style={noticeStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <p style={{ ...noticeStyle, marginBottom: '20px' }}>
             Review updates: only status, notes, blocked reason, and optional completion date are saved.
             Other task fields are managed by coordinators and admins.
           </p>
-          <div>
-            <p style={sectionTitleStyle}>Task</p>
+          <FormSection title="Task" first>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <Field label="Title">
                 <div style={readOnlyBoxStyle}>{task.title}</div>
@@ -191,9 +180,8 @@ export function TaskForm({
                 </Field>
               )}
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>Review</p>
+          </FormSection>
+          <FormSection title="Review">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={fieldGroupStyle}>
                 <Field label="Status" required>
@@ -214,7 +202,7 @@ export function TaskForm({
                 <textarea name="notes" rows={3} defaultValue={task.notes ?? ''} placeholder="Review notes…" style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }} />
               </Field>
             </div>
-          </div>
+          </FormSection>
           <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
         </div>
       </form>
@@ -227,12 +215,11 @@ export function TaskForm({
 
     return (
       <form action={handleSubmit}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-          <p style={noticeStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <p style={{ ...noticeStyle, marginBottom: '20px' }}>
             You can update execution fields only (status, progress, links, hours, notes). Project and assignment are locked.
           </p>
-          <div>
-            <p style={sectionTitleStyle}>Task (read-only)</p>
+          <FormSection title="Task (read-only)" first>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <Field label="Title">
                 <div style={readOnlyBoxStyle}>{task.title}</div>
@@ -243,9 +230,8 @@ export function TaskForm({
                 </div>
               </Field>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>Project & assignment (read-only)</p>
+          </FormSection>
+          <FormSection title="Project & assignment (read-only)">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {task.projects && (
                 <Field label="Project">
@@ -287,9 +273,8 @@ export function TaskForm({
                 </Field>
               </div>
             </div>
-          </div>
-          <div>
-            <p style={sectionTitleStyle}>Your updates</p>
+          </FormSection>
+          <FormSection title="Your updates">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={fieldGroupStyle}>
                 <Field label="Status" required>
@@ -321,7 +306,7 @@ export function TaskForm({
                 <textarea name="notes" rows={3} defaultValue={task.notes ?? ''} placeholder="Additional notes…" style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }} />
               </Field>
             </div>
-          </div>
+          </FormSection>
           <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
         </div>
       </form>
@@ -330,10 +315,9 @@ export function TaskForm({
 
   return (
     <form action={handleSubmit}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-        <div>
-          <p style={sectionTitleStyle}>Task Information</p>
+        <FormSection title="Task Information" first>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <Field label="Title" required>
               <input
@@ -355,10 +339,9 @@ export function TaskForm({
               />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Project & Classification</p>
+        <FormSection title="Project & Classification">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={fieldGroupStyle}>
               <Field label="Project" required>
@@ -401,10 +384,9 @@ export function TaskForm({
               </Field>
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Assignment</p>
+        <FormSection title="Assignment">
           <div style={fieldGroupStyle}>
             <Field label="Assigned To" required>
               <select
@@ -436,10 +418,9 @@ export function TaskForm({
               </select>
             </Field>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Timeline</p>
+        <FormSection title="Timeline">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={fieldGroupStyle}>
               <Field label="Start Date">
@@ -460,10 +441,9 @@ export function TaskForm({
               )}
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Status & Priority</p>
+        <FormSection title="Status & Priority">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={fieldGroupStyle}>
               <Field label="Status" required>
@@ -490,10 +470,9 @@ export function TaskForm({
               </Field>
             </div>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <p style={sectionTitleStyle}>Links & Notes</p>
+        <FormSection title="Links & Notes">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <Field label="Drive Link">
               <input name="drive_link" type="url" defaultValue={task?.drive_link ?? ''} placeholder="https://drive.google.com/…" style={inputStyle} />
@@ -502,7 +481,7 @@ export function TaskForm({
               <textarea name="notes" rows={3} defaultValue={task?.notes ?? ''} placeholder="Additional notes…" style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }} />
             </Field>
           </div>
-        </div>
+        </FormSection>
 
         <FormChrome error={error} isPending={isPending} mode={mode} onCancel={() => router.back()} />
       </div>

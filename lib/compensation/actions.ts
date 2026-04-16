@@ -5,10 +5,14 @@ import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { loadMutationProfile, ensureCompensationOrPaymentMutation } from '@/lib/auth/mutation-policy'
 
+function moneyInt(n: number): number {
+  return Math.round(Number.isFinite(n) ? n : 0)
+}
+
 function buildPayload(formData: FormData) {
   const qty = parseFloat(formData.get('qty') as string) || 1
-  const rate_amount = parseFloat(formData.get('rate_amount') as string) || 0
-  const subtotal_amount = qty * rate_amount
+  const rate_amount = moneyInt(parseFloat(formData.get('rate_amount') as string) || 0)
+  const subtotal_amount = moneyInt(qty * rate_amount)
 
   return {
     member_id: formData.get('member_id') as string,
@@ -65,6 +69,7 @@ export async function updateCompensation(id: string, formData: FormData) {
   const payload = buildPayload(formData)
   if (!payload.member_id) return { error: 'Member is required.' }
   if (!payload.project_id) return { error: 'Project is required.' }
+  if (!payload.rate_type) return { error: 'Rate type is required.' }
 
   const { error } = await supabase
     .from('compensation_records')

@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader }        from '@/components/layout/PageHeader'
 import { SectionCard }       from '@/components/shared/SectionCard'
+import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { AvailabilityBadge } from '@/components/modules/team/AvailabilityBadge'
 import { WorkerTypeBadge }   from '@/components/modules/team/WorkerTypeBadge'
 import { CompensationStatusBadge } from '@/components/modules/compensation/CompensationStatusBadge'
@@ -129,6 +130,18 @@ export default async function TeamMemberDetailPage({ params }: PageProps) {
         }
       />
 
+      <EntityStatusStrip
+        statusBadge={<AvailabilityBadge status={member.availability_status} />}
+        priorityBadge={
+          member.worker_type ? <WorkerTypeBadge type={member.worker_type} /> : undefined
+        }
+        extraBadge={
+          <span style={{ color: activeColor, fontWeight: 600, textTransform: 'capitalize', fontSize: '0.75rem' }}>
+            {member.active_status}
+          </span>
+        }
+      />
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
         {/* ── Identity ─────────────────────────────────────────── */}
@@ -189,14 +202,6 @@ export default async function TeamMemberDetailPage({ params }: PageProps) {
         {/* ── Status & Rate ─────────────────────────────────────── */}
         <SectionCard title="Status &amp; Rate">
           <div style={GRID2}>
-            <DetailRow label="Active Status">
-              <span style={{ color: activeColor, fontWeight: 500, textTransform: 'capitalize' }}>
-                {member.active_status}
-              </span>
-            </DetailRow>
-            <DetailRow label="Availability">
-              <AvailabilityBadge status={member.availability_status} />
-            </DetailRow>
             <DetailRow label="Rate Type">
               {member.rate_type ? RATE_LABEL[member.rate_type] ?? member.rate_type : '—'}
             </DetailRow>

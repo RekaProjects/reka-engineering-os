@@ -6,7 +6,10 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { FilterBar } from '@/components/shared/FilterBar'
+import { DataTable } from '@/components/shared/DataTable'
+import type { Column } from '@/components/shared/DataTable'
 import { DeliverableStatusBadge } from '@/components/modules/deliverables/DeliverableStatusBadge'
+import { getViewableProjectIdsForUser } from '@/lib/projects/queries'
 import { getDeliverables, type DeliverableWithRelations } from '@/lib/deliverables/queries'
 import { formatDate } from '@/lib/utils/formatters'
 import { FileText, Plus, ExternalLink } from 'lucide-react'
@@ -22,16 +25,139 @@ interface PageProps {
   searchParams: Promise<{ search?: string; status?: string; type?: string; project_id?: string }>
 }
 
+const typeLabels: Record<string, string> = {
+  drawing: 'Drawing',
+  '3d_model': '3D Model',
+  report: 'Report',
+  boq: 'BOQ',
+  calculation_sheet: 'Calc Sheet',
+  presentation: 'Presentation',
+  specification: 'Specification',
+  revision_package: 'Rev Package',
+  submission_package: 'Sub Package',
+}
+
+function deliverableColumns(): Column<DeliverableWithRelations>[] {
+  return [
+    {
+      key: 'name',
+      header: 'Deliverable',
+      render: (d) => (
+        <Link href={`/deliverables/${d.id}`} style={{ textDecoration: 'none' }}>
+          <span style={{
+            fontWeight: 500,
+            color: 'var(--color-text-primary)',
+            fontSize: '0.8125rem',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            display: 'block',
+            maxWidth: '260px',
+          }}>
+            {d.name}
+          </span>
+        </Link>
+      ),
+    },
+    {
+      key: 'project',
+      header: 'Project',
+      render: (d) => (
+        d.projects ? (
+          <Link href={`/projects/${d.projects.id}`} style={{ textDecoration: 'none', color: 'var(--color-primary)', fontWeight: 500, fontSize: '0.75rem' }}>
+            {d.projects.project_code}
+          </Link>
+        ) : '—'
+      ),
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      render: (d) => (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+          {typeLabels[d.type] ?? d.type}
+        </span>
+      ),
+    },
+    {
+      key: 'rev',
+      header: 'Rev',
+      render: (d) => (
+        <span>
+          <span style={{
+            fontFamily: 'monospace',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: 'var(--color-text-primary)',
+            backgroundColor: 'var(--color-surface-subtle)',
+            padding: '1px 6px',
+            borderRadius: '4px',
+          }}>
+            R{d.revision_number}
+          </span>
+          {d.version_label && (
+            <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginLeft: '4px' }}>
+              {d.version_label}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'preparer',
+      header: 'Prepared By',
+      render: (d) => (
+        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+          {d.preparer?.full_name ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (d) => <DeliverableStatusBadge status={d.status} />,
+    },
+    {
+      key: 'submitted',
+      header: 'Submitted',
+      render: (d) => (
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+          {formatDate(d.submitted_to_client_date)}
+        </span>
+      ),
+    },
+    {
+      key: 'file',
+      header: 'File',
+      render: (d) => (
+        d.file_link ? (
+          <a
+            href={d.file_link}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--color-primary)', display: 'flex', alignItems: 'center' }}
+          >
+            <ExternalLink size={13} aria-hidden="true" />
+          </a>
+        ) : (
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>—</span>
+        )
+      ),
+    },
+  ]
+}
+
 export default async function DeliverablesPage({ searchParams }: PageProps) {
   const profile = await getSessionProfile()
   const role = effectiveRole(profile.system_role)
   const params = await searchParams
 
   const scopeOpts =
-    role === 'member'      ? { scopePreparerId: profile.id } :
-    role === 'reviewer'    ? { scopeReviewerId: profile.id } :
-    role === 'coordinator' ? { scopeProjectUserId: profile.id } :
-    {}
+    role === 'member' ? { scopePreparerId: profile.id } :
+    role === 'reviewer' ? { scopeReviewerId: profile.id } :
+    role === 'coordinator'
+      ? { scopeProjectIds: (await getViewableProjectIdsForUser(profile.id, profile.system_role)) ?? [] }
+      : {}
 
   const deliverables = await getDeliverables({
     search: params.search,
@@ -50,6 +176,7 @@ export default async function DeliverablesPage({ searchParams }: PageProps) {
         ? 'Deliverables in your assigned projects.'
         : 'Project outputs tracked through review, revision, and final issuance.'
   const canCreate = canAccessTasksDeliverablesFilesNewRoute(profile.system_role)
+  const hasActiveFilters = Boolean(params.search || params.status || params.type || params.project_id)
 
   return (
     <div>
@@ -78,7 +205,6 @@ export default async function DeliverablesPage({ searchParams }: PageProps) {
         }
       />
 
-      {/* Filters */}
       <form method="GET">
         <FilterBar>
           <input name="search" type="search" defaultValue={params.search ?? ''} placeholder="Search deliverables…" style={FI} />
@@ -105,34 +231,44 @@ export default async function DeliverablesPage({ searchParams }: PageProps) {
             <option value="submission_package">Submission Package</option>
           </select>
           <button type="submit" style={FB}>Filter</button>
-          {(params.search || params.status || params.type || params.project_id) && (
+          {hasActiveFilters && (
             <Link href="/deliverables" style={FC}>Clear filters</Link>
           )}
         </FilterBar>
       </form>
 
-      {/* Table */}
       <SectionCard noPadding>
-        <DeliverablesTable deliverables={deliverables} />
+        <DeliverablesTable
+          deliverables={deliverables}
+          hasActiveFilters={hasActiveFilters}
+          canCreate={canCreate}
+        />
       </SectionCard>
     </div>
   )
 }
 
-const typeLabels: Record<string, string> = {
-  drawing: 'Drawing',
-  '3d_model': '3D Model',
-  report: 'Report',
-  boq: 'BOQ',
-  calculation_sheet: 'Calc Sheet',
-  presentation: 'Presentation',
-  specification: 'Specification',
-  revision_package: 'Rev Package',
-  submission_package: 'Sub Package',
-}
-
-function DeliverablesTable({ deliverables }: { deliverables: DeliverableWithRelations[] }) {
+function DeliverablesTable({
+  deliverables,
+  hasActiveFilters,
+  canCreate,
+}: {
+  deliverables: DeliverableWithRelations[]
+  hasActiveFilters: boolean
+  canCreate: boolean
+}) {
   if (deliverables.length === 0) {
+    if (hasActiveFilters) {
+      return (
+        <EmptyState
+          compact
+          icon={<FileText size={16} strokeWidth={1.5} aria-hidden="true" />}
+          title="No deliverables match your filters"
+          description="Try different criteria or clear filters to see all deliverables in scope."
+          action={<Link href="/deliverables" style={{ ...FC, display: 'inline-flex', alignItems: 'center' }}>Clear filters</Link>}
+        />
+      )
+    }
     return (
       <EmptyState
         emphasis
@@ -140,149 +276,35 @@ function DeliverablesTable({ deliverables }: { deliverables: DeliverableWithRela
         title="No deliverables yet"
         description="Create your first deliverable to start tracking project outputs, revisions, and client submissions."
         action={
-          <Link
-            href="/deliverables/new"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '9px 18px',
-              backgroundColor: 'var(--color-primary)',
-              color: 'var(--color-primary-fg)',
-              borderRadius: 'var(--radius-control)',
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-            }}
-          >
-            Create first deliverable
-          </Link>
+          canCreate ? (
+            <Link
+              href="/deliverables/new"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '9px 18px',
+                backgroundColor: 'var(--color-primary)',
+                color: 'var(--color-primary-fg)',
+                borderRadius: 'var(--radius-control)',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              Create first deliverable
+            </Link>
+          ) : undefined
         }
       />
     )
   }
 
-  const headers = ['Deliverable', 'Project', 'Type', 'Rev', 'Prepared By', 'Status', 'Submitted', 'File']
-
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-            {headers.map(h => (
-              <th
-                key={h}
-                style={{
-                  padding: '10px 14px',
-                  textAlign: 'left',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: 'var(--color-text-muted)',
-                  backgroundColor: 'var(--color-surface-subtle)',
-                  letterSpacing: '0.02em',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {deliverables.map((d, idx) => {
-            const isRevisionRequested = d.status === 'revision_requested'
-
-            return (
-              <tr
-                key={d.id}
-                style={{
-                  borderBottom: idx < deliverables.length - 1 ? '1px solid var(--color-border)' : undefined,
-                  backgroundColor: 'var(--color-surface)',
-                  boxShadow: isRevisionRequested ? 'inset 3px 0 0 var(--color-danger)' : undefined,
-                  cursor: 'pointer',
-                }}
-              >
-                {/* Name */}
-                <td style={{ padding: '10px 14px', maxWidth: '260px' }}>
-                  <Link href={`/deliverables/${d.id}`} style={{ textDecoration: 'none' }}>
-                    <span style={{
-                      fontWeight: 500,
-                      color: 'var(--color-text-primary)',
-                      fontSize: '0.8125rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'block',
-                    }}>
-                      {d.name}
-                    </span>
-                  </Link>
-                </td>
-                {/* Project */}
-                <td style={{ padding: '10px 14px' }}>
-                  {d.projects ? (
-                    <Link href={`/projects/${d.projects.id}`} style={{ textDecoration: 'none', color: 'var(--color-primary)', fontWeight: 500, fontSize: '0.75rem' }}>
-                      {d.projects.project_code}
-                    </Link>
-                  ) : '—'}
-                </td>
-                {/* Type */}
-                <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
-                  {typeLabels[d.type] ?? d.type}
-                </td>
-                {/* Rev */}
-                <td style={{ padding: '10px 14px' }}>
-                  <span style={{
-                    fontFamily: 'monospace',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--color-text-primary)',
-                    backgroundColor: 'var(--color-surface-subtle)',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                  }}>
-                    R{d.revision_number}
-                  </span>
-                  {d.version_label && (
-                    <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginLeft: '4px' }}>
-                      {d.version_label}
-                    </span>
-                  )}
-                </td>
-                {/* Prepared By */}
-                <td style={{ padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
-                  {d.preparer?.full_name ?? '—'}
-                </td>
-                {/* Status */}
-                <td style={{ padding: '10px 14px' }}>
-                  <DeliverableStatusBadge status={d.status} />
-                </td>
-                {/* Submitted */}
-                <td style={{ padding: '10px 14px', fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-                  {formatDate(d.submitted_to_client_date)}
-                </td>
-                {/* File */}
-                <td style={{ padding: '10px 14px' }}>
-                  {d.file_link ? (
-                    <a
-                      href={d.file_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--color-primary)', display: 'flex', alignItems: 'center' }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <ExternalLink size={13} />
-                    </a>
-                  ) : (
-                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>—</span>
-                  )}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      columns={deliverableColumns()}
+      data={deliverables}
+      getRowStyle={(d) => (d.status === 'revision_requested' ? { boxShadow: 'inset 3px 0 0 var(--color-danger)' } : undefined)}
+    />
   )
 }

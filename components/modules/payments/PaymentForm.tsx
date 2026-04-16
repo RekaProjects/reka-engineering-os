@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { CSSProperties } from 'react'
 import { PAYMENT_METHOD_OPTIONS } from '@/lib/constants/options'
+import { FormSection } from '@/components/shared/FormSection'
 
 type MemberOption = { id: string; full_name: string }
 type OptionPair = { value: string; label: string }
@@ -56,12 +57,8 @@ export function PaymentForm({ members, defaultValues: dv = {}, action, submitLab
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Section: Member & Period */}
-        <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-          <legend style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '12px' }}>
-            Member &amp; Period
-          </legend>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <FormSection title="Member & Period" first>
           <div style={GRID2}>
             <div>
               <label style={LABEL}>Member *</label>
@@ -77,13 +74,9 @@ export function PaymentForm({ members, defaultValues: dv = {}, action, submitLab
               <input name="period_label" defaultValue={(dv.period_label as string) ?? ''} placeholder="e.g. April 2026" style={INPUT} />
             </div>
           </div>
-        </fieldset>
+        </FormSection>
 
-        {/* Section: Amounts */}
-        <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-          <legend style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '12px' }}>
-            Amounts (IDR)
-          </legend>
+        <FormSection title="Amounts (IDR)">
           <div style={GRID2}>
             <div>
               <label style={LABEL}>Total Due *</label>
@@ -101,13 +94,9 @@ export function PaymentForm({ members, defaultValues: dv = {}, action, submitLab
           <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: '6px' }}>
             Balance and status are calculated automatically from Total Due and Total Paid.
           </p>
-        </fieldset>
+        </FormSection>
 
-        {/* Section: Payment Info */}
-        <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-          <legend style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '12px' }}>
-            Payment Details
-          </legend>
+        <FormSection title="Payment Details">
           <div style={GRID2}>
             <div>
               <label style={LABEL}>Payment Date</label>
@@ -128,16 +117,18 @@ export function PaymentForm({ members, defaultValues: dv = {}, action, submitLab
             </div>
             <div>
               <label style={LABEL}>Proof Link</label>
-              <input name="proof_link" defaultValue={(dv.proof_link as string) ?? ''} placeholder="URL to payment proof" style={INPUT} />
+              <input name="proof_link" defaultValue={(dv.proof_link as string) ?? ''} placeholder="https://…" style={INPUT} />
+              <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                Optional. Use a full http(s) URL only.
+              </p>
             </div>
           </div>
-        </fieldset>
+        </FormSection>
 
-        {/* Notes */}
-        <div>
+        <FormSection title="Notes">
           <label style={LABEL}>Notes</label>
           <textarea name="notes" rows={3} defaultValue={(dv.notes as string) ?? ''} style={{ ...INPUT, resize: 'vertical' }} placeholder="Optional notes…" />
-        </div>
+        </FormSection>
       </div>
 
       <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
