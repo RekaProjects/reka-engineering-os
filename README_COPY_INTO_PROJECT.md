@@ -1,36 +1,37 @@
-# Pre-Stage-7 Readiness Pack — Copy Into Project
+# Pre-Stage-7 Six-Stage Cursor Pack
 
-Copy this pack into the **root of your project**.
+Copy these files into the **root of your project**.
 
-Recommended workflow in Cursor desktop:
+This pack compresses the remaining pre-deploy work into **6 stages total**.
 
-1. Commit your current work before starting any pre-Stage-7 pass.
-2. Work in **one pass per chat/session**.
-3. Use **Agent** mode.
-4. Turn **Plan mode ON** if available.
-5. Start with the matching `docs/*.md` briefing and `prompts/*.md` prompt file.
-6. Do **not** let Cursor jump to another pass.
-7. Stop after each pass and review the completion report.
-8. Commit and push after each completed pass.
+## Stage order
+1. `prompts/STAGE_01_PRE_STAGE7_RLS_PARITY.md`
+2. `prompts/STAGE_02_PRE_STAGE7_STATUS_TRANSITIONS.md`
+3. `prompts/STAGE_03_PRE_STAGE7_CTA_LEAK_AND_ROLE_QA.md`
+4. `prompts/STAGE_04_PRE_STAGE7_FINANCE_AUTOMATION_AUDIT.md`
+5. `prompts/STAGE_05_PRE_STAGE7_FINANCE_AUTOMATION_IMPLEMENT.md`
+6. `prompts/STAGE_06_PRE_STAGE7_FINANCE_AUTOMATION_QA.md`
 
-Suggested order before Stage 7:
+## What these 6 stages cover
+### Hardening
+- RLS parity
+- minimal status transition rules
+- CTA leak cleanup everywhere
+- final manual QA matrix by role
 
-1. UI Completeness Pass
-2. RBAC QA Pass
-3. Payments / Compensation Sanity Pass
-4. Dashboard Payment Snapshot Pass
-5. Manual pre-deploy checklist
-6. Stage 7
+### Finance automation lite
+- compensation -> payment workflow feels less manual
+- grouped pending/payment-ready visibility
+- lighter admin prep flow
+- practical rollups only
+- still not payroll / tax / invoicing
 
-Files included:
+## Important
+- Use **one Cursor chat/session per stage**
+- Commit before each stage
+- Do not let Cursor jump ahead
+- Preserve all current working flows
+- Do not add unrelated features
 
-- `docs/PRE_STAGE7_MASTER_CHECKLIST.md`
-- `docs/PRE_STAGE7_UI_COMPLETENESS_BRIEFING.md`
-- `prompts/PRE_STAGE7_UI_COMPLETENESS_PROMPT.md`
-- `docs/PRE_STAGE7_RBAC_QA_BRIEFING.md`
-- `prompts/PRE_STAGE7_RBAC_QA_PROMPT.md`
-- `docs/PRE_STAGE7_PAYMENTS_COMP_SANITY_BRIEFING.md`
-- `prompts/PRE_STAGE7_PAYMENTS_COMP_SANITY_PROMPT.md`
-- `docs/PRE_STAGE7_DASHBOARD_PAYMENT_SNAPSHOT_BRIEFING.md`
-- `prompts/PRE_STAGE7_DASHBOARD_PAYMENT_SNAPSHOT_PROMPT.md`
-- `.cursor/rules/pre-stage7-readiness.mdc`
+## After Stage 6
+If all 6 stages are clean, you can move into **Stage 7 deploy readiness**.
