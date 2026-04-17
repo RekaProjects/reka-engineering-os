@@ -20,6 +20,8 @@ import {
 import { logout } from '@/app/auth/login/actions'
 import { getInitials } from '@/lib/utils/formatters'
 import { getNavPermissions } from '@/lib/auth/permissions'
+import { cn } from '@/lib/utils/cn'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import type { SystemRole } from '@/types/database'
 
 // ── Role display helpers ──────────────────────────────────────────────────
@@ -108,29 +110,19 @@ export function AppSidebar({
         <Link
           href={item.href}
           aria-current={active ? 'page' : undefined}
-          className="sidebar-nav-item"
-          style={{
-            display:         'flex',
-            alignItems:      'center',
-            gap:             '9px',
-            padding:         '6px 10px',
-            borderRadius:    '7px',
-            fontSize:        '0.8125rem',
-            fontWeight:      active ? 600 : 400,
-            color:           active ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-muted)',
-            backgroundColor: active ? 'var(--sidebar-active-bg)' : 'transparent',
-            textDecoration:  'none',
-            transition:      'background-color 0.12s, color 0.12s',
-          }}
+          className={cn(
+            'sidebar-nav-item flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[0.8125rem] no-underline transition-colors duration-[120ms]',
+            active
+              ? 'bg-[var(--sidebar-active-bg)] font-semibold text-[var(--sidebar-active-text)]'
+              : 'font-normal text-[var(--sidebar-text-muted)]'
+          )}
         >
           <span
-            style={{
-              display:    'flex',
-              flexShrink: 0,
-              color:      active ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-muted)',
-              transition: 'color 0.12s',
-            }}
             aria-hidden="true"
+            className={cn(
+              'flex shrink-0 transition-colors duration-[120ms]',
+              active ? 'text-[var(--sidebar-active-text)]' : 'text-[var(--sidebar-text-muted)]'
+            )}
           >
             {item.icon}
           </span>
@@ -140,163 +132,76 @@ export function AppSidebar({
     )
   }
 
+  // ── My Profile link ─────────────────────────────────────────
+
+  const profileActive = pathname === '/my-profile'
+
   // ── Render ──────────────────────────────────────────────────
 
   return (
     <aside
-      style={{
-        width:           'var(--sidebar-width)',
-        minWidth:        'var(--sidebar-width)',
-        height:          '100vh',
-        position:        'sticky',
-        top:             0,
-        display:         'flex',
-        flexDirection:   'column',
-        backgroundColor: 'var(--sidebar-bg)',
-        borderRight:     '1px solid var(--sidebar-border)',
-        overflow:        'hidden',
-      }}
+      className="sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]"
+      style={{ width: 'var(--sidebar-width)', minWidth: 'var(--sidebar-width)' }}
     >
-
       {/* ── Brand ─────────────────────────────────────────────── */}
       <div
-        style={{
-          height:       'var(--topbar-height)',
-          display:      'flex',
-          alignItems:   'center',
-          gap:          '10px',
-          padding:      '0 16px',
-          borderBottom: '1px solid var(--sidebar-border)',
-          flexShrink:   0,
-        }}
+        className="flex shrink-0 items-center gap-2.5 border-b border-[var(--sidebar-border)] px-4"
+        style={{ height: 'var(--topbar-height)' }}
       >
         <div
-          style={{
-            width:           '28px',
-            height:          '28px',
-            backgroundColor: 'var(--color-primary)',
-            borderRadius:    '7px',
-            display:         'flex',
-            alignItems:      'center',
-            justifyContent:  'center',
-            flexShrink:      0,
-            boxShadow:       '0 1px 3px rgba(20,45,80,0.25)',
-          }}
           aria-hidden="true"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-[var(--color-primary)] shadow-[0_1px_3px_rgba(20,45,80,0.25)]"
         >
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: '11px', letterSpacing: '0.02em' }}>EA</span>
+          <span className="text-[11px] font-bold tracking-[0.02em] text-white">EA</span>
         </div>
-        <div style={{ minWidth: 0 }}>
-          <span
-            style={{
-              fontWeight:   700,
-              fontSize:     '0.875rem',
-              color:        'var(--sidebar-text)',
-              whiteSpace:   'nowrap',
-              overflow:     'hidden',
-              textOverflow: 'ellipsis',
-              display:      'block',
-            }}
-          >
+        <div className="min-w-0">
+          <span className="block truncate text-[0.875rem] font-bold text-[var(--sidebar-text)]">
             Agency OS
           </span>
-          <span
-            style={{
-              fontSize:      '0.625rem',
-              color:         'var(--sidebar-label)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              fontWeight:    600,
-            }}
-          >
+          <span className="text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--sidebar-label)]">
             {systemRole ? (ROLE_CONTEXT[systemRole] ?? 'Engineering Agency') : 'Engineering Agency'}
           </span>
         </div>
       </div>
 
       {/* ── Nav groups ────────────────────────────────────────── */}
-      <nav
-        style={{ flex: 1, padding: '8px', overflowY: 'auto' }}
-        aria-label="Main navigation"
-      >
+      <nav className="flex-1 overflow-y-auto p-2" aria-label="Main navigation">
         {navGroups.map((group, gi) => (
-          <div key={gi} style={{ marginBottom: '2px' }}>
-
-            {/* Group label */}
+          <div key={gi} className="mb-0.5">
             {group.label && (
-              <p
-                style={{
-                  fontSize:      '0.625rem',
-                  fontWeight:    700,
-                  color:         'var(--sidebar-label)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.07em',
-                  padding:       '12px 10px 4px',
-                }}
-              >
+              <p className="px-2.5 pb-1 pt-3 text-[0.625rem] font-bold uppercase tracking-[0.07em] text-[var(--sidebar-label)]">
                 {group.label}
               </p>
             )}
-
-            {/* Items */}
-            <ul
-              role="list"
-              style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1px' }}
-            >
+            <ul role="list" className="flex flex-col gap-px">
               {group.items.map(renderItem)}
             </ul>
-
-            {/* Divider */}
             {gi < navGroups.length - 1 && (
-              <div
-                style={{
-                  height:          '1px',
-                  backgroundColor: 'var(--sidebar-border)',
-                  margin:          '6px 4px 2px',
-                  opacity:         0.6,
-                }}
-              />
+              <div className="mx-1 my-1.5 h-px bg-[var(--sidebar-border)] opacity-60" />
             )}
-
           </div>
         ))}
       </nav>
 
       {/* ── Footer ────────────────────────────────────────────── */}
-      <div
-        style={{
-          borderTop: '1px solid var(--sidebar-border)',
-          padding:   '10px 8px',
-          flexShrink: 0,
-        }}
-      >
+      <div className="shrink-0 border-t border-[var(--sidebar-border)] p-2">
         {/* My Profile */}
         <Link
           href="/my-profile"
-          aria-current={pathname === '/my-profile' ? 'page' : undefined}
-          className="sidebar-nav-item"
-          style={{
-            display:         'flex',
-            alignItems:      'center',
-            gap:             '9px',
-            padding:         '6px 10px',
-            borderRadius:    '7px',
-            fontSize:        '0.8125rem',
-            fontWeight:      pathname === '/my-profile' ? 600 : 400,
-            color:           pathname === '/my-profile' ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-muted)',
-            backgroundColor: pathname === '/my-profile' ? 'var(--sidebar-active-bg)' : 'transparent',
-            textDecoration:  'none',
-            transition:      'background-color 0.12s, color 0.12s',
-            marginBottom:    '6px',
-          }}
+          aria-current={profileActive ? 'page' : undefined}
+          className={cn(
+            'sidebar-nav-item mb-1.5 flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[0.8125rem] no-underline transition-colors duration-[120ms]',
+            profileActive
+              ? 'bg-[var(--sidebar-active-bg)] font-semibold text-[var(--sidebar-active-text)]'
+              : 'font-normal text-[var(--sidebar-text-muted)]'
+          )}
         >
           <span
-            style={{
-              display:  'flex',
-              flexShrink: 0,
-              color:    pathname === '/my-profile' ? 'var(--sidebar-active-text)' : 'var(--sidebar-text-muted)',
-            }}
             aria-hidden="true"
+            className={cn(
+              'flex shrink-0',
+              profileActive ? 'text-[var(--sidebar-active-text)]' : 'text-[var(--sidebar-text-muted)]'
+            )}
           >
             <UserCircle size={15} />
           </span>
@@ -304,70 +209,20 @@ export function AppSidebar({
         </Link>
 
         {/* User card */}
-        <div
-          style={{
-            display:         'flex',
-            alignItems:      'center',
-            gap:             '9px',
-            padding:         '8px 10px',
-            borderRadius:    '7px',
-            backgroundColor: 'rgba(255,253,247,0.06)',
-            border:          '1px solid var(--sidebar-border)',
-          }}
-        >
-          {/* Avatar */}
-          <div
-            style={{
-              width:           '28px',
-              height:          '28px',
-              borderRadius:    '50%',
-              backgroundColor: 'var(--color-primary)',
-              color:           '#fff',
-              display:         'flex',
-              alignItems:      'center',
-              justifyContent:  'center',
-              fontSize:        '10px',
-              fontWeight:      700,
-              flexShrink:      0,
-              letterSpacing:   '0.02em',
-            }}
-            aria-hidden="true"
-          >
-            {getInitials(userFullName)}
-          </div>
+        <div className="flex items-center gap-2.5 rounded-[7px] border border-[var(--sidebar-border)] bg-white/[0.06] px-2.5 py-2">
+          <Avatar className="h-7 w-7 shrink-0">
+            <AvatarFallback className="text-[10px]">
+              {getInitials(userFullName)}
+            </AvatarFallback>
+          </Avatar>
 
           {/* Name + role */}
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <p
-              style={{
-                fontSize:     '0.75rem',
-                fontWeight:   600,
-                color:        'var(--sidebar-text)',
-                overflow:     'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace:   'nowrap',
-              }}
-            >
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-[var(--sidebar-text)]">
               {userFullName}
             </p>
             {systemRole && (
-              <span
-                style={{
-                  display:         'inline-flex',
-                  alignItems:      'center',
-                  marginTop:       '3px',
-                  padding:         '1px 7px',
-                  borderRadius:    'var(--radius-pill)',
-                  fontSize:        '0.5625rem',
-                  fontWeight:      700,
-                  letterSpacing:   '0.05em',
-                  textTransform:   'uppercase',
-                  backgroundColor: 'rgba(255,253,247,0.10)',
-                  border:          '1px solid rgba(255,253,247,0.16)',
-                  color:           'var(--sidebar-text-muted)',
-                  whiteSpace:      'nowrap',
-                }}
-              >
+              <span className="mt-0.5 inline-flex items-center rounded-full border border-white/[0.16] bg-white/10 px-1.5 py-px text-[0.5625rem] font-bold uppercase tracking-[0.05em] text-[var(--sidebar-text-muted)] whitespace-nowrap">
                 {ROLE_LABEL[systemRole] ?? systemRole}
               </span>
             )}
@@ -379,21 +234,8 @@ export function AppSidebar({
               type="submit"
               title="Sign out"
               aria-label="Sign out"
-              style={{
-                display:         'flex',
-                alignItems:      'center',
-                justifyContent:  'center',
-                width:           '26px',
-                height:          '26px',
-                borderRadius:    '6px',
-                border:          '1px solid rgba(255,253,247,0.14)',
-                backgroundColor: 'rgba(255,253,247,0.06)',
-                color:           'var(--sidebar-text-muted)',
-                cursor:          'pointer',
-                flexShrink:      0,
-                transition:      'background-color 0.12s, color 0.12s, border-color 0.12s',
-              }}
-              className="signout-btn"
+              className="signout-btn flex h-6.5 w-6.5 shrink-0 cursor-pointer items-center justify-center rounded-[6px] border border-white/[0.14] bg-white/[0.06] text-[var(--sidebar-text-muted)] transition-colors duration-[120ms]"
+              style={{ width: '26px', height: '26px' }}
             >
               <LogOut size={12} aria-hidden="true" />
             </button>

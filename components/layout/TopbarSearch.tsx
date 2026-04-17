@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search } from 'lucide-react'
+import { cn } from '@/lib/utils/cn'
 
 export function TopbarSearch() {
   const [value,   setValue]   = useState('')
@@ -45,22 +46,17 @@ export function TopbarSearch() {
       onSubmit={handleSubmit}
       role="search"
       aria-label="Global search"
-      style={{ display: 'flex', alignItems: 'center' }}
+      className="flex items-center"
     >
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-        {/* Search icon */}
+      <div className="relative flex items-center">
         <Search
           size={14}
           aria-hidden="true"
-          style={{
-            position:      'absolute',
-            left:          '9px',
-            color:         focused ? 'var(--color-primary)' : 'var(--color-text-muted)',
-            pointerEvents: 'none',
-            transition:    'color 0.1s',
-          }}
+          className={cn(
+            'pointer-events-none absolute left-2.5 transition-colors duration-100',
+            focused ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'
+          )}
         />
-
         <input
           ref={inputRef}
           type="search"
@@ -74,22 +70,12 @@ export function TopbarSearch() {
           aria-label="Search across all records"
           autoComplete="off"
           spellCheck={false}
-          style={{
-            paddingLeft:     '30px',
-            paddingRight:    '10px',
-            paddingTop:      '6px',
-            paddingBottom:   '6px',
-            border:          focused
-              ? '1px solid var(--color-primary)'
-              : '1px solid var(--color-border)',
-            borderRadius:    'var(--radius-control)',
-            fontSize:        '0.8125rem',
-            width:           focused ? '260px' : '220px',
-            backgroundColor: 'var(--color-surface)',
-            color:           'var(--color-text-primary)',
-            outline:         'none',
-            transition:      'border-color 0.15s, width 0.15s',
-          }}
+          className={cn(
+            'h-8 rounded-[var(--radius-control)] border bg-[var(--color-surface)] py-1.5 pl-8 pr-2.5 text-[0.8125rem] text-[var(--color-text-primary)] outline-none transition-[border-color,width] duration-150 placeholder:text-[var(--color-text-muted)]',
+            focused
+              ? 'w-[260px] border-[var(--color-primary)] ring-[3px] ring-[var(--color-primary)]/10'
+              : 'w-[220px] border-[var(--color-border)]'
+          )}
         />
       </div>
     </form>

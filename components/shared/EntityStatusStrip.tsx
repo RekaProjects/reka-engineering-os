@@ -3,11 +3,11 @@ import { ProgressBar } from '@/components/shared/ProgressBar'
 import { formatDate } from '@/lib/utils/formatters'
 
 interface EntityStatusStripProps {
-  statusBadge:     ReactNode
-  priorityBadge?:  ReactNode
-  extraBadge?:     ReactNode
-  dueDate?:        string | null
-  progress?:       number | null
+  statusBadge:    ReactNode
+  priorityBadge?: ReactNode
+  extraBadge?:    ReactNode
+  dueDate?:       string | null
+  progress?:      number | null
 }
 
 /**
@@ -22,61 +22,27 @@ export function EntityStatusStrip({
   dueDate,
   progress,
 }: EntityStatusStripProps) {
-  const today    = new Date().toISOString().split('T')[0]
+  const today     = new Date().toISOString().split('T')[0]
   const isOverdue = dueDate && dueDate < today
 
   return (
-    <div
-      style={{
-        display:         'flex',
-        alignItems:      'center',
-        gap:             '12px',
-        flexWrap:        'wrap',
-        padding:         '10px 16px',
-        backgroundColor: 'var(--color-surface)',
-        border:          '1px solid var(--color-border)',
-        borderRadius:    'var(--radius-card)',
-        marginBottom:    '20px',
-        boxShadow:       'var(--shadow-sm)',
-      }}
-    >
+    <div className="mb-5 flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 shadow-[var(--shadow-sm)]">
       {statusBadge}
-
       {priorityBadge}
-
       {extraBadge}
 
       {dueDate && (
         <span
-          style={{
-            fontSize:   '0.75rem',
-            fontWeight: isOverdue ? 600 : 400,
-            color:      isOverdue ? 'var(--color-danger)' : 'var(--color-text-muted)',
-            whiteSpace: 'nowrap',
-          }}
+          className={`whitespace-nowrap text-xs ${isOverdue ? 'font-semibold text-[var(--color-danger)]' : 'font-normal text-[var(--color-text-muted)]'}`}
         >
           Due {formatDate(dueDate)}
         </span>
       )}
 
       {progress != null && (
-        <div
-          style={{
-            display:    'flex',
-            alignItems: 'center',
-            gap:        '6px',
-            minWidth:   '110px',
-            flex:       '0 0 auto',
-          }}
-        >
+        <div className="flex min-w-[110px] shrink-0 items-center gap-1.5">
           <ProgressBar value={progress} height={5} />
-          <span
-            style={{
-              fontSize:  '0.6875rem',
-              color:     'var(--color-text-muted)',
-              whiteSpace: 'nowrap',
-            }}
-          >
+          <span className="whitespace-nowrap text-[0.6875rem] text-[var(--color-text-muted)]">
             {progress}%
           </span>
         </div>

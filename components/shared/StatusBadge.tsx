@@ -1,10 +1,10 @@
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils/cn'
-import type { CSSProperties } from 'react'
 import type { StatusVariant } from '@/lib/constants/statuses'
 
 interface StatusBadgeProps {
-  label:     string
-  variant?:  StatusVariant
+  label:      string
+  variant?:   StatusVariant
   className?: string
 }
 
@@ -21,28 +21,13 @@ interface StatusBadgeProps {
  *   success — completed, paid, approved, done
  *   danger  — overdue, blocked, cancelled, revision, urgent
  */
-const variantStyles: Record<StatusVariant, CSSProperties> = {
-  neutral: { color: 'var(--badge-neutral-text)', backgroundColor: 'var(--badge-neutral-bg)' },
-  active:  { color: 'var(--badge-active-text)',  backgroundColor: 'var(--badge-active-bg)'  },
-  review:  { color: 'var(--badge-review-text)',  backgroundColor: 'var(--badge-review-bg)'  },
-  success: { color: 'var(--badge-success-text)', backgroundColor: 'var(--badge-success-bg)' },
-  danger:  { color: 'var(--badge-danger-text)',  backgroundColor: 'var(--badge-danger-bg)'  },
-}
-
 export function StatusBadge({ label, variant = 'neutral', className }: StatusBadgeProps) {
   return (
-    <span
-      className={cn('inline-flex items-center whitespace-nowrap', className)}
-      style={{
-        borderRadius:    'var(--radius-pill)',
-        padding:         '2px 10px',
-        fontSize:        '0.6875rem',
-        fontWeight:      600,
-        letterSpacing:   '0.01em',
-        ...variantStyles[variant],
-      }}
+    <Badge
+      variant={variant}
+      className={cn('px-2.5 py-0.5 text-[0.6875rem] font-semibold tracking-[0.01em]', className)}
     >
       {label}
-    </span>
+    </Badge>
   )
 }

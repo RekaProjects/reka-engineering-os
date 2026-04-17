@@ -60,46 +60,23 @@ function parseBreadcrumb(pathname: string): Breadcrumb {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function BreadcrumbNav() {
-  const pathname       = usePathname()
+  const pathname        = usePathname()
   const { module, sub } = parseBreadcrumb(pathname)
 
   if (!module) return null
 
   return (
-    <nav
-      aria-label="Current section"
-      style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
-    >
-      <span
-        style={{
-          fontSize:   '0.8125rem',
-          fontWeight: 500,
-          color:      sub ? 'var(--color-text-muted)' : 'var(--color-text-secondary)',
-        }}
-      >
+    <nav aria-label="Current section" className="flex items-center gap-1.5">
+      <span className={`text-[0.8125rem] font-medium ${sub ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-secondary)]'}`}>
         {module}
       </span>
 
       {sub && (
         <>
-          <span
-            aria-hidden="true"
-            style={{
-              fontSize:    '0.75rem',
-              color:       'var(--color-border-strong)',
-              lineHeight:  1,
-              userSelect:  'none',
-            }}
-          >
+          <span aria-hidden="true" className="select-none text-xs leading-none text-[var(--color-border-strong)]">
             /
           </span>
-          <span
-            style={{
-              fontSize:   '0.8125rem',
-              fontWeight: 500,
-              color:      'var(--color-text-secondary)',
-            }}
-          >
+          <span className="text-[0.8125rem] font-medium text-[var(--color-text-secondary)]">
             {sub}
           </span>
         </>

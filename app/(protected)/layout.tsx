@@ -1,4 +1,4 @@
-import Link     from 'next/link'
+import Link from 'next/link'
 import { AppSidebar }    from '@/components/layout/AppSidebar'
 import { AppTopbar }     from '@/components/layout/AppTopbar'
 import { TopbarSearch }  from '@/components/layout/TopbarSearch'
@@ -15,66 +15,33 @@ export default async function ProtectedLayout({
   const profileIncomplete = profile.profile_completed_at === null
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div className="flex h-screen overflow-hidden">
       <AppSidebar
         userFullName={profile.full_name}
         userEmail={profile.email}
         systemRole={profile.system_role}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="flex flex-1 flex-col overflow-hidden">
         <AppTopbar left={<BreadcrumbNav />} right={<TopbarSearch />} />
 
         {/* Profile completion banner */}
         {profileIncomplete && (
-          <div
-            style={{
-              padding:         '10px 28px',
-              backgroundColor: 'var(--color-warning-subtle)',
-              borderBottom:    '1px solid var(--color-border)',
-              display:         'flex',
-              alignItems:      'center',
-              justifyContent:  'space-between',
-              gap:             '12px',
-              flexShrink:      0,
-            }}
-          >
-            <span style={{ fontSize: '0.8125rem', color: 'var(--color-warning)' }}>
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-warning-subtle)] px-7 py-2.5">
+            <span className="text-[0.8125rem] text-[var(--color-warning)]">
               Your profile is incomplete. Complete it so the team knows how to reach you and what you work on.
             </span>
             <Link
               href="/onboarding/complete"
-              style={{
-                fontSize:        '0.8125rem',
-                fontWeight:      600,
-                color:           'var(--color-warning)',
-                textDecoration:  'none',
-                whiteSpace:      'nowrap',
-                padding:         '4px 12px',
-                border:          '1px solid var(--color-border-strong)',
-                borderRadius:    'var(--radius-control)',
-                backgroundColor: 'var(--color-surface)',
-              }}
+              className="shrink-0 rounded-[var(--radius-control)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-1 text-[0.8125rem] font-semibold text-[var(--color-warning)] no-underline hover:bg-[var(--color-surface-muted)] transition-colors"
             >
               Complete profile →
             </Link>
           </div>
         )}
 
-        <main
-          style={{
-            flex:            1,
-            overflowY:       'auto',
-            backgroundColor: 'var(--color-background)',
-          }}
-        >
-          <div
-            style={{
-              maxWidth: 'var(--content-max-width)',
-              margin:   '0 auto',
-              padding:  '28px 32px',
-            }}
-          >
+        <main className="flex-1 overflow-y-auto bg-[var(--color-background)]">
+          <div className="mx-auto max-w-[var(--content-max-width)] px-8 py-7">
             {children}
           </div>
         </main>

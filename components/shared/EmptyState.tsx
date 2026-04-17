@@ -20,40 +20,26 @@ export function EmptyState({ icon, title, description, action, emphasis, compact
   if (compact) {
     return (
       <div
-        className={cn('flex items-center gap-3 px-4 py-3', className)}
-        style={{
-          backgroundColor: 'var(--color-surface-subtle)',
-          borderRadius:    'var(--radius-control)',
-          border:          '1px dashed var(--color-border)',
-        }}
+        className={cn(
+          'flex items-center gap-3 rounded-[var(--radius-control)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3',
+          className
+        )}
       >
         {icon && (
-          <span
-            style={{ color: 'var(--color-text-muted)', display: 'flex', flexShrink: 0 }}
-            aria-hidden="true"
-          >
+          <span aria-hidden="true" className="flex shrink-0 text-[var(--color-text-muted)]">
             {icon}
           </span>
         )}
-        <div style={{ minWidth: 0 }}>
-          <p
-            style={{
-              fontSize:   '0.8125rem',
-              fontWeight: 500,
-              color:      'var(--color-text-secondary)',
-              lineHeight: 1.35,
-            }}
-          >
+        <div className="min-w-0">
+          <p className="text-[0.8125rem] font-medium leading-[1.35] text-[var(--color-text-secondary)]">
             {title}
           </p>
           {description && (
-            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '1px' }}>
-              {description}
-            </p>
+            <p className="mt-px text-xs text-[var(--color-text-muted)]">{description}</p>
           )}
         </div>
         {action && (
-          <div style={{ flexShrink: 0, marginLeft: 'auto' }}>{action}</div>
+          <div className="ml-auto shrink-0">{action}</div>
         )}
       </div>
     )
@@ -62,7 +48,7 @@ export function EmptyState({ icon, title, description, action, emphasis, compact
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center text-center px-6',
+        'flex flex-col items-center justify-center px-6 text-center',
         emphasis ? 'py-20' : 'py-16',
         className
       )}
@@ -70,39 +56,36 @@ export function EmptyState({ icon, title, description, action, emphasis, compact
       {icon && (
         <div
           className={cn(
-            'flex items-center justify-center',
-            emphasis ? 'mb-5 h-14 w-14' : 'mb-4 h-12 w-12'
+            'flex items-center justify-center rounded-[var(--radius-card)]',
+            emphasis
+              ? 'mb-5 h-14 w-14 border border-[var(--color-border)] bg-[var(--color-primary-subtle)] text-[var(--color-primary)] shadow-[var(--shadow-sm)]'
+              : 'mb-4 h-12 w-12 bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]'
           )}
-          style={{
-            backgroundColor: emphasis ? 'var(--color-primary-subtle)' : 'var(--color-surface-muted)',
-            color:           emphasis ? 'var(--color-primary)' : 'var(--color-text-muted)',
-            borderRadius:    'var(--radius-card)',
-            border:          emphasis ? '1px solid var(--color-border)' : 'none',
-            boxShadow:       emphasis ? 'var(--shadow-sm)' : undefined,
-          }}
+          aria-hidden="true"
         >
           {icon}
         </div>
       )}
       <h3
-        className="mb-1 font-semibold"
-        style={{
-          color:    'var(--color-text-primary)',
-          fontSize: emphasis ? '1rem' : '0.9375rem',
-        }}
+        className={cn(
+          'mb-1 font-semibold text-[var(--color-text-primary)]',
+          emphasis ? 'text-base' : 'text-[0.9375rem]'
+        )}
       >
         {title}
       </h3>
       {description && (
         <p
-          className={cn('max-w-sm', emphasis ? 'mb-8' : 'mb-6')}
-          style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem', lineHeight: '1.65' }}
+          className={cn(
+            'max-w-sm text-[0.8125rem] leading-[1.65] text-[var(--color-text-muted)]',
+            emphasis ? 'mb-8' : 'mb-6'
+          )}
         >
           {description}
         </p>
       )}
       {action && (
-        <div className="flex w-full justify-center" style={{ marginTop: emphasis ? '8px' : 0 }}>
+        <div className={cn('flex w-full justify-center', emphasis ? 'mt-2' : '')}>
           {action}
         </div>
       )}

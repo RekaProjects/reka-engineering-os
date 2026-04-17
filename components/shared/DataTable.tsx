@@ -1,4 +1,12 @@
 import { cn } from '@/lib/utils/cn'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table'
 import type { CSSProperties, ReactNode } from 'react'
 
 export interface Column<T> {
@@ -37,60 +45,42 @@ export function DataTable<T extends { id: string }>({
   }
 
   return (
-    <div className={cn('w-full overflow-x-auto', className)}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                style={{
-                  width:           col.width,
-                  padding:         '10px 14px',
-                  textAlign:       col.align ?? 'left',
-                  fontSize:        '0.6875rem',
-                  fontWeight:      600,
-                  color:           'var(--color-text-muted)',
-                  backgroundColor: 'var(--color-surface-subtle)',
-                  letterSpacing:   '0.04em',
-                  textTransform:   'uppercase',
-                  whiteSpace:      'nowrap',
-                }}
-              >
-                {col.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, idx) => (
-            <tr
-              key={row.id}
-              className={interactiveRows ? 'transition-colors hover:bg-[var(--color-surface-muted)]' : undefined}
+    <Table className={cn(className)}>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          {columns.map((col) => (
+            <TableHead
+              key={col.key}
+              className="bg-[var(--color-surface-subtle)] whitespace-nowrap"
               style={{
-                borderBottom:    idx < data.length - 1 ? '1px solid var(--color-border)' : undefined,
-                backgroundColor: 'var(--color-surface)',
-                ...getRowStyle?.(row, idx),
+                width:     col.width,
+                textAlign: col.align ?? 'left',
               }}
             >
-              {columns.map((col) => (
-                <td
-                  key={col.key}
-                  style={{
-                    padding:       '10px 14px',
-                    color:         'var(--color-text-secondary)',
-                    fontSize:      '0.8125rem',
-                    verticalAlign: 'middle',
-                    textAlign:     col.align ?? 'left',
-                  }}
-                >
-                  {col.render(row)}
-                </td>
-              ))}
-            </tr>
+              {col.header}
+            </TableHead>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((row, idx) => (
+          <TableRow
+            key={row.id}
+            className={cn(!interactiveRows && 'hover:bg-transparent')}
+            style={getRowStyle?.(row, idx)}
+          >
+            {columns.map((col) => (
+              <TableCell
+                key={col.key}
+                className="text-[var(--color-text-secondary)]"
+                style={{ textAlign: col.align ?? 'left' }}
+              >
+                {col.render(row)}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }

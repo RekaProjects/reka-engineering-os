@@ -13,52 +13,22 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, actions, className, breadcrumb }: PageHeaderProps) {
   return (
-    <div
-      className={cn('flex items-start justify-between gap-4', className)}
-      style={{ marginBottom: '24px' }}
-    >
+    <div className={cn('mb-6 flex items-start justify-between gap-4', className)}>
       {/* Left: optional breadcrumb + title + subtitle */}
       <div className="min-w-0">
         {breadcrumb && (
           <Link
             href={breadcrumb.href}
-            style={{
-              display:        'inline-flex',
-              alignItems:     'center',
-              gap:            '4px',
-              fontSize:       '0.75rem',
-              fontWeight:     500,
-              color:          'var(--color-text-muted)',
-              textDecoration: 'none',
-              marginBottom:   '6px',
-              transition:     'color 0.1s',
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--color-primary)' }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted)' }}
+            className="mb-1.5 inline-flex items-center gap-1 text-xs font-medium text-[var(--color-text-muted)] no-underline transition-colors hover:text-[var(--color-primary)]"
           >
             ← {breadcrumb.label}
           </Link>
         )}
-        <h1
-          style={{
-            fontSize:      '1.375rem',
-            fontWeight:    700,
-            color:         'var(--color-text-primary)',
-            lineHeight:    '1.3',
-            letterSpacing: '-0.01em',
-          }}
-        >
+        <h1 className="text-[1.375rem] font-bold leading-tight tracking-[-0.01em] text-[var(--color-text-primary)]">
           {title}
         </h1>
         {subtitle && (
-          <p
-            style={{
-              fontSize:  '0.8125rem',
-              color:     'var(--color-text-muted)',
-              marginTop: '3px',
-              lineHeight: '1.4',
-            }}
-          >
+          <p className="mt-0.5 text-[0.8125rem] leading-snug text-[var(--color-text-muted)]">
             {subtitle}
           </p>
         )}
@@ -67,8 +37,7 @@ export function PageHeader({ title, subtitle, actions, className, breadcrumb }: 
       {/* Right: action buttons */}
       {actions && (
         <div
-          className="flex items-center gap-2 shrink-0"
-          style={{ marginTop: breadcrumb ? '26px' : '2px' }}
+          className={cn('flex shrink-0 items-center gap-2', breadcrumb ? 'mt-[26px]' : 'mt-0.5')}
         >
           {actions}
         </div>

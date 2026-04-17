@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils/cn'
+import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent } from '@/components/ui/card'
 import type { ReactNode } from 'react'
 
 interface SectionCardProps {
@@ -18,58 +19,30 @@ export function SectionCard({
   className,
   noPadding = false,
 }: SectionCardProps) {
+  const hasHeader = Boolean(title || description || actions)
+
   return (
-    <div
-      className={cn('', className)}
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        border:          '1px solid var(--color-border)',
-        borderRadius:    '8px',
-        boxShadow:       '0 1px 2px rgba(29,31,30,0.05)',
-      }}
-    >
-      {(title || description || actions) && (
-        <div
-          className="flex items-start justify-between gap-4"
-          style={{
-            padding:         '12px 16px',
-            borderBottom:    '1px solid var(--color-border)',
-            backgroundColor: 'var(--color-surface-muted)',
-            borderRadius:    '8px 8px 0 0',
-          }}
-        >
+    <Card className={cn('overflow-hidden', className)}>
+      {hasHeader && (
+        <CardHeader className="flex-row items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] py-3 px-4 rounded-t-[var(--radius-card)]">
           <div className="min-w-0">
             {title && (
-              <h2
-                style={{
-                  fontSize:   '0.875rem',
-                  fontWeight: 700,
-                  color:      'var(--color-text-primary)',
-                  lineHeight: 1.3,
-                }}
-              >
-                {title}
-              </h2>
+              <CardTitle className="text-[0.875rem]">{title}</CardTitle>
             )}
             {description && (
-              <p
-                style={{
-                  fontSize:  '0.75rem',
-                  color:     'var(--color-text-muted)',
-                  marginTop: title ? '2px' : 0,
-                  lineHeight: 1.4,
-                }}
-              >
-                {description}
-              </p>
+              <CardDescription className={title ? 'mt-0.5' : ''}>{description}</CardDescription>
             )}
           </div>
           {actions && (
-            <div className="flex items-center gap-2 shrink-0">{actions}</div>
+            <CardAction className="shrink-0">{actions}</CardAction>
           )}
-        </div>
+        </CardHeader>
       )}
-      <div style={noPadding ? {} : { padding: '16px' }}>{children}</div>
-    </div>
+      {noPadding ? (
+        <div>{children}</div>
+      ) : (
+        <CardContent className="p-4">{children}</CardContent>
+      )}
+    </Card>
   )
 }

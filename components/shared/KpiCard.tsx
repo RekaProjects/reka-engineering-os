@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils/cn'
-import type { CSSProperties, ReactNode } from 'react'
+import { Card } from '@/components/ui/card'
+import type { ReactNode } from 'react'
 
 interface KpiCardProps {
   label:        string
@@ -40,36 +41,16 @@ export function KpiCard({
     'var(--color-surface-muted)'
 
   return (
-    <div
-      className={cn(className)}
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        border:          '1px solid var(--color-border)',
-        borderRadius:    '8px',
-        padding:         '14px 16px 16px',
-        boxShadow:       '0 1px 2px rgba(29,31,30,0.05)',
-        borderTop:       `4px solid ${accentBorderColor}`,
-        position:        'relative',
-      }}
+    <Card
+      className={cn('relative px-4 pb-4 pt-3.5', className)}
+      style={{ borderTop: `4px solid ${accentBorderColor}` }}
     >
-      {/* Icon — top-right block */}
+      {/* Icon — top-right */}
       {icon && (
         <div
-          style={{
-            position:        'absolute',
-            top:             '14px',
-            right:           '14px',
-            width:           '32px',
-            height:          '32px',
-            borderRadius:    '7px',
-            backgroundColor: iconBg,
-            display:         'flex',
-            alignItems:      'center',
-            justifyContent:  'center',
-            color:           accentColor,
-            flexShrink:      0,
-          }}
           aria-hidden="true"
+          className="absolute right-3.5 top-3.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px]"
+          style={{ backgroundColor: iconBg, color: accentColor }}
         >
           {icon}
         </div>
@@ -77,30 +58,18 @@ export function KpiCard({
 
       {/* Label */}
       <p
-        style={{
-          fontSize:      '0.6875rem',
-          fontWeight:    600,
-          color:         'var(--color-text-muted)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          lineHeight:    1,
-          marginBottom:  '10px',
-          paddingRight:  icon ? '40px' : 0,
-        }}
+        className={cn(
+          'mb-2.5 text-[0.6875rem] font-semibold uppercase leading-none tracking-[0.06em] text-[var(--color-text-muted)]',
+          icon && 'pr-10'
+        )}
       >
         {label}
       </p>
 
       {/* Value */}
       <p
-        style={{
-          fontSize:           '2rem',
-          fontWeight:         700,
-          color:              accent === 'urgent' ? 'var(--color-danger)' : 'var(--color-text-primary)',
-          lineHeight:         1,
-          fontVariantNumeric: 'tabular-nums',
-          letterSpacing:      '-0.02em',
-        }}
+        className="text-[2rem] font-bold leading-none tracking-[-0.02em] tabular-nums"
+        style={{ color: accent === 'urgent' ? 'var(--color-danger)' : 'var(--color-text-primary)' }}
       >
         {value}
       </p>
@@ -108,17 +77,15 @@ export function KpiCard({
       {/* Optional description */}
       {description && (
         <p
+          className="mt-1.5 text-xs leading-snug"
           style={{
-            fontSize:   '0.75rem',
             color:      accent === 'urgent' ? 'var(--color-danger)' : 'var(--color-text-muted)',
-            marginTop:  '5px',
             fontWeight: accent === 'urgent' ? 600 : 400,
-            lineHeight: 1.3,
           }}
         >
           {description}
         </p>
       )}
-    </div>
+    </Card>
   )
 }

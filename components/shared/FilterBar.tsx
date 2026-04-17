@@ -9,20 +9,17 @@ interface FilterBarProps {
 /**
  * FilterBar — wraps filter controls (search, selects, submit, clear) in a
  * visually contained row. Sits between the PageHeader and the data table.
+ * Keeps server-form GET pattern — NOT converting to client-controlled state.
  */
 export function FilterBar({ children, className }: FilterBarProps) {
   return (
     <div
-      className={cn('flex flex-wrap items-center gap-2', className)}
       role="group"
       aria-label="Filters"
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        border:          '1px solid var(--color-border)',
-        borderRadius:    'var(--radius-control)',
-        padding:         '10px 14px',
-        marginBottom:    '16px',
-      }}
+      className={cn(
+        'mb-4 flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5',
+        className
+      )}
     >
       {children}
     </div>
