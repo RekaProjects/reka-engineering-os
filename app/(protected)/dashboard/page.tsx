@@ -6,9 +6,7 @@ import {
   Clock,
   FileText,
   CheckSquare,
-  RotateCcw,
   AlertTriangle,
-  CalendarClock,
   ShieldAlert,
   CheckCircle2,
   Activity,
@@ -74,18 +72,43 @@ interface DashSectionProps {
   children:     ReactNode
   className?:   string
   bodyClassName?: string
+  /**
+   * hero    — primary anchor panel (stronger border, subtle tinted surface, no hover lift).
+   * default — secondary panel (clean porcelain card).
+   * quiet   — supporting panel (compact padding, lighter weight title).
+   */
+  variant?:     'default' | 'hero' | 'quiet'
 }
 
-function DashSection({ title, description, actions, children, className, bodyClassName }: DashSectionProps) {
+function DashSection({ title, description, actions, children, className, bodyClassName, variant = 'default' }: DashSectionProps) {
+  const isHero  = variant === 'hero'
+  const isQuiet = variant === 'quiet'
+
   return (
-    <Card className={cn('p-5', className)}>
-      <div className="mb-4 flex items-start justify-between gap-4">
+    <Card
+      className={cn(
+        isHero
+          ? 'border-[var(--color-border-strong)] bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-surface-subtle)] p-6 shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-md)]'
+          : isQuiet
+            ? 'p-5'
+            : 'p-6',
+        className
+      )}
+    >
+      <div className={cn('flex items-start justify-between gap-4', isQuiet ? 'mb-3.5' : 'mb-5')}>
         <div className="min-w-0">
-          <h2 className="text-[0.9375rem] font-semibold leading-tight text-[var(--color-text-primary)]">
+          <h2
+            className={cn(
+              'font-semibold leading-tight tracking-[-0.01em] text-[var(--color-text-primary)]',
+              isHero  ? 'text-[1.0625rem]' :
+              isQuiet ? 'text-[0.9375rem]' :
+              'text-[1rem]'
+            )}
+          >
             {title}
           </h2>
           {description && (
-            <p className="mt-1 text-[0.8125rem] leading-snug text-[var(--color-text-muted)]">
+            <p className="mt-1.5 text-[0.8125rem] leading-snug text-[var(--color-text-muted)]">
               {description}
             </p>
           )}
@@ -352,61 +375,54 @@ function SignalBand({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3',
+        'flex flex-wrap items-center gap-4 rounded-[var(--radius-card)] border px-5 py-3.5',
         isClear
-          ? 'border-[var(--color-success)]/20 bg-[var(--color-success-subtle)]/50'
-          : 'border-[var(--color-danger)]/20 bg-[var(--color-danger-subtle)]'
+          ? 'border-[var(--color-success)]/25 bg-[var(--color-success-subtle)]/60'
+          : 'border-[var(--color-danger)]/25  bg-[var(--color-danger-subtle)]'
       )}
     >
-      {isClear ? (
-        <>
-          <div
-            aria-hidden="true"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-success)]/10 text-[var(--color-success)] ring-1 ring-[var(--color-success)]/20"
-          >
-            <CheckCircle2 size={15} />
-          </div>
-          <div className="min-w-0">
-            <p className="m-0 text-[0.875rem] font-semibold text-[var(--color-success)]">
-              Pipeline clear
-            </p>
-            <p className="mt-0.5 text-[0.75rem] leading-snug text-[var(--color-text-muted)]">
-              No critical blockers flagged in headline metrics.
-            </p>
-          </div>
-          {summary && summary.length > 0 && (
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              {summary.map((chip) => (
-                <span
-                  key={chip.label}
-                  className="inline-flex items-baseline gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[0.6875rem] text-[var(--color-text-muted)]"
-                >
-                  <span className="font-semibold tabular-nums text-[var(--color-text-primary)]">
-                    {chip.value}
-                  </span>
-                  <span className="uppercase tracking-[0.04em]">{chip.label}</span>
-                </span>
-              ))}
-            </div>
+      <div
+        aria-hidden="true"
+        className={cn(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1',
+          isClear
+            ? 'bg-[var(--color-success)]/10 text-[var(--color-success)] ring-[var(--color-success)]/20'
+            : 'bg-[var(--color-danger)]/10  text-[var(--color-danger)]  ring-[var(--color-danger)]/20'
+        )}
+      >
+        {isClear ? <CheckCircle2 size={16} /> : <ShieldAlert size={16} />}
+      </div>
+
+      <div className="min-w-0">
+        <p
+          className={cn(
+            'm-0 text-[0.9375rem] font-semibold tracking-[-0.005em]',
+            isClear ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
           )}
-        </>
-      ) : (
-        <>
-          <div
-            aria-hidden="true"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-danger)]/10 text-[var(--color-danger)] ring-1 ring-[var(--color-danger)]/20"
-          >
-            <ShieldAlert size={15} />
-          </div>
-          <div className="min-w-0">
-            <p className="m-0 text-[0.875rem] font-semibold text-[var(--color-danger)]">
-              {riskCount} risk signal{riskCount === 1 ? '' : 's'}
-            </p>
-            <p className="mt-0.5 text-[0.75rem] leading-snug text-[var(--color-text-secondary)]">
-              Overdue work, client holds, and revision requests need triage.
-            </p>
-          </div>
-        </>
+        >
+          {isClear ? 'Pipeline clear' : `${riskCount} risk signal${riskCount === 1 ? '' : 's'}`}
+        </p>
+        <p className="mt-0.5 text-[0.75rem] leading-snug text-[var(--color-text-secondary)]">
+          {isClear
+            ? 'No critical blockers flagged in headline metrics.'
+            : 'Overdue work, client holds, and revision requests need triage.'}
+        </p>
+      </div>
+
+      {summary && summary.length > 0 && (
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {summary.map((chip) => (
+            <span
+              key={chip.label}
+              className="inline-flex items-baseline gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-[0.6875rem] text-[var(--color-text-muted)]"
+            >
+              <span className="text-[0.875rem] font-semibold tabular-nums text-[var(--color-text-primary)]">
+                {chip.value}
+              </span>
+              <span className="uppercase tracking-[0.05em]">{chip.label}</span>
+            </span>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -495,7 +511,7 @@ export default async function DashboardPage() {
     }
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-7">
         <PageHeader
           title="Coordinator Dashboard"
           subtitle="Operational view of your assigned projects — workload, deadlines, and blockers."
@@ -503,14 +519,15 @@ export default async function DashboardPage() {
         <ScopedKpiRow kpis={data.kpis} />
 
         <div className="grid grid-cols-12 gap-6">
-          {/* Left column */}
+          {/* Left column (primary) */}
           <div className="col-span-12 space-y-6 xl:col-span-8">
             <DashSection
+              variant="hero"
               title="Needs attention"
               description="Ranked queue for your portfolio."
               actions={
                 attentionCount > 0 ? (
-                  <span className="rounded-full bg-[var(--color-danger-subtle)] px-2.5 py-1 text-[0.6875rem] font-semibold text-[var(--color-danger)]">
+                  <span className="rounded-full bg-[var(--color-danger-subtle)] px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-danger)]">
                     {attentionCount} flagged
                   </span>
                 ) : undefined
@@ -533,9 +550,9 @@ export default async function DashboardPage() {
             </DashSection>
           </div>
 
-          {/* Right column */}
+          {/* Right column (supporting) */}
           <div className="col-span-12 space-y-6 xl:col-span-4">
-            <DashSection title="Recent activity" description="Latest changes in your projects.">
+            <DashSection variant="quiet" title="Recent activity" description="Latest changes in your projects.">
               <RecentActivityFeed entries={activity} />
             </DashSection>
             <ScopedTasksSection        tasks={data.tasks}               title="Open tasks"          />
@@ -567,26 +584,37 @@ export default async function DashboardPage() {
     waitingClient.length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <PageHeader
         title="Dashboard"
         subtitle="Owner / admin control center — pipeline health, deadlines, cash exposure, and team load."
       />
 
-      {/* A. KPI strip — 2 → 3 → 6 columns from mobile to laptop */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      {/* A. Signal band — absorbs demoted KPIs (Waiting on Client / In Revision)
+           as persistent summary chips so no data is lost. */}
+      <SignalBand
+        riskCount={queueSignals}
+        summary={[
+          { label: 'Waiting on client', value: kpis.waitingClient },
+          { label: 'In revision',       value: kpis.inRevision },
+        ]}
+      />
+
+      {/* B. KPI strip — 4 primary headline tiles on xl.
+           Taller cards (min-h 156) with 2.125rem values read as real metrics. */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <KpiCard
           variant="dashboard"
           label="Active Projects"
           value={kpis.activeProjects}
-          icon={<FolderKanban size={18} />}
+          icon={<FolderKanban size={20} />}
           accent="primary"
         />
         <KpiCard
           variant="dashboard"
           label="Open Tasks"
           value={kpis.openTasks}
-          icon={<CheckSquare size={18} />}
+          icon={<CheckSquare size={20} />}
           accent={kpis.overdueTasks > 0 ? 'urgent' : 'none'}
           description={kpis.overdueTasks > 0 ? `${kpis.overdueTasks} overdue` : undefined}
         />
@@ -594,51 +622,29 @@ export default async function DashboardPage() {
           variant="dashboard"
           label="Due This Week"
           value={kpis.dueThisWeek}
-          icon={<Clock size={18} />}
+          icon={<Clock size={20} />}
+          accent={kpis.dueThisWeek > 0 ? 'warning' : 'none'}
         />
         <KpiCard
           variant="dashboard"
           label="Awaiting Review"
           value={kpis.awaitingReview}
-          icon={<FileText size={18} />}
+          icon={<FileText size={20} />}
           accent={kpis.awaitingReview > 0 ? 'primary' : 'none'}
-        />
-        <KpiCard
-          variant="dashboard"
-          label="Waiting on Client"
-          value={kpis.waitingClient}
-          icon={<CalendarClock size={18} />}
-          accent={kpis.waitingClient > 0 ? 'warning' : 'none'}
-        />
-        <KpiCard
-          variant="dashboard"
-          label="In Revision"
-          value={kpis.inRevision}
-          icon={<RotateCcw size={18} />}
-          accent={kpis.inRevision > 0 ? 'warning' : 'none'}
         />
       </div>
 
-      {/* B. Signal band */}
-      <SignalBand
-        riskCount={queueSignals}
-        summary={[
-          { label: 'Active projects', value: kpis.activeProjects },
-          { label: 'Open tasks',      value: kpis.openTasks },
-          { label: 'Due this week',   value: kpis.dueThisWeek },
-        ]}
-      />
-
       {/* C. Main 12-col grid — 8 / 4 split on xl+ laptops */}
       <div className="grid grid-cols-12 gap-6">
-        {/* ── Left column ─────────────────────────────────────────────── */}
+        {/* ── Left column (primary) ───────────────────────────────────── */}
         <div className="col-span-12 space-y-6 xl:col-span-8">
           <DashSection
+            variant="hero"
             title="Needs attention"
             description="Ranked queue — overdue, blocked, revision, and client holds."
             actions={
               totalAttention > 0 ? (
-                <span className="rounded-full bg-[var(--color-danger-subtle)] px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.04em] text-[var(--color-danger)]">
+                <span className="rounded-full bg-[var(--color-danger-subtle)] px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-danger)]">
                   {totalAttention} flagged
                 </span>
               ) : undefined
@@ -670,17 +676,19 @@ export default async function DashboardPage() {
           </DashSection>
         </div>
 
-        {/* ── Right column ────────────────────────────────────────────── */}
+        {/* ── Right column (supporting) ───────────────────────────────── */}
         <div className="col-span-12 space-y-6 xl:col-span-4">
           <DashSection
+            variant="quiet"
             title="Payment snapshot"
-            description="Balance still owed on open rows — not full finance."
+            description="Balance still owed on open rows."
           >
             <PaymentSnapshotCard snapshot={paymentSnapshot} />
           </DashSection>
           <DashSection
+            variant="quiet"
             title="Recent activity"
-            description="What changed recently across the workspace."
+            description="Latest changes across the workspace."
           >
             <RecentActivityFeed entries={activity} />
           </DashSection>

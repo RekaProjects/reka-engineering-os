@@ -13,17 +13,16 @@ interface KpiCardProps {
 }
 
 /**
- * KpiCard — premium summary tile.
+ * KpiCard — headline metric tile.
  *
- * v0-style composition with Stage 3.6 depth:
- *   • Uppercase tracking-[0.08em] label, icon pill on the right.
- *   • Large tabular value (font-semibold, tracking tight).
- *   • Accented variants (primary/urgent/warning) get a very subtle
- *     top-to-bottom tint using the accent's subtle token — this gives
- *     the tile dimension without a heavy shadow.
- *   • Neutral tiles stay clean porcelain.
- *   • A persistent bottom meta row keeps every tile on the same
- *     baseline even when `description` is absent — no jittery heights.
+ * Stage 3.6b composition:
+ *   • Taller card (min-h-[156px]) so 4 tiles across carry real weight.
+ *   • Label row at top, large value mid, meta line pinned at bottom —
+ *     fills the card so no tile looks half-empty.
+ *   • Value 2.125rem / 600 / tracking-[-0.025em] — a real headline.
+ *   • Accented variants (primary/urgent/warning) carry subtle top→bottom
+ *     tint gradient; neutral tiles stay clean porcelain.
+ *   • Icon pill 10×10 rounded-xl with ringed token, anchored top-right.
  */
 export function KpiCard({
   label,
@@ -49,42 +48,39 @@ export function KpiCard({
     accent === 'urgent'  ? 'bg-[var(--color-danger)]/10  text-[var(--color-danger)]  ring-1 ring-[var(--color-danger)]/15'  :
     accent === 'warning' ? 'bg-[var(--color-warning)]/10 text-[var(--color-warning)] ring-1 ring-[var(--color-warning)]/15' :
     accent === 'primary' ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/15' :
-    'bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]'
+    'bg-[var(--color-surface-muted)] text-[var(--color-text-muted)] ring-1 ring-[var(--color-border)]'
 
-  // Very subtle accent tint — gives the tile depth without shouting.
   const surfaceTint =
-    accent === 'urgent'  ? 'bg-gradient-to-b from-[var(--color-danger-subtle)]/40  to-[var(--color-surface)]' :
-    accent === 'warning' ? 'bg-gradient-to-b from-[var(--color-warning-subtle)]/50 to-[var(--color-surface)]' :
-    accent === 'primary' ? 'bg-gradient-to-b from-[var(--color-primary-subtle)]/40 to-[var(--color-surface)]' :
+    accent === 'urgent'  ? 'bg-gradient-to-b from-[var(--color-danger-subtle)]/50  to-[var(--color-surface)]' :
+    accent === 'warning' ? 'bg-gradient-to-b from-[var(--color-warning-subtle)]/60 to-[var(--color-surface)]' :
+    accent === 'primary' ? 'bg-gradient-to-b from-[var(--color-primary-subtle)]/50 to-[var(--color-surface)]' :
     ''
 
   const accentBar =
-    accent === 'urgent'  ? 'border-l-2 border-l-[var(--color-danger)]'  :
-    accent === 'warning' ? 'border-l-2 border-l-[var(--color-warning)]' :
+    accent === 'urgent'  ? 'border-l-[3px] border-l-[var(--color-danger)]'  :
+    accent === 'warning' ? 'border-l-[3px] border-l-[var(--color-warning)]' :
+    accent === 'primary' ? 'border-l-[3px] border-l-[var(--color-primary)]' :
     ''
 
   return (
-    <Card className={cn('relative overflow-hidden p-5', surfaceTint, accentBar, className)}>
+    <Card
+      className={cn(
+        'relative flex min-h-[156px] flex-col justify-between overflow-hidden p-6',
+        surfaceTint,
+        accentBar,
+        className
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[0.6875rem] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--color-text-muted)]">
-            {label}
-          </p>
-          <p
-            className={cn(
-              'mt-3 text-[1.875rem] font-semibold leading-[1.05] tracking-[-0.025em] tabular-nums',
-              valueTone
-            )}
-          >
-            {value}
-          </p>
-        </div>
+        <p className="text-[0.6875rem] font-semibold uppercase leading-none tracking-[0.09em] text-[var(--color-text-muted)]">
+          {label}
+        </p>
 
         {icon && (
           <div
             aria-hidden="true"
             className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
               iconTone
             )}
           >
@@ -93,12 +89,18 @@ export function KpiCard({
         )}
       </div>
 
-      {/* Persistent meta baseline — keeps all tiles aligned.
-          When description is present, use it; otherwise render a faint em-dash
-          so the visual row exists but reads as "no signal". */}
       <p
         className={cn(
-          'mt-2.5 text-[0.75rem] leading-snug',
+          'mt-4 text-[2.125rem] font-semibold leading-[1.02] tracking-[-0.025em] tabular-nums',
+          valueTone
+        )}
+      >
+        {value}
+      </p>
+
+      <p
+        className={cn(
+          'mt-3 text-[0.75rem] leading-snug',
           description ? descTone : 'text-[var(--color-text-muted)]/50'
         )}
       >

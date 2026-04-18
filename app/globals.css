@@ -77,16 +77,16 @@
    Parchment     #F4F3EE
    ─────────────────────────────────────────────────────────────── */
 :root {
-  /* Backgrounds */
-  --color-background:      #F4F3EE;   /* Parchment — page canvas */
+  /* Backgrounds — canvas pushed deeper so Porcelain cards actually lift */
+  --color-background:      #ECE8DC;   /* Deeper parchment — page canvas */
   --color-surface:         #FFFDF7;   /* Porcelain — card / panel surface */
-  --color-surface-alt:     #F8F7F2;
-  --color-surface-subtle:  #F5F4EF;
-  --color-surface-muted:   #EEECEA;
+  --color-surface-alt:     #F5F3EC;
+  --color-surface-subtle:  #F2EFE7;
+  --color-surface-muted:   #E7E3D8;
 
   /* Borders */
-  --color-border:          #DDD9D1;
-  --color-border-strong:   #C8C3B8;
+  --color-border:          #D6D1C4;
+  --color-border-strong:   #BEB8A9;
 
   /* Typography */
   --color-text-primary:    #1D1F1E;   /* Carbon Black */
@@ -170,7 +170,7 @@
   /* Layout */
   --sidebar-width:         248px;
   --topbar-height:         56px;
-  --content-max-width:     1440px;
+  --content-max-width:     1280px;
 }
 
 /* ─── Base ──────────────────────────────────────────────────── */
