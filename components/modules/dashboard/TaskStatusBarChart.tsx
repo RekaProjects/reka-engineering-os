@@ -1,4 +1,9 @@
+'use client'
+
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts'
+
 import type { OpenTaskStatusCounts, TaskPipelineStatus } from '@/lib/dashboard/queries'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 
 const ORDER: TaskPipelineStatus[] = ['to_do', 'in_progress', 'review', 'revision', 'blocked']
 
@@ -10,160 +15,75 @@ const LABELS: Record<TaskPipelineStatus, string> = {
   blocked:     'Blocked',
 }
 
-const STATUS_CONFIG: Record<
-  TaskPipelineStatus,
-  { barColor: string; trackColor: string; textColor: string; barTextColor: string; isRisk: boolean }
-> = {
-  to_do:       { barColor: '#B8B3A8', trackColor: '#EEECEA', textColor: '#7A7673',  barTextColor: '#454040', isRisk: false },
-  in_progress: { barColor: '#142D50', trackColor: '#E6EDF7', textColor: '#142D50',  barTextColor: '#FFFDF7', isRisk: false },
-  review:      { barColor: '#3A6490', trackColor: '#EAF1F9', textColor: '#2B5C8A',  barTextColor: '#FFFDF7', isRisk: false },
-  revision:    { barColor: '#851E1E', trackColor: '#F5E8E8', textColor: '#851E1E',  barTextColor: '#FFFDF7', isRisk: true  },
-  blocked:     { barColor: '#851E1E', trackColor: '#F5E8E8', textColor: '#851E1E',  barTextColor: '#FFFDF7', isRisk: true  },
+const FILL: Record<TaskPipelineStatus, string> = {
+  to_do:       'var(--color-chart-4)',
+  in_progress: 'var(--color-chart-1)',
+  review:      'var(--color-chart-3)',
+  revision:    'var(--color-chart-5)',
+  blocked:     'var(--color-chart-5)',
+}
+
+const CHART_CONFIG: ChartConfig = {
+  count:       { label: 'Tasks' },
+  to_do:       { label: LABELS.to_do,       color: 'var(--color-chart-4)' },
+  in_progress: { label: LABELS.in_progress, color: 'var(--color-chart-1)' },
+  review:      { label: LABELS.review,      color: 'var(--color-chart-3)' },
+  revision:    { label: LABELS.revision,    color: 'var(--color-chart-5)' },
+  blocked:     { label: LABELS.blocked,     color: 'var(--color-chart-5)' },
 }
 
 export function TaskStatusBarChart({ counts }: { counts: OpenTaskStatusCounts }) {
-  const total    = ORDER.reduce((s, k) => s + (counts[k] ?? 0), 0)
-  const maxCount = Math.max(...ORDER.map((k) => counts[k] ?? 0), 1)
+  const total = ORDER.reduce((s, k) => s + (counts[k] ?? 0), 0)
 
   if (total === 0) {
     return (
-      <div
-        style={{
-          padding:         '20px 16px',
-          borderRadius:    '6px',
-          border:          '1px dashed var(--color-border)',
-          backgroundColor: 'var(--color-surface-subtle)',
-        }}
-      >
-        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 }}>
+      <div className="rounded-[var(--radius-control)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-5">
+        <p className="m-0 text-[0.8125rem] text-[var(--color-text-muted)]">
           No open tasks in the pipeline.
         </p>
       </div>
     )
   }
 
+  const data = ORDER.map((key) => ({
+    key,
+    status: LABELS[key],
+    count:  counts[key] ?? 0,
+    fill:   FILL[key],
+  }))
+
   return (
     <div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {ORDER.map((key) => {
-          const n   = counts[key] ?? 0
-          const pct = (n / maxCount) * 100
-          const cfg = STATUS_CONFIG[key]
+      <ChartContainer config={CHART_CONFIG} className="h-[200px] w-full">
+        <BarChart data={data} layout="vertical" barSize={18} margin={{ top: 4, right: 16, bottom: 4, left: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--color-border)" />
+          <XAxis
+            type="number"
+            tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
+            tickLine={false}
+            axisLine={false}
+            allowDecimals={false}
+          />
+          <YAxis
+            type="category"
+            dataKey="status"
+            tick={{ fontSize: 11, fill: 'var(--color-text-secondary)' }}
+            tickLine={false}
+            axisLine={false}
+            width={84}
+          />
+          <ChartTooltip cursor={{ fill: 'var(--color-surface-muted)', opacity: 0.5 }} content={<ChartTooltipContent hideLabel />} />
+          <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+            {data.map((entry) => (
+              <Cell key={entry.key} fill={entry.fill} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ChartContainer>
 
-          return (
-            <div
-              key={key}
-              style={{
-                display:             'grid',
-                gridTemplateColumns: '84px 1fr 32px',
-                gap:                 '10px',
-                alignItems:          'center',
-              }}
-            >
-              {/* Status label */}
-              <span
-                style={{
-                  fontSize:    '0.75rem',
-                  fontWeight:  n > 0 && cfg.isRisk ? 600 : 500,
-                  color:       n > 0 ? cfg.textColor : 'var(--color-text-muted)',
-                  textAlign:   'right',
-                  whiteSpace:  'nowrap',
-                  opacity:     n === 0 ? 0.45 : 1,
-                  userSelect:  'none',
-                }}
-              >
-                {LABELS[key]}
-              </span>
-
-              {/* Bar track */}
-              <div
-                style={{
-                  height:          '20px',
-                  borderRadius:    '4px',
-                  backgroundColor: cfg.trackColor,
-                  position:        'relative',
-                  overflow:        'hidden',
-                  border:
-                    n > 0 && cfg.isRisk
-                      ? '1px solid rgba(133,30,30,0.22)'
-                      : '1px solid var(--color-border)',
-                  opacity: n === 0 ? 0.35 : 1,
-                }}
-              >
-                {n > 0 && (
-                  <div
-                    title={`${LABELS[key]}: ${n}`}
-                    style={{
-                      position:        'absolute',
-                      left:            0,
-                      top:             0,
-                      bottom:          0,
-                      width:           `${pct}%`,
-                      backgroundColor: cfg.barColor,
-                      minWidth:        '4px',
-                      borderRadius:    '3px',
-                      display:         'flex',
-                      alignItems:      'center',
-                      paddingLeft:     '7px',
-                    }}
-                  >
-                    {pct >= 22 && (
-                      <span
-                        style={{
-                          fontSize:           '0.6875rem',
-                          fontWeight:         700,
-                          color:              cfg.barTextColor,
-                          fontVariantNumeric: 'tabular-nums',
-                          lineHeight:         1,
-                        }}
-                      >
-                        {n}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Count */}
-              <span
-                style={{
-                  fontSize:           '0.8125rem',
-                  fontWeight:         700,
-                  color:              n > 0 && cfg.isRisk ? cfg.textColor : 'var(--color-text-secondary)',
-                  fontVariantNumeric: 'tabular-nums',
-                  textAlign:          'right',
-                  opacity:            n === 0 ? 0.35 : 1,
-                }}
-              >
-                {n}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Summary footer */}
-      <div
-        style={{
-          marginTop:     '14px',
-          paddingTop:    '10px',
-          borderTop:     '1px solid var(--color-border)',
-          display:       'flex',
-          justifyContent: 'space-between',
-          alignItems:    'center',
-        }}
-      >
-        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-          Total open tasks
-        </span>
-        <span
-          style={{
-            fontSize:           '0.875rem',
-            fontWeight:         700,
-            color:              'var(--color-text-primary)',
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
+      <div className="mt-3 flex items-center justify-between border-t border-[var(--color-border)] pt-2.5">
+        <span className="text-xs text-[var(--color-text-muted)]">Total open tasks</span>
+        <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
           {total}
         </span>
       </div>

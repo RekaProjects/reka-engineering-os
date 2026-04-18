@@ -1,11 +1,12 @@
 import type { PaymentSnapshot } from '@/lib/dashboard/queries'
 import { formatIDR } from '@/lib/utils/formatters'
 import Link from 'next/link'
+import { cn } from '@/lib/utils/cn'
 
-const STATUS_PILL: Record<string, { color: string; bg: string; label: string }> = {
-  unpaid:  { color: 'var(--color-danger)', bg: 'var(--color-danger-subtle)', label: 'Unpaid' },
-  partial: { color: 'var(--color-warning)', bg: 'var(--color-warning-subtle)', label: 'Partial' },
-  paid:    { color: 'var(--color-success)', bg: 'var(--color-success-subtle)', label: 'Paid' },
+const STATUS_PILL: Record<string, { text: string; bg: string; ring: string; label: string }> = {
+  unpaid:  { text: 'text-[var(--color-danger)]',  bg: 'bg-[var(--color-danger-subtle)]',  ring: 'ring-[var(--color-danger)]/15',  label: 'Unpaid'  },
+  partial: { text: 'text-[var(--color-warning)]', bg: 'bg-[var(--color-warning-subtle)]', ring: 'ring-[var(--color-warning)]/15', label: 'Partial' },
+  paid:    { text: 'text-[var(--color-success)]', bg: 'bg-[var(--color-success-subtle)]', ring: 'ring-[var(--color-success)]/15', label: 'Paid'    },
 }
 
 export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot }) {
@@ -17,33 +18,17 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
     outstandingUnpaidAmount,
     outstandingPartialAmount,
   } = snapshot
-  const recordTotal = unpaidCount + partialCount + paidCount
+  const recordTotal  = unpaidCount + partialCount + paidCount
   const notFullyPaid = unpaidCount + partialCount
 
   if (recordTotal === 0) {
     return (
-      <div
-        style={{
-          minHeight:       '120px',
-          display:         'flex',
-          flexDirection:   'column',
-          alignItems:      'center',
-          justifyContent:  'center',
-          borderRadius:    'var(--radius-control)',
-          border:          '1px dashed var(--color-border)',
-          backgroundColor: 'var(--color-surface-subtle)',
-          padding:         '20px 16px',
-          gap:             '10px',
-        }}
-      >
-        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0, textAlign: 'center' }}>
+      <div className="flex min-h-[120px] flex-col items-center justify-center gap-2.5 rounded-[var(--radius-control)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-5">
+        <p className="m-0 text-center text-[0.8125rem] text-[var(--color-text-muted)]">
           No payment records yet. When you add periods in Payments, this card will show unpaid / partial / paid
           counts and total balance still owed on open rows.
         </p>
-        <Link
-          href="/payments"
-          style={{ fontSize: '0.8125rem', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}
-        >
+        <Link href="/payments" className="text-[0.8125rem] font-semibold text-[var(--color-primary)] no-underline hover:underline">
           Open payments →
         </Link>
       </div>
@@ -56,21 +41,13 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
 
   return (
     <div>
-      <p
-        style={{
-          fontSize:      '0.6875rem',
-          color:         'var(--color-text-muted)',
-          margin:        '0 0 12px',
-          lineHeight:    1.45,
-        }}
-      >
-        <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>{recordTotal}</span> payment
+      <p className="mb-3 text-[0.6875rem] leading-snug text-[var(--color-text-muted)]">
+        <span className="font-semibold text-[var(--color-text-secondary)]">{recordTotal}</span> payment
         {recordTotal === 1 ? '' : 's'} on file
         {notFullyPaid > 0 ? (
           <>
             {' · '}
-            <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>{notFullyPaid}</span> not fully
-            paid
+            <span className="font-semibold text-[var(--color-text-secondary)]">{notFullyPaid}</span> not fully paid
           </>
         ) : (
           ' · all settled'
@@ -79,52 +56,31 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
 
       {/* Outstanding amount — headline figure */}
       <div
-        style={{
-          marginBottom:    '14px',
-          padding:         '12px 14px',
-          borderRadius:    'var(--radius-control)',
-          backgroundColor: totalOutstanding > 0 ? 'var(--color-danger-subtle)' : 'var(--color-surface-subtle)',
-          border:
-            totalOutstanding > 0
-              ? '1px solid color-mix(in srgb, var(--color-danger) 18%, transparent)'
-              : '1px solid var(--color-border)',
-        }}
+        className={cn(
+          'mb-3.5 rounded-[var(--radius-control)] border px-3.5 py-3',
+          totalOutstanding > 0
+            ? 'border-[var(--color-danger)]/20 bg-[var(--color-danger-subtle)]'
+            : 'border-[var(--color-border)] bg-[var(--color-surface-subtle)]'
+        )}
       >
         <p
-          style={{
-            fontSize:      '0.625rem',
-            fontWeight:    600,
-            color:         totalOutstanding > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            margin:        '0 0 5px',
-          }}
+          className={cn(
+            'mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.06em]',
+            totalOutstanding > 0 ? 'text-[var(--color-danger)]' : 'text-[var(--color-text-muted)]'
+          )}
         >
           Outstanding on unpaid / partial
         </p>
         <p
-          style={{
-            fontSize:           '1.375rem',
-            fontWeight:         700,
-            color:              totalOutstanding > 0 ? 'var(--color-danger)' : 'var(--color-text-primary)',
-            margin:             0,
-            fontVariantNumeric: 'tabular-nums',
-            letterSpacing:      '-0.01em',
-            lineHeight:         1.1,
-          }}
+          className={cn(
+            'm-0 text-[1.375rem] font-bold leading-[1.1] tracking-[-0.01em] tabular-nums',
+            totalOutstanding > 0 ? 'text-[var(--color-danger)]' : 'text-[var(--color-text-primary)]'
+          )}
         >
           {formatIDR(totalOutstanding)}
         </p>
         {showExposureSplit ? (
-          <p
-            style={{
-              fontSize:           '0.6875rem',
-              color:              'var(--color-text-secondary)',
-              margin:             '8px 0 0',
-              fontVariantNumeric: 'tabular-nums',
-              lineHeight:         1.4,
-            }}
-          >
+          <p className="mt-2 text-[0.6875rem] leading-snug tabular-nums text-[var(--color-text-secondary)]">
             {outstandingUnpaidAmount > 0 && (
               <>
                 Unpaid {formatIDR(outstandingUnpaidAmount)}
@@ -137,7 +93,7 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
       </div>
 
       {/* Status counts — horizontal pills */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+      <div className="mb-3 flex flex-wrap gap-2">
         {[
           { key: 'unpaid',  count: unpaidCount  },
           { key: 'partial', count: partialCount },
@@ -147,38 +103,17 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
           return (
             <div
               key={key}
-              style={{
-                display:         'flex',
-                alignItems:      'center',
-                gap:             '6px',
-                padding:         '6px 10px',
-                borderRadius:    'var(--radius-control)',
-                backgroundColor: cfg.bg,
-                border:          `1px solid color-mix(in srgb, ${cfg.color} 13%, transparent)`,
-                opacity:         count === 0 ? 0.45 : 1,
-              }}
+              className={cn(
+                'flex items-center gap-1.5 rounded-[var(--radius-control)] px-2.5 py-1.5 ring-1',
+                cfg.bg,
+                cfg.ring,
+                count === 0 && 'opacity-45'
+              )}
             >
-              <span
-                style={{
-                  fontSize:           '1rem',
-                  fontWeight:         700,
-                  color:              cfg.color,
-                  fontVariantNumeric: 'tabular-nums',
-                  lineHeight:         1,
-                }}
-              >
+              <span className={cn('text-base font-bold leading-none tabular-nums', cfg.text)}>
                 {count}
               </span>
-              <span
-                style={{
-                  fontSize:      '0.625rem',
-                  fontWeight:    600,
-                  color:         cfg.color,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  lineHeight:    1,
-                }}
-              >
+              <span className={cn('text-[0.625rem] font-semibold uppercase leading-none tracking-[0.05em]', cfg.text)}>
                 {cfg.label}
               </span>
             </div>
@@ -190,48 +125,29 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
       <div
         role="img"
         aria-label="Payment records by status"
-        style={{
-          display:       'flex',
-          height:        '8px',
-          borderRadius:  '999px',
-          overflow:      'hidden',
-          border:        '1px solid var(--color-border)',
-          marginBottom:  '12px',
-        }}
+        className="mb-3 flex h-2 overflow-hidden rounded-full border border-[var(--color-border)]"
       >
         {unpaidCount > 0 && (
           <div
-            style={{
-              width:           `${(unpaidCount / barTotal) * 100}%`,
-              backgroundColor: 'var(--color-danger)',
-              minWidth:        4,
-            }}
+            className="min-w-[4px] bg-[var(--color-danger)]"
+            style={{ width: `${(unpaidCount / barTotal) * 100}%` }}
           />
         )}
         {partialCount > 0 && (
           <div
-            style={{
-              width:           `${(partialCount / barTotal) * 100}%`,
-              backgroundColor: 'var(--color-warning)',
-              minWidth:        4,
-            }}
+            className="min-w-[4px] bg-[var(--color-warning)]"
+            style={{ width: `${(partialCount / barTotal) * 100}%` }}
           />
         )}
         {paidCount > 0 && (
           <div
-            style={{
-              width:           `${(paidCount / barTotal) * 100}%`,
-              backgroundColor: 'var(--color-success)',
-              minWidth:        4,
-            }}
+            className="min-w-[4px] bg-[var(--color-success)]"
+            style={{ width: `${(paidCount / barTotal) * 100}%` }}
           />
         )}
       </div>
 
-      <Link
-        href="/payments"
-        style={{ fontSize: '0.8125rem', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}
-      >
+      <Link href="/payments" className="text-[0.8125rem] font-semibold text-[var(--color-primary)] no-underline hover:underline">
         View payments →
       </Link>
     </div>

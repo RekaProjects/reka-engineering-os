@@ -59,6 +59,13 @@
   --radius-lg:   var(--radius-card);
   --radius-xl:   calc(var(--radius-card) + 4px);
   --radius-full: var(--radius-pill);
+
+  /* Chart palette (Recharts + ChartContainer cells) */
+  --color-chart-1: var(--color-chart-1);
+  --color-chart-2: var(--color-chart-2);
+  --color-chart-3: var(--color-chart-3);
+  --color-chart-4: var(--color-chart-4);
+  --color-chart-5: var(--color-chart-5);
 }
 
 /* ─── Design Tokens — derived from brand palette ────────────────
@@ -118,6 +125,13 @@
   /* Active alias */
   --color-active:          #142D50;
   --color-active-subtle:   #E6EDF7;
+
+  /* ── Chart palette (recharts Cell fills) ──────────────────── */
+  --color-chart-1: #142D50;   /* Twilight Indigo — primary / in-progress */
+  --color-chart-2: #1A6340;   /* Success green — completed / paid */
+  --color-chart-3: #3A6490;   /* Mid-blue — review */
+  --color-chart-4: #B8B3A8;   /* Neutral gray — to-do / unassigned */
+  --color-chart-5: #851E1E;   /* Dark Wine — revision / blocked / danger */
 
   /* ── Sidebar — dark Carbon Black, premium enterprise shell ── */
   --sidebar-bg:            #1D1F1E;   /* Carbon Black */
