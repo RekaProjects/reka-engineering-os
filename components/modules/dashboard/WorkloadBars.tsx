@@ -39,9 +39,9 @@ export function WorkloadBars({ users }: { users: WorkloadUser[] }) {
 
   return (
     <div>
-      <ChartContainer config={CHART_CONFIG} className="h-[200px] w-full">
+      <ChartContainer config={CHART_CONFIG} className="h-[220px] w-full">
         <BarChart data={data} barGap={4} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+          <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="var(--color-border)" />
           <XAxis
             dataKey="name"
             tick={{ fontSize: 11, fill: 'var(--color-text-secondary)' }}
@@ -60,13 +60,13 @@ export function WorkloadBars({ users }: { users: WorkloadUser[] }) {
             cursor={{ fill: 'var(--color-surface-muted)', opacity: 0.5 }}
             content={<ChartTooltipContent indicator="dot" />}
           />
-          <Bar dataKey="openTasks"    fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} barSize={18} />
-          <Bar dataKey="overdueTasks" fill="var(--color-chart-5)" radius={[4, 4, 0, 0]} barSize={18} />
+          <Bar dataKey="openTasks"    fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} barSize={16} />
+          <Bar dataKey="overdueTasks" fill="var(--color-chart-5)" radius={[4, 4, 0, 0]} barSize={16} />
         </BarChart>
       </ChartContainer>
 
       {/* Legend */}
-      <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-[var(--color-border)] pt-2.5 text-[0.6875rem] text-[var(--color-text-muted)]">
+      <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-[var(--color-border)] pt-3 text-[0.75rem] text-[var(--color-text-muted)]">
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-[var(--color-chart-1)]" />
           Open tasks
@@ -76,7 +76,7 @@ export function WorkloadBars({ users }: { users: WorkloadUser[] }) {
           Overdue
         </span>
         {atRisk.length > 0 && (
-          <span className="ml-auto font-semibold text-[var(--color-danger)]">
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-[var(--color-danger-subtle)] px-2.5 py-1 text-[0.6875rem] font-semibold text-[var(--color-danger)]">
             {atRisk.length} at risk
           </span>
         )}

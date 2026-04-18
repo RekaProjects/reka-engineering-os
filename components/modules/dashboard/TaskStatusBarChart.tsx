@@ -54,9 +54,9 @@ export function TaskStatusBarChart({ counts }: { counts: OpenTaskStatusCounts })
 
   return (
     <div>
-      <ChartContainer config={CHART_CONFIG} className="h-[200px] w-full">
-        <BarChart data={data} layout="vertical" barSize={18} margin={{ top: 4, right: 16, bottom: 4, left: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--color-border)" />
+      <ChartContainer config={CHART_CONFIG} className="h-[220px] w-full">
+        <BarChart data={data} layout="vertical" barSize={16} margin={{ top: 4, right: 16, bottom: 4, left: 4 }}>
+          <CartesianGrid strokeDasharray="2 4" horizontal={false} stroke="var(--color-border)" />
           <XAxis
             type="number"
             tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
@@ -67,10 +67,10 @@ export function TaskStatusBarChart({ counts }: { counts: OpenTaskStatusCounts })
           <YAxis
             type="category"
             dataKey="status"
-            tick={{ fontSize: 11, fill: 'var(--color-text-secondary)' }}
+            tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
             tickLine={false}
             axisLine={false}
-            width={84}
+            width={90}
           />
           <ChartTooltip cursor={{ fill: 'var(--color-surface-muted)', opacity: 0.5 }} content={<ChartTooltipContent hideLabel />} />
           <Bar dataKey="count" radius={[0, 4, 4, 0]}>
@@ -81,9 +81,11 @@ export function TaskStatusBarChart({ counts }: { counts: OpenTaskStatusCounts })
         </BarChart>
       </ChartContainer>
 
-      <div className="mt-3 flex items-center justify-between border-t border-[var(--color-border)] pt-2.5">
-        <span className="text-xs text-[var(--color-text-muted)]">Total open tasks</span>
-        <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
+      <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+        <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
+          Total open tasks
+        </span>
+        <span className="text-[0.9375rem] font-semibold tabular-nums text-[var(--color-text-primary)]">
           {total}
         </span>
       </div>

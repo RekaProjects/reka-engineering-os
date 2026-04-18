@@ -137,15 +137,15 @@ export function AttentionQueue({
             <Link
               href={row.href}
               className={cn(
-                'flex items-center gap-3 rounded-[var(--radius-control)] p-3 text-inherit no-underline transition-colors',
+                'group flex items-center gap-3 rounded-[var(--radius-control)] p-3.5 text-inherit no-underline transition-colors',
                 KIND_ROW_CLASS[row.kind]
               )}
             >
               <div className="min-w-0 flex-1">
-                <div className="mb-1 flex items-center gap-2">
+                <div className="mb-1.5 flex items-center gap-2">
                   <span
                     className={cn(
-                      'inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.05em]',
+                      'inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.06em]',
                       KIND_BADGE_CLASS[row.kind]
                     )}
                   >
@@ -156,31 +156,36 @@ export function AttentionQueue({
                     {row.project}
                   </span>
                 </div>
-                <p className="truncate text-sm font-medium text-[var(--color-text-primary)]">
+                <p className="truncate text-[0.875rem] font-medium leading-snug text-[var(--color-text-primary)]">
                   {row.title}
                 </p>
               </div>
 
               <div className="hidden shrink-0 text-right sm:block">
-                <p className="text-[0.6875rem] text-[var(--color-text-muted)]">{row.detailLabel}</p>
-                <p className="truncate text-xs font-medium text-[var(--color-text-secondary)]">
+                <p className="text-[0.625rem] font-medium uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
+                  {row.detailLabel}
+                </p>
+                <p className="mt-0.5 truncate text-[0.8125rem] font-medium text-[var(--color-text-secondary)]">
                   {row.detailValue}
                 </p>
               </div>
 
-              <ChevronRight className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" aria-hidden />
+              <ChevronRight
+                className="h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform group-hover:translate-x-0.5"
+                aria-hidden
+              />
             </Link>
           </li>
         ))}
       </ul>
 
       {hidden > 0 && (
-        <p className="mt-3 pl-1 text-xs text-[var(--color-text-muted)]">
+        <p className="mt-3 pl-1 text-[0.75rem] text-[var(--color-text-muted)]">
           +{hidden} more — use the task and deliverable lists to triage.
         </p>
       )}
 
-      <div className="mt-3">
+      <div className="mt-4 border-t border-[var(--color-border)] pt-3">
         <QuickLinks />
       </div>
     </div>

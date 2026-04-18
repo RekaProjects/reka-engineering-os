@@ -11,9 +11,16 @@ interface PageHeaderProps {
   breadcrumb?: { label: string; href: string }
 }
 
+/**
+ * PageHeader — top of every page. Premium typography:
+ *   • Title: 1.625rem / 600 / tracking-tight  (feels like a product heading,
+ *     not a form label)
+ *   • Subtitle: 0.875rem / muted, sits with a small top gap
+ *   • Optional breadcrumb above the title, optional actions aligned right
+ */
 export function PageHeader({ title, subtitle, actions, className, breadcrumb }: PageHeaderProps) {
   return (
-    <div className={cn('mb-6 flex items-start justify-between gap-4', className)}>
+    <div className={cn('flex items-start justify-between gap-4', className)}>
       {/* Left: optional breadcrumb + title + subtitle */}
       <div className="min-w-0">
         {breadcrumb && (
@@ -24,11 +31,11 @@ export function PageHeader({ title, subtitle, actions, className, breadcrumb }: 
             ← {breadcrumb.label}
           </Link>
         )}
-        <h1 className="text-[1.375rem] font-bold leading-tight tracking-[-0.01em] text-[var(--color-text-primary)]">
+        <h1 className="text-[1.625rem] font-semibold leading-tight tracking-[-0.015em] text-[var(--color-text-primary)]">
           {title}
         </h1>
         {subtitle && (
-          <p className="mt-0.5 text-[0.8125rem] leading-snug text-[var(--color-text-muted)]">
+          <p className="mt-1 text-[0.875rem] leading-snug text-[var(--color-text-muted)]">
             {subtitle}
           </p>
         )}
@@ -37,7 +44,7 @@ export function PageHeader({ title, subtitle, actions, className, breadcrumb }: 
       {/* Right: action buttons */}
       {actions && (
         <div
-          className={cn('flex shrink-0 items-center gap-2', breadcrumb ? 'mt-[26px]' : 'mt-0.5')}
+          className={cn('flex shrink-0 items-center gap-2', breadcrumb ? 'mt-7' : 'mt-1')}
         >
           {actions}
         </div>

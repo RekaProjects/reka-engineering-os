@@ -12,80 +12,81 @@ interface KpiCardProps {
   accent?:      'none' | 'primary' | 'urgent' | 'warning'
 }
 
+/**
+ * KpiCard — premium summary tile.
+ *
+ * v0-style composition:
+ *   • Title row: uppercase label (soft, tracking-wider) on the left,
+ *     a rounded-lg icon pill on the right.
+ *   • Large tabular value below (font-semibold, not bold).
+ *   • Optional description line beneath.
+ *   • Subtle left-border accent for `urgent` and `warning` states only —
+ *     never on default/primary, so the strip never looks decorative.
+ */
 export function KpiCard({
   label,
   value,
   icon,
   description,
   className,
-  variant = 'default',
-  accent  = 'none',
+  accent = 'none',
 }: KpiCardProps) {
 
-  const accentColor =
-    accent === 'urgent'  ? 'var(--color-danger)'  :
-    accent === 'warning' ? 'var(--color-warning)' :
-    accent === 'primary' ? 'var(--color-primary)'  :
-    'var(--color-text-muted)'
+  const valueTone =
+    accent === 'urgent'  ? 'text-[var(--color-danger)]'  :
+    accent === 'warning' ? 'text-[var(--color-warning)]' :
+    'text-[var(--color-text-primary)]'
 
-  const accentBorderColor =
-    accent === 'urgent'  ? 'var(--color-danger)'  :
-    accent === 'warning' ? 'var(--color-warning)' :
-    accent === 'primary' ? 'var(--color-primary)'  :
-    'transparent'
+  const descTone =
+    accent === 'urgent'  ? 'text-[var(--color-danger)] font-medium'  :
+    accent === 'warning' ? 'text-[var(--color-warning)] font-medium' :
+    'text-[var(--color-text-muted)]'
 
-  const iconBg =
-    accent === 'urgent'  ? 'var(--color-danger-subtle)'  :
-    accent === 'warning' ? 'var(--color-warning-subtle)' :
-    accent === 'primary' ? 'var(--color-primary-subtle)'  :
-    'var(--color-surface-muted)'
+  const iconTone =
+    accent === 'urgent'  ? 'bg-[var(--color-danger-subtle)]  text-[var(--color-danger)]'  :
+    accent === 'warning' ? 'bg-[var(--color-warning-subtle)] text-[var(--color-warning)]' :
+    accent === 'primary' ? 'bg-[var(--color-primary-subtle)] text-[var(--color-primary)]' :
+    'bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]'
+
+  const accentBar =
+    accent === 'urgent'  ? 'border-l-2 border-l-[var(--color-danger)]'  :
+    accent === 'warning' ? 'border-l-2 border-l-[var(--color-warning)]' :
+    ''
 
   return (
-    <Card
-      className={cn('relative px-4 pb-4 pt-3.5', className)}
-      style={{ borderTop: `4px solid ${accentBorderColor}` }}
-    >
-      {/* Icon — top-right */}
-      {icon && (
-        <div
-          aria-hidden="true"
-          className="absolute right-3.5 top-3.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px]"
-          style={{ backgroundColor: iconBg, color: accentColor }}
-        >
-          {icon}
+    <Card className={cn('p-5', accentBar, className)}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[0.6875rem] font-medium uppercase leading-none tracking-[0.08em] text-[var(--color-text-muted)]">
+            {label}
+          </p>
+          <p
+            className={cn(
+              'mt-3 text-[1.75rem] font-semibold leading-[1.1] tracking-[-0.02em] tabular-nums',
+              valueTone
+            )}
+          >
+            {value}
+          </p>
+          {description && (
+            <p className={cn('mt-1.5 text-xs leading-snug', descTone)}>
+              {description}
+            </p>
+          )}
         </div>
-      )}
 
-      {/* Label */}
-      <p
-        className={cn(
-          'mb-2.5 text-[0.6875rem] font-semibold uppercase leading-none tracking-[0.06em] text-[var(--color-text-muted)]',
-          icon && 'pr-10'
+        {icon && (
+          <div
+            aria-hidden="true"
+            className={cn(
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+              iconTone
+            )}
+          >
+            {icon}
+          </div>
         )}
-      >
-        {label}
-      </p>
-
-      {/* Value */}
-      <p
-        className="text-[2rem] font-bold leading-none tracking-[-0.02em] tabular-nums"
-        style={{ color: accent === 'urgent' ? 'var(--color-danger)' : 'var(--color-text-primary)' }}
-      >
-        {value}
-      </p>
-
-      {/* Optional description */}
-      {description && (
-        <p
-          className="mt-1.5 text-xs leading-snug"
-          style={{
-            color:      accent === 'urgent' ? 'var(--color-danger)' : 'var(--color-text-muted)',
-            fontWeight: accent === 'urgent' ? 600 : 400,
-          }}
-        >
-          {description}
-        </p>
-      )}
+      </div>
     </Card>
   )
 }

@@ -41,7 +41,7 @@ export default async function ProtectedLayout({
         )}
 
         <main className="flex-1 overflow-y-auto bg-[var(--color-background)]">
-          <div className="mx-auto max-w-[var(--content-max-width)] px-8 py-7">
+          <div className="mx-auto max-w-[var(--content-max-width)] px-8 py-8">
             {children}
           </div>
         </main>

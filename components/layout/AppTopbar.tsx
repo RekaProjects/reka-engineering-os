@@ -5,9 +5,15 @@ interface AppTopbarProps {
   right?: ReactNode
 }
 
+/**
+ * AppTopbar — sticky top shell. Slightly taller (56px) to match the sidebar
+ * brand area; uses a single hairline border instead of a shadow drop so
+ * the scroll region below reads as one continuous surface.
+ */
 export function AppTopbar({ left, right }: AppTopbarProps) {
   return (
-    <header className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 shadow-[0_1px_0_var(--color-border)] sticky top-0 z-10"
+    <header
+      className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6"
       style={{ height: 'var(--topbar-height)' }}
     >
       {/* Left — breadcrumb / page context */}

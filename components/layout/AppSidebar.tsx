@@ -57,6 +57,16 @@ interface AppSidebarProps {
   systemRole?:   SystemRole | null
 }
 
+/**
+ * AppSidebar — premium vertical navigation rail.
+ *
+ * v0-inspired density:
+ *   • 248px rail, h-14 brand area
+ *   • Groups separated by whitespace (space-y-6), NOT dividers
+ *   • Nav items: `rounded-md px-3 py-2 text-sm` with soft hover state
+ *   • User footer is a single quiet row — avatar + name/role + signout icon,
+ *     no visible inner border
+ */
 export function AppSidebar({
   userFullName = 'User',
   userEmail    = '',
@@ -68,27 +78,27 @@ export function AppSidebar({
   // ── Build nav groups ────────────────────────────────────────
 
   const mainItems: NavItem[] = [
-    { label: perms.labelDashboard, href: '/dashboard', icon: <LayoutDashboard size={15} /> },
+    { label: perms.labelDashboard, href: '/dashboard', icon: <LayoutDashboard size={16} /> },
   ]
 
   const operationsItems: NavItem[] = [
-    ...(perms.showClients  ? [{ label: 'Clients',      href: '/clients',      icon: <Users size={15} /> }]        : []),
-    ...(perms.showIntakes  ? [{ label: 'Intakes',      href: '/intakes',      icon: <ClipboardList size={15} /> }] : []),
-    { label: perms.labelProjects,     href: '/projects',     icon: <FolderKanban size={15} /> },
-    { label: perms.labelTasks,        href: '/tasks',        icon: <CheckSquare size={15} /> },
-    { label: perms.labelDeliverables, href: '/deliverables', icon: <FileText size={15} /> },
-    { label: perms.labelFiles,        href: '/files',        icon: <Paperclip size={15} /> },
+    ...(perms.showClients  ? [{ label: 'Clients',      href: '/clients',      icon: <Users size={16} /> }]        : []),
+    ...(perms.showIntakes  ? [{ label: 'Intakes',      href: '/intakes',      icon: <ClipboardList size={16} /> }] : []),
+    { label: perms.labelProjects,     href: '/projects',     icon: <FolderKanban size={16} /> },
+    { label: perms.labelTasks,        href: '/tasks',        icon: <CheckSquare size={16} /> },
+    { label: perms.labelDeliverables, href: '/deliverables', icon: <FileText size={16} /> },
+    { label: perms.labelFiles,        href: '/files',        icon: <Paperclip size={16} /> },
   ]
 
   const peopleItems: NavItem[] = [
-    ...(perms.showTeam         ? [{ label: 'Team',         href: '/team',         icon: <UserSquare2 size={15} /> }] : []),
-    ...(perms.showCompensation ? [{ label: 'Compensation', href: '/compensation', icon: <Receipt size={15} /> }]    : []),
-    ...(perms.showPayments     ? [{ label: 'Payments',     href: '/payments',     icon: <Wallet size={15} /> }]     : []),
-    ...(perms.showMyPayments   ? [{ label: 'My Payments',  href: '/my-payments',  icon: <Wallet size={15} /> }]     : []),
+    ...(perms.showTeam         ? [{ label: 'Team',         href: '/team',         icon: <UserSquare2 size={16} /> }] : []),
+    ...(perms.showCompensation ? [{ label: 'Compensation', href: '/compensation', icon: <Receipt size={16} /> }]    : []),
+    ...(perms.showPayments     ? [{ label: 'Payments',     href: '/payments',     icon: <Wallet size={16} /> }]     : []),
+    ...(perms.showMyPayments   ? [{ label: 'My Payments',  href: '/my-payments',  icon: <Wallet size={16} /> }]     : []),
   ]
 
   const bottomItems: NavItem[] = [
-    ...(perms.showSettings ? [{ label: 'Settings', href: '/settings', icon: <Settings size={15} /> }] : []),
+    ...(perms.showSettings ? [{ label: 'Settings', href: '/settings', icon: <Settings size={16} /> }] : []),
   ]
 
   const navGroups: NavGroup[] = [
@@ -111,28 +121,26 @@ export function AppSidebar({
           href={item.href}
           aria-current={active ? 'page' : undefined}
           className={cn(
-            'sidebar-nav-item flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[0.8125rem] no-underline transition-colors duration-[120ms]',
+            'sidebar-nav-item flex items-center gap-3 rounded-md px-3 py-2 text-sm no-underline transition-colors duration-150',
             active
               ? 'bg-[var(--sidebar-active-bg)] font-semibold text-[var(--sidebar-active-text)]'
-              : 'font-normal text-[var(--sidebar-text-muted)]'
+              : 'font-medium text-[var(--sidebar-text-muted)]'
           )}
         >
           <span
             aria-hidden="true"
             className={cn(
-              'flex shrink-0 transition-colors duration-[120ms]',
+              'flex shrink-0',
               active ? 'text-[var(--sidebar-active-text)]' : 'text-[var(--sidebar-text-muted)]'
             )}
           >
             {item.icon}
           </span>
-          {item.label}
+          <span className="truncate">{item.label}</span>
         </Link>
       </li>
     )
   }
-
-  // ── My Profile link ─────────────────────────────────────────
 
   const profileActive = pathname === '/my-profile'
 
@@ -150,50 +158,47 @@ export function AppSidebar({
       >
         <div
           aria-hidden="true"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-[var(--color-primary)] shadow-[0_1px_3px_rgba(20,45,80,0.25)]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[var(--color-primary)] shadow-[0_1px_3px_rgba(20,45,80,0.35)]"
         >
-          <span className="text-[11px] font-bold tracking-[0.02em] text-white">EA</span>
+          <span className="text-[12px] font-bold tracking-[0.02em] text-white">R</span>
         </div>
-        <div className="min-w-0">
-          <span className="block truncate text-[0.875rem] font-bold text-[var(--sidebar-text)]">
+        <div className="min-w-0 leading-tight">
+          <span className="block truncate text-[0.9375rem] font-semibold text-[var(--sidebar-text)]">
             Agency OS
           </span>
-          <span className="text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--sidebar-label)]">
+          <span className="mt-0.5 block truncate text-[0.6875rem] font-medium text-[var(--sidebar-label)]">
             {systemRole ? (ROLE_CONTEXT[systemRole] ?? 'Engineering Agency') : 'Engineering Agency'}
           </span>
         </div>
       </div>
 
       {/* ── Nav groups ────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto p-2" aria-label="Main navigation">
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4" aria-label="Main navigation">
         {navGroups.map((group, gi) => (
-          <div key={gi} className="mb-0.5">
+          <div key={gi}>
             {group.label && (
-              <p className="px-2.5 pb-1 pt-3 text-[0.625rem] font-bold uppercase tracking-[0.07em] text-[var(--sidebar-label)]">
+              <p className="mb-2 px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--sidebar-label)]">
                 {group.label}
               </p>
             )}
-            <ul role="list" className="flex flex-col gap-px">
+            <ul role="list" className="flex flex-col gap-0.5">
               {group.items.map(renderItem)}
             </ul>
-            {gi < navGroups.length - 1 && (
-              <div className="mx-1 my-1.5 h-px bg-[var(--sidebar-border)] opacity-60" />
-            )}
           </div>
         ))}
       </nav>
 
       {/* ── Footer ────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-[var(--sidebar-border)] p-2">
+      <div className="shrink-0 border-t border-[var(--sidebar-border)] p-3">
         {/* My Profile */}
         <Link
           href="/my-profile"
           aria-current={profileActive ? 'page' : undefined}
           className={cn(
-            'sidebar-nav-item mb-1.5 flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[0.8125rem] no-underline transition-colors duration-[120ms]',
+            'sidebar-nav-item mb-2 flex items-center gap-3 rounded-md px-3 py-2 text-sm no-underline transition-colors duration-150',
             profileActive
               ? 'bg-[var(--sidebar-active-bg)] font-semibold text-[var(--sidebar-active-text)]'
-              : 'font-normal text-[var(--sidebar-text-muted)]'
+              : 'font-medium text-[var(--sidebar-text-muted)]'
           )}
         >
           <span
@@ -203,41 +208,38 @@ export function AppSidebar({
               profileActive ? 'text-[var(--sidebar-active-text)]' : 'text-[var(--sidebar-text-muted)]'
             )}
           >
-            <UserCircle size={15} />
+            <UserCircle size={16} />
           </span>
           My Profile
         </Link>
 
-        {/* User card */}
-        <div className="flex items-center gap-2.5 rounded-[7px] border border-[var(--sidebar-border)] bg-white/[0.06] px-2.5 py-2">
-          <Avatar className="h-7 w-7 shrink-0">
-            <AvatarFallback className="text-[10px]">
+        {/* User card — quiet row, no inner border */}
+        <div className="flex items-center gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-[var(--sidebar-hover)]">
+          <Avatar className="h-8 w-8 shrink-0">
+            <AvatarFallback className="bg-[var(--color-primary)] text-[10px] text-white">
               {getInitials(userFullName)}
             </AvatarFallback>
           </Avatar>
 
-          {/* Name + role */}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-[var(--sidebar-text)]">
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="truncate text-[0.8125rem] font-semibold text-[var(--sidebar-text)]">
               {userFullName}
             </p>
             {systemRole && (
-              <span className="mt-0.5 inline-flex items-center rounded-full border border-white/[0.16] bg-white/10 px-1.5 py-px text-[0.5625rem] font-bold uppercase tracking-[0.05em] text-[var(--sidebar-text-muted)] whitespace-nowrap">
+              <p className="mt-0.5 truncate text-[0.6875rem] font-medium text-[var(--sidebar-text-muted)] capitalize">
                 {ROLE_LABEL[systemRole] ?? systemRole}
-              </span>
+              </p>
             )}
           </div>
 
-          {/* Sign out icon button */}
           <form action={logout}>
             <button
               type="submit"
               title="Sign out"
               aria-label="Sign out"
-              className="signout-btn flex h-6.5 w-6.5 shrink-0 cursor-pointer items-center justify-center rounded-[6px] border border-white/[0.14] bg-white/[0.06] text-[var(--sidebar-text-muted)] transition-colors duration-[120ms]"
-              style={{ width: '26px', height: '26px' }}
+              className="signout-btn flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-[var(--sidebar-text-muted)] transition-colors duration-150"
             >
-              <LogOut size={12} aria-hidden="true" />
+              <LogOut size={14} aria-hidden="true" />
             </button>
           </form>
         </div>

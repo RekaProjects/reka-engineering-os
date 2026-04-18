@@ -157,19 +157,19 @@
   --badge-danger-text:   #851E1E;   /* = --color-danger */
   --badge-danger-bg:     #F8E9E8;
 
-  /* Shadows */
-  --shadow-sm:             0 1px 2px rgba(29,31,30,0.06);
-  --shadow-md:             0 4px 16px rgba(29,31,30,0.10);
+  /* Shadows — softer, more premium */
+  --shadow-sm:             0 1px 2px rgba(29,31,30,0.04), 0 1px 1px rgba(29,31,30,0.02);
+  --shadow-md:             0 6px 20px rgba(29,31,30,0.08), 0 1px 2px rgba(29,31,30,0.04);
 
   /* Radius */
-  --radius-card:           8px;
+  --radius-card:           10px;
   --radius-control:        6px;
   --radius-pill:           999px;
   --radius:                6px;
 
   /* Layout */
-  --sidebar-width:         240px;
-  --topbar-height:         52px;
+  --sidebar-width:         248px;
+  --topbar-height:         56px;
   --content-max-width:     1440px;
 }
 

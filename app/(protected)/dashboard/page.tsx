@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import {
   FolderKanban,
@@ -15,6 +16,7 @@ import {
 import { getSessionProfile } from '@/lib/auth/session'
 import { effectiveRole } from '@/lib/auth/permissions'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { Card } from '@/components/ui/card'
 import { KpiCard } from '@/components/shared/KpiCard'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -58,10 +60,46 @@ export const metadata = {
   title: 'Dashboard — Engineering Agency OS',
 }
 
-// ── Shared table styles (scoped role dashboards) ──────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+// DashSection — v0-style inline-header card framing for dashboard sections.
+// One continuous card surface (no muted header strip), title + description
+// inline with optional right-aligned actions, then the content body below.
+// ═════════════════════════════════════════════════════════════════════════════
 
-const TH_CLASS = 'whitespace-nowrap border-b border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-2 text-left text-[0.6875rem] font-semibold uppercase tracking-[0.04em] text-[var(--color-text-muted)]'
-const TD_CLASS = 'align-middle px-3 py-2 text-[0.8125rem] text-[var(--color-text-secondary)]'
+interface DashSectionProps {
+  title:        string
+  description?: string
+  actions?:     ReactNode
+  children:     ReactNode
+  className?:   string
+  bodyClassName?: string
+}
+
+function DashSection({ title, description, actions, children, className, bodyClassName }: DashSectionProps) {
+  return (
+    <Card className={cn('p-5', className)}>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-[0.9375rem] font-semibold leading-tight text-[var(--color-text-primary)]">
+            {title}
+          </h2>
+          {description && (
+            <p className="mt-1 text-[0.8125rem] leading-snug text-[var(--color-text-muted)]">
+              {description}
+            </p>
+          )}
+        </div>
+        {actions && <div className="shrink-0">{actions}</div>}
+      </div>
+      <div className={bodyClassName}>{children}</div>
+    </Card>
+  )
+}
+
+// ── Shared table classes (scoped role dashboards) ────────────────────────────
+
+const TH_CLASS = 'whitespace-nowrap border-b border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-2.5 text-left text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]'
+const TD_CLASS = 'align-middle px-3 py-2.5 text-[0.8125rem] text-[var(--color-text-secondary)]'
 const ROW_LINK_CLASS  = 'text-[0.8125rem] font-medium text-[var(--color-text-primary)] no-underline hover:text-[var(--color-primary)]'
 const CODE_LINK_CLASS = 'text-xs font-medium text-[var(--color-primary)] no-underline hover:underline'
 
@@ -69,26 +107,22 @@ const CODE_LINK_CLASS = 'text-xs font-medium text-[var(--color-primary)] no-unde
 // SHARED SCOPED COMPONENTS
 // ═════════════════════════════════════════════════════════════════════════════
 
-/**
- * Scoped KPI row for member / reviewer / coordinator dashboards.
- * Responsive grid: 2 cols on mobile → 3 on small → 5 on xl laptops.
- */
 function ScopedKpiRow({ kpis }: { kpis: ScopedKpis }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-      <KpiCard variant="dashboard" label="Active Projects" value={kpis.activeProjects} icon={<FolderKanban size={20} />} />
-      <KpiCard variant="dashboard" label="Open Tasks"      value={kpis.openTasks}      icon={<CheckSquare  size={20} />} />
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+      <KpiCard variant="dashboard" label="Active Projects" value={kpis.activeProjects} icon={<FolderKanban size={18} />} />
+      <KpiCard variant="dashboard" label="Open Tasks"      value={kpis.openTasks}      icon={<CheckSquare  size={18} />} />
       <KpiCard
         variant="dashboard"
         label="Overdue Tasks"
         value={kpis.overdueTasks}
-        icon={<AlertCircle size={20} />}
+        icon={<AlertCircle size={18} />}
         accent={kpis.overdueTasks > 0 ? 'urgent' : 'none'}
         description={kpis.overdueTasks > 0 ? 'Needs action' : undefined}
       />
-      <KpiCard variant="dashboard" label="Due This Week" value={kpis.dueThisWeek} icon={<Clock size={20} />} />
+      <KpiCard variant="dashboard" label="Due This Week" value={kpis.dueThisWeek} icon={<Clock size={18} />} />
       {kpis.awaitingReview > 0 && (
-        <KpiCard variant="dashboard" label="Awaiting Review" value={kpis.awaitingReview} icon={<FileText size={20} />} accent="primary" />
+        <KpiCard variant="dashboard" label="Awaiting Review" value={kpis.awaitingReview} icon={<FileText size={18} />} accent="primary" />
       )}
     </div>
   )
@@ -260,7 +294,7 @@ const ACTION_LABELS: Record<string, string> = {
 function RecentActivityFeed({ entries }: { entries: ActivityLogEntry[] }) {
   if (entries.length === 0) {
     return (
-      <div className="rounded-[var(--radius-control)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3.5">
+      <div className="rounded-md border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-4">
         <p className="m-0 text-[0.8125rem] leading-relaxed text-[var(--color-text-muted)]">
           No recent updates. Activity will appear as work moves through the pipeline.
         </p>
@@ -268,25 +302,19 @@ function RecentActivityFeed({ entries }: { entries: ActivityLogEntry[] }) {
     )
   }
   return (
-    <div className="flex flex-col">
-      {entries.map((entry, i) => {
+    <div className="divide-y divide-[var(--color-border)]">
+      {entries.map((entry) => {
         const description =
           entry.note ??
           `${ENTITY_LABELS[entry.entity_type] ?? entry.entity_type} ${ACTION_LABELS[entry.action_type] ?? entry.action_type}`
         return (
-          <div
-            key={entry.id}
-            className={cn(
-              'flex items-start gap-2.5 py-2',
-              i < entries.length - 1 && 'border-b border-[var(--color-border)]'
-            )}
-          >
-            <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)] opacity-45" />
+          <div key={entry.id} className="flex items-start gap-3 py-3">
+            <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)] opacity-60" />
             <div className="min-w-0 flex-1">
               <p className="m-0 text-[0.8125rem] leading-snug text-[var(--color-text-primary)]">
                 {description}
               </p>
-              <p className="mt-0.5 text-[0.6875rem] text-[var(--color-text-muted)]">
+              <p className="mt-1 text-[0.6875rem] text-[var(--color-text-muted)]">
                 {entry.actor?.full_name ?? 'System'} · {formatRelativeDate(entry.created_at)}
               </p>
             </div>
@@ -304,26 +332,26 @@ function SignalBand({ riskCount }: { riskCount: number }) {
   return (
     <div
       className={cn(
-        'flex items-center gap-2.5 rounded-[var(--radius-control)] border px-3.5 py-2.5',
+        'flex items-center gap-2.5 rounded-md border px-4 py-3',
         isClear
-          ? 'border-[var(--color-border)] bg-[var(--color-surface-subtle)]'
+          ? 'border-[var(--color-border)] bg-[var(--color-surface)]'
           : 'border-[var(--color-danger)]/20 bg-[var(--color-danger-subtle)]'
       )}
     >
       {isClear ? (
         <>
-          <CheckCircle2 size={14} className="shrink-0 text-[var(--color-success)]" />
-          <span className="text-[0.8125rem] leading-none text-[var(--color-text-secondary)]">
+          <CheckCircle2 size={16} className="shrink-0 text-[var(--color-success)]" />
+          <span className="text-[0.875rem] text-[var(--color-text-secondary)]">
             Pipeline clear — no critical blockers flagged in headline metrics.
           </span>
         </>
       ) : (
         <>
-          <ShieldAlert size={14} className="shrink-0 text-[var(--color-danger)]" />
-          <span className="text-[0.8125rem] font-semibold leading-none text-[var(--color-danger)]">
+          <ShieldAlert size={16} className="shrink-0 text-[var(--color-danger)]" />
+          <span className="text-[0.875rem] font-semibold text-[var(--color-danger)]">
             {riskCount} risk signal{riskCount === 1 ? '' : 's'}
           </span>
-          <span className="text-[0.8125rem] leading-none text-[var(--color-text-secondary)]">
+          <span className="text-[0.875rem] text-[var(--color-text-secondary)]">
             — overdue work, client holds, and revision requests need triage.
           </span>
         </>
@@ -351,7 +379,7 @@ export default async function DashboardPage() {
         />
         <ScopedKpiRow kpis={data.kpis} />
         <ScopedTasksSection tasks={data.tasks} title="My Open Tasks" />
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="xl:col-span-2">
             <ScopedDeliverablesSection deliverables={data.deliverables} title="My Deliverables" />
           </div>
@@ -371,7 +399,7 @@ export default async function DashboardPage() {
           subtitle="Queue and items waiting for your sign-off."
         />
         <ScopedKpiRow kpis={data.kpis} />
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <ScopedTasksSection        tasks={data.tasks}                title="Review Tasks"        />
           <ScopedDeliverablesSection deliverables={data.deliverables}  title="Review Deliverables" />
         </div>
@@ -405,11 +433,11 @@ export default async function DashboardPage() {
             subtitle="Operational view of your assigned projects — workload, deadlines, and blockers."
           />
           <ScopedKpiRow kpis={data.kpis} />
-          <SectionCard title="Assignments">
+          <DashSection title="Assignments">
             <p className="m-0 text-sm text-[var(--color-text-muted)]">
               No project assignments yet. When you are added to projects, this dashboard will populate.
             </p>
-          </SectionCard>
+          </DashSection>
         </div>
       )
     }
@@ -422,42 +450,42 @@ export default async function DashboardPage() {
         />
         <ScopedKpiRow kpis={data.kpis} />
 
-        <div className="grid grid-cols-12 gap-5">
+        <div className="grid grid-cols-12 gap-6">
           {/* Left column */}
-          <div className="col-span-12 space-y-5 xl:col-span-8">
-            <SectionCard
+          <div className="col-span-12 space-y-6 xl:col-span-8">
+            <DashSection
               title="Needs attention"
               description="Ranked queue for your portfolio."
               actions={
                 attentionCount > 0 ? (
-                  <span className="rounded-[var(--radius-pill)] bg-[var(--color-danger-subtle)] px-2.5 py-1 text-[0.6875rem] font-bold text-[var(--color-danger)]">
+                  <span className="rounded-full bg-[var(--color-danger-subtle)] px-2.5 py-1 text-[0.6875rem] font-semibold text-[var(--color-danger)]">
                     {attentionCount} flagged
                   </span>
                 ) : undefined
               }
             >
               <AttentionQueue attention={attention} waitingClient={waiting} />
-            </SectionCard>
+            </DashSection>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <SectionCard title="Operational health" description="Open tasks by status across your projects.">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <DashSection title="Operational health" description="Open tasks by status across your projects.">
                 <TaskStatusBarChart counts={pipeline} />
-              </SectionCard>
-              <SectionCard title="Deadline pressure" description="Due dates in the next two weeks.">
+              </DashSection>
+              <DashSection title="Deadline pressure" description="Due dates in the next two weeks.">
                 <DeadlineBucketsChart buckets={buckets} />
-              </SectionCard>
+              </DashSection>
             </div>
 
-            <SectionCard title="Team workload" description="Open task load on your projects — highest first.">
+            <DashSection title="Team workload" description="Open task load on your projects — highest first.">
               <WorkloadBars users={workload} />
-            </SectionCard>
+            </DashSection>
           </div>
 
           {/* Right column */}
-          <div className="col-span-12 space-y-5 xl:col-span-4">
-            <SectionCard title="Recent activity" description="Latest changes in your projects.">
+          <div className="col-span-12 space-y-6 xl:col-span-4">
+            <DashSection title="Recent activity" description="Latest changes in your projects.">
               <RecentActivityFeed entries={activity} />
-            </SectionCard>
+            </DashSection>
             <ScopedTasksSection        tasks={data.tasks}               title="Open tasks"          />
             <ScopedDeliverablesSection deliverables={data.deliverables} title="Active deliverables" />
           </div>
@@ -493,23 +521,20 @@ export default async function DashboardPage() {
         subtitle="Owner / admin control center — pipeline health, deadlines, cash exposure, and team load."
       />
 
-      {/* Operational signal band */}
-      <SignalBand riskCount={queueSignals} />
-
       {/* A. KPI strip — 2 → 3 → 6 columns from mobile to laptop */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         <KpiCard
           variant="dashboard"
           label="Active Projects"
           value={kpis.activeProjects}
-          icon={<FolderKanban size={20} />}
+          icon={<FolderKanban size={18} />}
           accent="primary"
         />
         <KpiCard
           variant="dashboard"
           label="Open Tasks"
           value={kpis.openTasks}
-          icon={<CheckSquare size={20} />}
+          icon={<CheckSquare size={18} />}
           accent={kpis.overdueTasks > 0 ? 'urgent' : 'none'}
           description={kpis.overdueTasks > 0 ? `${kpis.overdueTasks} overdue` : undefined}
         />
@@ -517,86 +542,89 @@ export default async function DashboardPage() {
           variant="dashboard"
           label="Due This Week"
           value={kpis.dueThisWeek}
-          icon={<Clock size={20} />}
+          icon={<Clock size={18} />}
         />
         <KpiCard
           variant="dashboard"
           label="Awaiting Review"
           value={kpis.awaitingReview}
-          icon={<FileText size={20} />}
+          icon={<FileText size={18} />}
           accent={kpis.awaitingReview > 0 ? 'primary' : 'none'}
         />
         <KpiCard
           variant="dashboard"
           label="Waiting on Client"
           value={kpis.waitingClient}
-          icon={<CalendarClock size={20} />}
+          icon={<CalendarClock size={18} />}
           accent={kpis.waitingClient > 0 ? 'warning' : 'none'}
         />
         <KpiCard
           variant="dashboard"
           label="In Revision"
           value={kpis.inRevision}
-          icon={<RotateCcw size={20} />}
+          icon={<RotateCcw size={18} />}
           accent={kpis.inRevision > 0 ? 'warning' : 'none'}
         />
       </div>
 
-      {/* Main 12-col grid — 8 / 4 split on xl+ laptops, stacks otherwise */}
-      <div className="grid grid-cols-12 gap-5">
-        {/* ── Left column — attention + charts + workload ─────────────── */}
-        <div className="col-span-12 space-y-5 xl:col-span-8">
-          <SectionCard
+      {/* B. Signal band */}
+      <SignalBand riskCount={queueSignals} />
+
+      {/* C. Main 12-col grid — 8 / 4 split on xl+ laptops */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* ── Left column ─────────────────────────────────────────────── */}
+        <div className="col-span-12 space-y-6 xl:col-span-8">
+          <DashSection
             title="Needs attention"
             description="Ranked queue — overdue, blocked, revision, and client holds."
             actions={
               totalAttention > 0 ? (
-                <span className="rounded-[var(--radius-pill)] bg-[var(--color-danger-subtle)] px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.02em] text-[var(--color-danger)]">
+                <span className="rounded-full bg-[var(--color-danger-subtle)] px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.04em] text-[var(--color-danger)]">
                   {totalAttention} flagged
                 </span>
               ) : undefined
             }
           >
             <AttentionQueue attention={attention} waitingClient={waitingClient} />
-          </SectionCard>
+          </DashSection>
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <SectionCard
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <DashSection
               title="Operational health"
-              description="Where open work sits in the pipeline — flow vs. friction."
+              description="Where open work sits — flow vs. friction."
             >
               <TaskStatusBarChart counts={pipeline} />
-            </SectionCard>
-            <SectionCard
+            </DashSection>
+            <DashSection
               title="Deadline pressure"
-              description="Tasks and projects with target dates in the next 14 days."
+              description="Target dates in the next 14 days."
             >
               <DeadlineBucketsChart buckets={buckets} />
-            </SectionCard>
+            </DashSection>
           </div>
 
-          <SectionCard
+          <DashSection
             title="Team workload"
             description="Open assignments by person — overload is obvious."
           >
             <WorkloadBars users={workload} />
-          </SectionCard>
+          </DashSection>
         </div>
 
-        {/* ── Right column — activity + payments ──────────────────────── */}
-        <div className="col-span-12 space-y-5 xl:col-span-4">
-          <SectionCard
+        {/* ── Right column ────────────────────────────────────────────── */}
+        <div className="col-span-12 space-y-6 xl:col-span-4">
+          <DashSection
             title="Payment snapshot"
             description="Balance still owed on open rows — not full finance."
           >
             <PaymentSnapshotCard snapshot={paymentSnapshot} />
-          </SectionCard>
-          <SectionCard
+          </DashSection>
+          <DashSection
             title="Recent activity"
             description="What changed recently across the workspace."
           >
             <RecentActivityFeed entries={activity} />
-          </SectionCard>
+          </DashSection>
         </div>
       </div>
     </div>
