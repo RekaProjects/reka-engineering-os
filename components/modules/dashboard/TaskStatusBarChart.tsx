@@ -36,11 +36,37 @@ export function TaskStatusBarChart({ counts }: { counts: OpenTaskStatusCounts })
   const total = ORDER.reduce((s, k) => s + (counts[k] ?? 0), 0)
 
   if (total === 0) {
+    // Preserve the five-row pipeline rhythm at zero counts so the panel
+    // still reads as an operational health snapshot, not a blank box.
     return (
-      <div className="rounded-[var(--radius-control)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-5">
-        <p className="m-0 text-[0.8125rem] text-[var(--color-text-muted)]">
-          No open tasks in the pipeline.
-        </p>
+      <div>
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          {ORDER.map((key) => (
+            <li key={key} className="flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: FILL[key], opacity: 0.35 }}
+              />
+              <span className="w-24 shrink-0 text-[0.75rem] font-medium text-[var(--color-text-secondary)]">
+                {LABELS[key]}
+              </span>
+              <span className="h-1.5 flex-1 rounded-full bg-[var(--color-surface-muted)]" />
+              <span className="w-6 text-right text-[0.75rem] font-semibold tabular-nums text-[var(--color-text-muted)]/60">
+                0
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+          <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
+            Total open tasks
+          </span>
+          <span className="text-[0.9375rem] font-semibold tabular-nums text-[var(--color-text-muted)]">
+            0
+          </span>
+        </div>
       </div>
     )
   }

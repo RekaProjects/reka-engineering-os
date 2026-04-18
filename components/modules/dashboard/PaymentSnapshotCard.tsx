@@ -1,6 +1,8 @@
+import { Wallet } from 'lucide-react'
+import Link from 'next/link'
+
 import type { PaymentSnapshot } from '@/lib/dashboard/queries'
 import { formatIDR } from '@/lib/utils/formatters'
-import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 
 const STATUS_PILL: Record<string, { text: string; bg: string; ring: string; label: string }> = {
@@ -22,13 +24,62 @@ export function PaymentSnapshotCard({ snapshot }: { snapshot: PaymentSnapshot })
   const notFullyPaid = unpaidCount + partialCount
 
   if (recordTotal === 0) {
+    // Preserve the live rhythm at zero: outstanding tile + three status pills
+    // (rendered faint) + action link. Feels designed, not blank.
     return (
-      <div className="flex min-h-[120px] flex-col items-center justify-center gap-2.5 rounded-[var(--radius-control)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-5">
-        <p className="m-0 text-center text-[0.8125rem] text-[var(--color-text-muted)]">
-          No payment records yet. When you add periods in Payments, this card will show unpaid / partial / paid
-          counts and total balance still owed on open rows.
-        </p>
-        <Link href="/payments" className="text-[0.8125rem] font-semibold text-[var(--color-primary)] no-underline hover:underline">
+      <div>
+        <div className="mb-3.5 flex items-start gap-3 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3.5 py-3">
+          <div
+            aria-hidden="true"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface)] text-[var(--color-text-muted)] ring-1 ring-[var(--color-border)]"
+          >
+            <Wallet size={15} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
+              Outstanding on unpaid / partial
+            </p>
+            <p className="mt-1 text-[1.375rem] font-semibold leading-[1.1] tracking-[-0.01em] tabular-nums text-[var(--color-text-primary)]">
+              {formatIDR(0)}
+            </p>
+            <p className="mt-1 text-[0.6875rem] leading-snug text-[var(--color-text-muted)]">
+              No payment periods on file yet.
+            </p>
+          </div>
+        </div>
+
+        <div className="mb-3 flex flex-wrap gap-2 opacity-50">
+          {[
+            { key: 'unpaid',  label: 'Unpaid',  cfg: STATUS_PILL.unpaid  },
+            { key: 'partial', label: 'Partial', cfg: STATUS_PILL.partial },
+            { key: 'paid',    label: 'Paid',    cfg: STATUS_PILL.paid    },
+          ].map(({ key, label, cfg }) => (
+            <div
+              key={key}
+              className={cn(
+                'flex items-center gap-1.5 rounded-[var(--radius-control)] px-2.5 py-1.5 ring-1',
+                cfg.bg,
+                cfg.ring
+              )}
+            >
+              <span className={cn('text-base font-bold leading-none tabular-nums', cfg.text)}>0</span>
+              <span className={cn('text-[0.625rem] font-semibold uppercase leading-none tracking-[0.05em]', cfg.text)}>
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div
+          role="img"
+          aria-label="No payment records yet"
+          className="mb-3 h-2 rounded-full border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)]"
+        />
+
+        <Link
+          href="/payments"
+          className="text-[0.8125rem] font-semibold text-[var(--color-primary)] no-underline hover:underline"
+        >
           Open payments →
         </Link>
       </div>

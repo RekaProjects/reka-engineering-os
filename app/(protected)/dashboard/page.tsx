@@ -11,6 +11,7 @@ import {
   CalendarClock,
   ShieldAlert,
   CheckCircle2,
+  Activity,
 } from 'lucide-react'
 
 import { getSessionProfile } from '@/lib/auth/session'
@@ -294,10 +295,21 @@ const ACTION_LABELS: Record<string, string> = {
 function RecentActivityFeed({ entries }: { entries: ActivityLogEntry[] }) {
   if (entries.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-4">
-        <p className="m-0 text-[0.8125rem] leading-relaxed text-[var(--color-text-muted)]">
-          No recent updates. Activity will appear as work moves through the pipeline.
-        </p>
+      <div className="flex items-start gap-3 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
+        <div
+          aria-hidden="true"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface)] text-[var(--color-text-muted)] ring-1 ring-[var(--color-border)]"
+        >
+          <Activity className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="m-0 text-[0.875rem] font-semibold text-[var(--color-text-primary)]">
+            No recent updates
+          </p>
+          <p className="mt-1 text-[0.75rem] leading-snug text-[var(--color-text-muted)]">
+            Changes to projects, tasks, deliverables, and intakes will stream here as work moves through the pipeline.
+          </p>
+        </div>
       </div>
     )
   }
@@ -327,33 +339,73 @@ function RecentActivityFeed({ entries }: { entries: ActivityLogEntry[] }) {
 
 // ── Admin operational signal band ────────────────────────────────────────────
 
-function SignalBand({ riskCount }: { riskCount: number }) {
+interface SignalBandSummaryChip { label: string; value: number | string }
+
+function SignalBand({
+  riskCount,
+  summary,
+}: {
+  riskCount: number
+  summary?:  SignalBandSummaryChip[]
+}) {
   const isClear = riskCount === 0
   return (
     <div
       className={cn(
-        'flex items-center gap-2.5 rounded-md border px-4 py-3',
+        'flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3',
         isClear
-          ? 'border-[var(--color-border)] bg-[var(--color-surface)]'
+          ? 'border-[var(--color-success)]/20 bg-[var(--color-success-subtle)]/50'
           : 'border-[var(--color-danger)]/20 bg-[var(--color-danger-subtle)]'
       )}
     >
       {isClear ? (
         <>
-          <CheckCircle2 size={16} className="shrink-0 text-[var(--color-success)]" />
-          <span className="text-[0.875rem] text-[var(--color-text-secondary)]">
-            Pipeline clear — no critical blockers flagged in headline metrics.
-          </span>
+          <div
+            aria-hidden="true"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-success)]/10 text-[var(--color-success)] ring-1 ring-[var(--color-success)]/20"
+          >
+            <CheckCircle2 size={15} />
+          </div>
+          <div className="min-w-0">
+            <p className="m-0 text-[0.875rem] font-semibold text-[var(--color-success)]">
+              Pipeline clear
+            </p>
+            <p className="mt-0.5 text-[0.75rem] leading-snug text-[var(--color-text-muted)]">
+              No critical blockers flagged in headline metrics.
+            </p>
+          </div>
+          {summary && summary.length > 0 && (
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {summary.map((chip) => (
+                <span
+                  key={chip.label}
+                  className="inline-flex items-baseline gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[0.6875rem] text-[var(--color-text-muted)]"
+                >
+                  <span className="font-semibold tabular-nums text-[var(--color-text-primary)]">
+                    {chip.value}
+                  </span>
+                  <span className="uppercase tracking-[0.04em]">{chip.label}</span>
+                </span>
+              ))}
+            </div>
+          )}
         </>
       ) : (
         <>
-          <ShieldAlert size={16} className="shrink-0 text-[var(--color-danger)]" />
-          <span className="text-[0.875rem] font-semibold text-[var(--color-danger)]">
-            {riskCount} risk signal{riskCount === 1 ? '' : 's'}
-          </span>
-          <span className="text-[0.875rem] text-[var(--color-text-secondary)]">
-            — overdue work, client holds, and revision requests need triage.
-          </span>
+          <div
+            aria-hidden="true"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-danger)]/10 text-[var(--color-danger)] ring-1 ring-[var(--color-danger)]/20"
+          >
+            <ShieldAlert size={15} />
+          </div>
+          <div className="min-w-0">
+            <p className="m-0 text-[0.875rem] font-semibold text-[var(--color-danger)]">
+              {riskCount} risk signal{riskCount === 1 ? '' : 's'}
+            </p>
+            <p className="mt-0.5 text-[0.75rem] leading-snug text-[var(--color-text-secondary)]">
+              Overdue work, client holds, and revision requests need triage.
+            </p>
+          </div>
         </>
       )}
     </div>
@@ -568,7 +620,14 @@ export default async function DashboardPage() {
       </div>
 
       {/* B. Signal band */}
-      <SignalBand riskCount={queueSignals} />
+      <SignalBand
+        riskCount={queueSignals}
+        summary={[
+          { label: 'Active projects', value: kpis.activeProjects },
+          { label: 'Open tasks',      value: kpis.openTasks },
+          { label: 'Due this week',   value: kpis.dueThisWeek },
+        ]}
+      />
 
       {/* C. Main 12-col grid — 8 / 4 split on xl+ laptops */}
       <div className="grid grid-cols-12 gap-6">

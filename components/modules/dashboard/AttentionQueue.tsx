@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, Ban, ChevronRight, MessageSquareWarning, RotateCcw } from 'lucide-react'
+import { AlertTriangle, Ban, CheckCircle2, ChevronRight, MessageSquareWarning, RotateCcw } from 'lucide-react'
 
 import type { NeedsAttentionData, WaitingClientProjectRow } from '@/lib/dashboard/queries'
 import { formatDate } from '@/lib/utils/formatters'
@@ -114,17 +114,30 @@ export function AttentionQueue({
   const hidden = rows.length - shown.length
 
   if (rows.length === 0) {
+    // "All clear" composition — matches the live queue's framing weight so
+    // the panel reads as intentional success, not a blank box.
     return (
       <div>
-        <div className="mb-3 rounded-[var(--radius-control)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
-          <p className="m-0 text-[0.8125rem] leading-relaxed text-[var(--color-text-muted)]">
-            No critical blockers in this queue.{' '}
-            <span className="text-[var(--color-text-secondary)]">
+        <div className="flex items-start gap-3 rounded-[var(--radius-control)] border border-[var(--color-success)]/20 bg-[var(--color-success-subtle)] p-4">
+          <div
+            aria-hidden="true"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-success)]/10 text-[var(--color-success)] ring-1 ring-[var(--color-success)]/20"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="m-0 text-[0.875rem] font-semibold text-[var(--color-success)]">
+              All clear — no items flagged
+            </p>
+            <p className="mt-1 text-[0.75rem] leading-snug text-[var(--color-text-secondary)]">
               Overdue tasks, blocked work, revision requests, and client holds will rank here as they arise.
-            </span>
-          </p>
+            </p>
+          </div>
         </div>
-        <QuickLinks />
+
+        <div className="mt-4 border-t border-[var(--color-border)] pt-3">
+          <QuickLinks />
+        </div>
       </div>
     )
   }

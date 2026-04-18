@@ -116,11 +116,19 @@ export function DeadlineBucketsChart({ buckets }: { buckets: DeadlineBuckets }) 
   const max = Math.max(w1, w2, 1)
 
   if (w1 + w2 === 0) {
+    // Preserve the two-week rhythm at zero — reuse WeekRow with empty tracks
+    // so the card reads as a designed schedule view, not a blank panel.
     return (
-      <div className="rounded-[var(--radius-control)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-5">
-        <p className="m-0 text-[0.8125rem] text-[var(--color-text-muted)]">
-          No tasks or projects due in the next 14 days.
-        </p>
+      <div>
+        <WeekRow label="This week" sub="Next 0–7 days" tasks={0} projects={0} max={1} />
+        <WeekRow label="Next week" sub="Days 8–14"     tasks={0} projects={0} max={1} />
+
+        <div className="mt-1 flex items-center gap-2 border-t border-[var(--color-border)] pt-2.5">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-success)]" />
+          <span className="text-[0.75rem] leading-snug text-[var(--color-text-secondary)]">
+            Two-week window clear. New due dates will populate these rows as work is scheduled.
+          </span>
+        </div>
       </div>
     )
   }

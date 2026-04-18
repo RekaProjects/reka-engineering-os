@@ -17,11 +17,35 @@ function firstName(full: string): string {
 
 export function WorkloadBars({ users }: { users: WorkloadUser[] }) {
   if (users.length === 0) {
+    // Ghost-bars composition: keeps the bar-chart silhouette so the panel
+    // reads as a workload view at rest, not a blank rectangle.
+    const GHOST_HEIGHTS = [40, 62, 54, 78, 46, 70, 58]
     return (
-      <div className="rounded-[var(--radius-control)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-5">
-        <p className="m-0 text-[0.8125rem] text-[var(--color-text-muted)]">
-          No open assignments. Task load will appear here as work is assigned.
-        </p>
+      <div>
+        <div
+          aria-hidden="true"
+          className="flex h-[140px] items-end gap-3 border-b border-dashed border-[var(--color-border)] px-1 pb-1"
+        >
+          {GHOST_HEIGHTS.map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-[3px] bg-[var(--color-surface-muted)]"
+              style={{ height: `${h}%` }}
+            />
+          ))}
+        </div>
+
+        <div className="mt-4 flex items-start gap-2.5">
+          <span className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)]/60" />
+          <div className="min-w-0">
+            <p className="text-[0.8125rem] font-semibold text-[var(--color-text-primary)]">
+              No open assignments
+            </p>
+            <p className="mt-0.5 text-[0.75rem] leading-snug text-[var(--color-text-muted)]">
+              Task load per person will populate here as work is assigned. Overloaded names will surface to the top.
+            </p>
+          </div>
+        </div>
       </div>
     )
   }
