@@ -5,13 +5,19 @@ import { useRouter } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
+/**
+ * TopbarSearch — global search control.
+ *
+ * Quiet surface (surface-muted background, no visible border) at rest;
+ * resolves to the brand primary focus ring. Width is stable (no expand-on-focus
+ * animation) which reads more premium and avoids visual jitter.
+ */
 export function TopbarSearch() {
   const [value,   setValue]   = useState('')
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const router   = useRouter()
 
-  // Press '/' anywhere outside a text field → focus the search input
   const handleGlobalKeydown = useCallback((e: KeyboardEvent) => {
     const tag = (e.target as HTMLElement).tagName
     if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) {
@@ -50,10 +56,10 @@ export function TopbarSearch() {
     >
       <div className="relative flex items-center">
         <Search
-          size={14}
+          size={15}
           aria-hidden="true"
           className={cn(
-            'pointer-events-none absolute left-2.5 transition-colors duration-100',
+            'pointer-events-none absolute left-3 transition-colors duration-100',
             focused ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'
           )}
         />
@@ -66,17 +72,23 @@ export function TopbarSearch() {
           onKeyDown={handleInputKeydown}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="Search…  /"
+          placeholder="Search projects, tasks, files…"
           aria-label="Search across all records"
           autoComplete="off"
           spellCheck={false}
           className={cn(
-            'h-8 rounded-[var(--radius-control)] border bg-[var(--color-surface)] py-1.5 pl-8 pr-2.5 text-[0.8125rem] text-[var(--color-text-primary)] outline-none transition-[border-color,width] duration-150 placeholder:text-[var(--color-text-muted)]',
-            focused
-              ? 'w-[260px] border-[var(--color-primary)] ring-[3px] ring-[var(--color-primary)]/10'
-              : 'w-[220px] border-[var(--color-border)]'
+            'h-9 w-[300px] rounded-md border border-transparent bg-[var(--color-surface-muted)] py-2 pl-9 pr-8 text-[0.875rem] text-[var(--color-text-primary)] outline-none transition-colors duration-150 placeholder:text-[var(--color-text-muted)]',
+            focused && 'border-[var(--color-primary)] bg-[var(--color-surface)] ring-[3px] ring-[var(--color-primary)]/10'
           )}
         />
+        {!focused && !value && (
+          <kbd
+            aria-hidden="true"
+            className="pointer-events-none absolute right-3 inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 text-[0.6875rem] font-semibold text-[var(--color-text-muted)]"
+          >
+            /
+          </kbd>
+        )}
       </div>
     </form>
   )

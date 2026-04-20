@@ -1,143 +1,110 @@
+'use client'
+
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
+
 import type { WorkloadUser } from '@/lib/dashboard/queries'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 
-const LOAD_COLOR: Record<string, string> = {
-  Overloaded: '#851E1E',
-  High:       '#8A4A08',
-  Medium:     '#142D50',
-  Low:        '#4A7098',
+const CHART_CONFIG: ChartConfig = {
+  openTasks:    { label: 'Open',    color: 'var(--color-chart-1)' },
+  overdueTasks: { label: 'Overdue', color: 'var(--color-chart-5)' },
 }
 
-const LOAD_BG: Record<string, string> = {
-  Overloaded: '#F5E8E8',
-  High:       '#FDF3E7',
-  Medium:     '#E6EDF7',
-  Low:        '#EAF0F9',
-}
-
-const LOAD_BORDER: Record<string, string> = {
-  Overloaded: '#851E1E',
-  High:       '#8A4A08',
-  Medium:     'transparent',
-  Low:        'transparent',
+function firstName(full: string): string {
+  const parts = full.trim().split(/\s+/)
+  return parts[0] ?? full
 }
 
 export function WorkloadBars({ users }: { users: WorkloadUser[] }) {
   if (users.length === 0) {
+    // Ghost-bars composition: keeps the bar-chart silhouette so the panel
+    // reads as a workload view at rest, not a blank rectangle.
+    const GHOST_HEIGHTS = [40, 62, 54, 78, 46, 70, 58]
     return (
-      <div
-        style={{
-          padding:         '20px 16px',
-          borderRadius:    '6px',
-          border:          '1px dashed var(--color-border)',
-          backgroundColor: 'var(--color-surface-subtle)',
-        }}
-      >
-        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 }}>
-          No open assignments. Task load will appear here as work is assigned.
-        </p>
+      <div>
+        <div
+          aria-hidden="true"
+          className="flex h-[140px] items-end gap-3 border-b border-dashed border-[var(--color-border)] px-1 pb-1"
+        >
+          {GHOST_HEIGHTS.map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-[3px] bg-[var(--color-surface-muted)]"
+              style={{ height: `${h}%` }}
+            />
+          ))}
+        </div>
+
+        <div className="mt-4 flex items-start gap-2.5">
+          <span className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)]/60" />
+          <div className="min-w-0">
+            <p className="text-[0.8125rem] font-semibold text-[var(--color-text-primary)]">
+              No open assignments
+            </p>
+            <p className="mt-0.5 text-[0.75rem] leading-snug text-[var(--color-text-muted)]">
+              Task load per person will populate here as work is assigned. Overloaded names will surface to the top.
+            </p>
+          </div>
+        </div>
       </div>
     )
   }
 
-  const maxOpen = Math.max(...users.map((u) => u.openTasks), 1)
+  const data = users.slice(0, 10).map((u) => ({
+    id:           u.id,
+    name:         firstName(u.full_name),
+    full_name:    u.full_name,
+    openTasks:    u.openTasks,
+    overdueTasks: u.overdueTasks,
+    label:        u.label,
+  }))
+
+  const atRisk = users.filter((u) => u.label === 'Overloaded' || u.label === 'High')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {users.map((u) => {
-        const pct        = (u.openTasks / maxOpen) * 100
-        const barColor   = LOAD_COLOR[u.label]  ?? LOAD_COLOR['Low']
-        const trackBg    = LOAD_BG[u.label]     ?? LOAD_BG['Low']
-        const accentBorder = LOAD_BORDER[u.label] ?? 'transparent'
-        const isAtRisk   = u.label === 'Overloaded' || u.label === 'High'
+    <div>
+      <ChartContainer config={CHART_CONFIG} className="h-[220px] w-full">
+        <BarChart data={data} barGap={4} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+          <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="var(--color-border)" />
+          <XAxis
+            dataKey="name"
+            tick={{ fontSize: 11, fill: 'var(--color-text-secondary)' }}
+            tickLine={false}
+            axisLine={false}
+            interval={0}
+          />
+          <YAxis
+            tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }}
+            tickLine={false}
+            axisLine={false}
+            allowDecimals={false}
+            width={28}
+          />
+          <ChartTooltip
+            cursor={{ fill: 'var(--color-surface-muted)', opacity: 0.5 }}
+            content={<ChartTooltipContent indicator="dot" />}
+          />
+          <Bar dataKey="openTasks"    fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} barSize={16} />
+          <Bar dataKey="overdueTasks" fill="var(--color-chart-5)" radius={[4, 4, 0, 0]} barSize={16} />
+        </BarChart>
+      </ChartContainer>
 
-        return (
-          <div
-            key={u.id}
-            style={{
-              paddingLeft:  isAtRisk ? '8px' : '0',
-              borderLeft:   isAtRisk ? `3px solid ${accentBorder}` : '3px solid transparent',
-              paddingTop:   isAtRisk ? '2px' : '0',
-              paddingBottom: isAtRisk ? '2px' : '0',
-            }}
-          >
-            {/* Name + counts */}
-            <div
-              style={{
-                display:        'flex',
-                justifyContent: 'space-between',
-                alignItems:     'baseline',
-                marginBottom:   '5px',
-              }}
-            >
-              <span
-                style={{
-                  fontSize:     '0.875rem',
-                  fontWeight:   isAtRisk ? 600 : 500,
-                  color:        'var(--color-text-primary)',
-                  maxWidth:     '58%',
-                  overflow:     'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace:   'nowrap',
-                }}
-              >
-                {u.full_name}
-              </span>
-              <span
-                style={{
-                  fontSize:   '0.75rem',
-                  color:      u.overdueTasks > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)',
-                  fontWeight: u.overdueTasks > 0 ? 600 : 400,
-                  fontVariantNumeric: 'tabular-nums',
-                }}
-              >
-                {u.openTasks} open
-                {u.overdueTasks > 0 ? ` · ${u.overdueTasks} overdue` : ''}
-              </span>
-            </div>
-
-            {/* Bar track */}
-            <div
-              style={{
-                height:          '14px',
-                borderRadius:    '4px',
-                backgroundColor: 'var(--color-surface-muted)',
-                border:          '1px solid var(--color-border)',
-                overflow:        'hidden',
-              }}
-            >
-              <div
-                style={{
-                  width:           `${pct}%`,
-                  height:          '100%',
-                  borderRadius:    '4px',
-                  backgroundColor: barColor,
-                }}
-              />
-            </div>
-
-            {/* Load label */}
-            <p
-              style={{
-                display:         'inline-flex',
-                alignItems:      'center',
-                gap:             '4px',
-                marginTop:       '4px',
-                fontSize:        '0.625rem',
-                fontWeight:      600,
-                textTransform:   'uppercase',
-                letterSpacing:   '0.05em',
-                color:           barColor,
-                backgroundColor: trackBg,
-                padding:         '2px 7px',
-                borderRadius:    '3px',
-                lineHeight:      1,
-              }}
-            >
-              {u.label} load
-            </p>
-          </div>
-        )
-      })}
+      {/* Legend */}
+      <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-[var(--color-border)] pt-3 text-[0.75rem] text-[var(--color-text-muted)]">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-[var(--color-chart-1)]" />
+          Open tasks
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-[2px] bg-[var(--color-chart-5)]" />
+          Overdue
+        </span>
+        {atRisk.length > 0 && (
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-[var(--color-danger-subtle)] px-2.5 py-1 text-[0.6875rem] font-semibold text-[var(--color-danger)]">
+            {atRisk.length} at risk
+          </span>
+        )}
+      </div>
     </div>
   )
 }

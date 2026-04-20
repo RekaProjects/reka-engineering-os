@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import {
   FolderKanban,
@@ -6,22 +6,21 @@ import {
   Clock,
   FileText,
   CheckSquare,
-  RotateCcw,
   AlertTriangle,
   CalendarClock,
-  ShieldAlert,
-  CheckCircle2,
+  Activity,
 } from 'lucide-react'
 
 import { getSessionProfile } from '@/lib/auth/session'
 import { effectiveRole } from '@/lib/auth/permissions'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { KpiCard } from '@/components/shared/KpiCard'
-import { SectionCard } from '@/components/shared/SectionCard'
+import { PageHeader, SectionHeader } from '@/components/layout/PageHeader'
+import { Card } from '@/components/ui/card'
+import { KpiCard, KpiStrip } from '@/components/shared/KpiCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { TaskStatusBadge } from '@/components/modules/tasks/TaskStatusBadge'
 import { formatDate, formatIDR, formatRelativeDate } from '@/lib/utils/formatters'
+import { cn } from '@/lib/utils/cn'
 
 import {
   getDashboardKpis,
@@ -55,44 +54,55 @@ import { PaymentSnapshotCard } from '@/components/modules/dashboard/PaymentSnaps
 import { WorkloadBars } from '@/components/modules/dashboard/WorkloadBars'
 
 export const metadata = {
-  title: 'Dashboard — Engineering Agency OS',
+  title: 'Dashboard — ReKa Engineering OS',
 }
 
-// ── Shared table styles (scoped role dashboards) ──────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+// SectionShell — Card + SectionHeader (Stage 2 v0 pattern)
+// ═════════════════════════════════════════════════════════════════════════════
 
-const TH: CSSProperties = {
-  padding:         '8px 12px',
-  textAlign:       'left',
-  fontSize:        '0.6875rem',
-  fontWeight:      600,
-  color:           'var(--color-text-muted)',
-  backgroundColor: 'var(--color-surface-subtle)',
-  letterSpacing:   '0.04em',
-  textTransform:   'uppercase',
-  whiteSpace:      'nowrap',
-  borderBottom:    '1px solid var(--color-border)',
+interface SectionShellProps {
+  title:        string
+  description?: string
+  actions?:     ReactNode
+  children:     ReactNode
+  className?:   string
 }
 
-const TD: CSSProperties = {
-  padding:       '8px 12px',
-  fontSize:      '0.8125rem',
-  color:         'var(--color-text-secondary)',
-  verticalAlign: 'middle',
+function SectionShell({ title, description, actions, children, className }: SectionShellProps) {
+  return (
+    <div
+      className={cn('rounded-[var(--radius-card)] border p-5', className)}
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        borderColor: 'var(--color-border)',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            {title}
+          </h2>
+          {description && (
+            <p className="mt-0.5 text-[0.8125rem]" style={{ color: 'var(--color-text-muted)' }}>
+              {description}
+            </p>
+          )}
+        </div>
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      </div>
+      {children}
+    </div>
+  )
 }
 
-const ROW_LINK: CSSProperties = {
-  fontWeight:     500,
-  color:          'var(--color-text-primary)',
-  textDecoration: 'none',
-  fontSize:       '0.8125rem',
-}
+// ── Shared table classes (scoped role dashboards) ────────────────────────────
 
-const CODE_LINK: CSSProperties = {
-  fontWeight:     500,
-  color:          'var(--color-primary)',
-  textDecoration: 'none',
-  fontSize:       '0.75rem',
-}
+const TH_CLASS = 'whitespace-nowrap border-b border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-2.5 text-left text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]'
+const TD_CLASS = 'align-middle px-3 py-2.5 text-[0.8125rem] text-[var(--color-text-secondary)]'
+const ROW_LINK_CLASS  = 'text-[0.8125rem] font-medium text-[var(--color-text-primary)] no-underline hover:text-[var(--color-primary)]'
+const CODE_LINK_CLASS = 'text-xs font-medium text-[var(--color-primary)] no-underline hover:underline'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // SHARED SCOPED COMPONENTS
@@ -100,79 +110,78 @@ const CODE_LINK: CSSProperties = {
 
 function ScopedKpiRow({ kpis }: { kpis: ScopedKpis }) {
   return (
-    <div
-      style={{
-        display:             'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(172px, 1fr))',
-        gap:                 '14px',
-        marginBottom:        '24px',
-      }}
-    >
-      <KpiCard variant="dashboard" label="Active Projects"  value={kpis.activeProjects} icon={<FolderKanban size={20} />} />
-      <KpiCard variant="dashboard" label="Open Tasks"       value={kpis.openTasks}      icon={<CheckSquare  size={20} />} />
+    <KpiStrip className="lg:grid-cols-5 xl:grid-cols-5">
+      <KpiCard title="Active Projects" value={kpis.activeProjects} icon={FolderKanban} />
+      <KpiCard title="Open Tasks" value={kpis.openTasks} icon={CheckSquare} />
       <KpiCard
-        variant="dashboard"
-        label="Overdue Tasks"
+        title="Overdue Tasks"
         value={kpis.overdueTasks}
-        icon={<AlertCircle size={20} />}
-        accent={kpis.overdueTasks > 0 ? 'urgent' : 'none'}
-        description={kpis.overdueTasks > 0 ? 'Needs action' : undefined}
+        icon={AlertCircle}
+        variant={kpis.overdueTasks > 0 ? 'danger' : 'default'}
       />
-      <KpiCard variant="dashboard" label="Due This Week"   value={kpis.dueThisWeek}    icon={<Clock        size={20} />} />
-      {kpis.awaitingReview > 0 && (
-        <KpiCard variant="dashboard" label="Awaiting Review" value={kpis.awaitingReview} icon={<FileText size={20} />} accent="primary" />
-      )}
-    </div>
+      <KpiCard
+        title="Due This Week"
+        value={kpis.dueThisWeek}
+        icon={Clock}
+        variant={kpis.dueThisWeek > 0 ? 'warning' : 'default'}
+      />
+      <KpiCard
+        title="Awaiting Review"
+        value={kpis.awaitingReview}
+        icon={FileText}
+        accent={kpis.awaitingReview > 0 ? 'primary' : 'none'}
+      />
+    </KpiStrip>
   )
 }
 
 function ScopedTasksSection({ tasks, title }: { tasks: ScopedTask[]; title: string }) {
   const today = new Date().toISOString().split('T')[0]
   return (
-    <SectionCard title={title}>
+    <Card className="p-5">
+      <SectionHeader title={title} />
+      <div className="space-y-3">
       {tasks.length === 0 ? (
         <EmptyState icon={<CheckSquare size={20} />} title="No open tasks" description="You're all caught up." className="py-8" />
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th style={TH}>Task</th>
-                <th style={TH}>Project</th>
-                <th style={TH}>Due</th>
-                <th style={TH}>Priority</th>
-                <th style={TH}>Status</th>
+                <th className={TH_CLASS}>Task</th>
+                <th className={TH_CLASS}>Project</th>
+                <th className={TH_CLASS}>Due</th>
+                <th className={TH_CLASS}>Priority</th>
+                <th className={TH_CLASS}>Status</th>
               </tr>
             </thead>
             <tbody>
               {tasks.map((t, i) => {
                 const overdue = t.due_date && t.due_date < today
                 return (
-                  <tr key={t.id} style={{ borderBottom: i < tasks.length - 1 ? '1px solid var(--color-border)' : undefined }}>
-                    <td style={TD}>
-                      <Link href={`/tasks/${t.id}`} style={ROW_LINK}>{t.title}</Link>
+                  <tr key={t.id} className={cn(i < tasks.length - 1 && 'border-b border-[var(--color-border)]')}>
+                    <td className={TD_CLASS}>
+                      <Link href={`/tasks/${t.id}`} className={ROW_LINK_CLASS}>{t.title}</Link>
                     </td>
-                    <td style={TD}>
+                    <td className={TD_CLASS}>
                       {t.projects
-                        ? <Link href={`/projects/${t.projects.id}`} style={CODE_LINK}>{t.projects.project_code}</Link>
+                        ? <Link href={`/projects/${t.projects.id}`} className={CODE_LINK_CLASS}>{t.projects.project_code}</Link>
                         : '—'}
                     </td>
                     <td
-                      style={{
-                        ...TD,
-                        whiteSpace: 'nowrap',
-                        color:      overdue ? 'var(--color-danger)' : 'var(--color-text-muted)',
-                        fontWeight: overdue ? 600 : 400,
-                        fontSize:   '0.75rem',
-                      }}
+                      className={cn(
+                        TD_CLASS,
+                        'whitespace-nowrap text-xs',
+                        overdue ? 'font-semibold text-[var(--color-danger)]' : 'text-[var(--color-text-muted)]'
+                      )}
                     >
-                      {overdue && <AlertTriangle size={11} style={{ marginRight: '3px', verticalAlign: 'middle' }} />}
+                      {overdue && <AlertTriangle size={11} className="mr-1 inline-block align-middle" />}
                       {t.due_date ? formatDate(t.due_date) : '—'}
                     </td>
-                    <td style={TD}>
+                    <td className={TD_CLASS}>
                       <PriorityBadge priority={t.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'} />
                     </td>
-                    <td style={TD}>
+                    <td className={TD_CLASS}>
                       <TaskStatusBadge status={t.status} />
                     </td>
                   </tr>
@@ -182,88 +191,88 @@ function ScopedTasksSection({ tasks, title }: { tasks: ScopedTask[]; title: stri
           </table>
         </div>
       )}
-    </SectionCard>
+      </div>
+    </Card>
   )
 }
 
 function ScopedDeliverablesSection({ deliverables, title }: { deliverables: ScopedDeliverable[]; title: string }) {
   return (
-    <SectionCard title={title}>
+    <Card className="p-5">
+      <SectionHeader title={title} />
+      <div className="space-y-3">
       {deliverables.length === 0 ? (
         <EmptyState icon={<FileText size={20} />} title="No active deliverables" description="Deliverables will appear here." className="py-8" />
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th style={TH}>Deliverable</th>
-                <th style={TH}>Type</th>
-                <th style={TH}>Project</th>
-                <th style={TH}>Status</th>
+                <th className={TH_CLASS}>Deliverable</th>
+                <th className={TH_CLASS}>Type</th>
+                <th className={TH_CLASS}>Project</th>
+                <th className={TH_CLASS}>Status</th>
               </tr>
             </thead>
             <tbody>
               {deliverables.map((d, i) => (
-                <tr key={d.id} style={{ borderBottom: i < deliverables.length - 1 ? '1px solid var(--color-border)' : undefined }}>
-                  <td style={TD}>
-                    <Link href={`/deliverables/${d.id}`} style={ROW_LINK}>{d.name}</Link>
+                <tr key={d.id} className={cn(i < deliverables.length - 1 && 'border-b border-[var(--color-border)]')}>
+                  <td className={TD_CLASS}>
+                    <Link href={`/deliverables/${d.id}`} className={ROW_LINK_CLASS}>{d.name}</Link>
                   </td>
-                  <td style={{ ...TD, textTransform: 'capitalize' }}>{d.type.replace(/_/g, ' ')}</td>
-                  <td style={TD}>
+                  <td className={cn(TD_CLASS, 'capitalize')}>{d.type.replace(/_/g, ' ')}</td>
+                  <td className={TD_CLASS}>
                     {d.projects
-                      ? <Link href={`/projects/${d.projects.id}`} style={CODE_LINK}>{d.projects.project_code}</Link>
+                      ? <Link href={`/projects/${d.projects.id}`} className={CODE_LINK_CLASS}>{d.projects.project_code}</Link>
                       : '—'}
                   </td>
-                  <td style={{ ...TD, textTransform: 'capitalize' }}>{d.status.replace(/_/g, ' ')}</td>
+                  <td className={cn(TD_CLASS, 'capitalize')}>{d.status.replace(/_/g, ' ')}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </SectionCard>
+      </div>
+    </Card>
   )
 }
 
 function ScopedPaymentsSection({ payments }: { payments: ScopedPayment[] }) {
   if (payments.length === 0) return null
-  const PAYMENT_STATUS_STYLE: Record<string, CSSProperties> = {
-    unpaid:  { color: 'var(--color-danger)',  backgroundColor: 'var(--color-danger-subtle)'  },
-    partial: { color: 'var(--color-warning)', backgroundColor: 'var(--color-warning-subtle)' },
-    paid:    { color: 'var(--color-success)', backgroundColor: 'var(--color-success-subtle)' },
+  const PILL_CLASS: Record<string, string> = {
+    unpaid:  'text-[var(--color-danger)]  bg-[var(--color-danger-subtle)]',
+    partial: 'text-[var(--color-warning)] bg-[var(--color-warning-subtle)]',
+    paid:    'text-[var(--color-success)] bg-[var(--color-success-subtle)]',
   }
   return (
-    <SectionCard title="My Payments">
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <Card className="p-5">
+      <SectionHeader title="My Payments" />
+      <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
           <thead>
             <tr>
-              <th style={TH}>Period</th>
-              <th style={{ ...TH, textAlign: 'right' }}>Due</th>
-              <th style={{ ...TH, textAlign: 'right' }}>Paid</th>
-              <th style={{ ...TH, textAlign: 'right' }}>Balance</th>
-              <th style={TH}>Status</th>
+              <th className={TH_CLASS}>Period</th>
+              <th className={cn(TH_CLASS, 'text-right')}>Due</th>
+              <th className={cn(TH_CLASS, 'text-right')}>Paid</th>
+              <th className={cn(TH_CLASS, 'text-right')}>Balance</th>
+              <th className={TH_CLASS}>Status</th>
             </tr>
           </thead>
           <tbody>
             {payments.map((p, i) => (
-              <tr key={p.id} style={{ borderBottom: i < payments.length - 1 ? '1px solid var(--color-border)' : undefined }}>
-                <td style={{ ...TD, fontWeight: 500, color: 'var(--color-text-primary)' }}>{p.period_label ?? '—'}</td>
-                <td style={{ ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatIDR(p.total_due)}</td>
-                <td style={{ ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatIDR(p.total_paid)}</td>
-                <td style={{ ...TD, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: p.balance > 0 ? 600 : 400 }}>{formatIDR(p.balance)}</td>
-                <td style={TD}>
+              <tr key={p.id} className={cn(i < payments.length - 1 && 'border-b border-[var(--color-border)]')}>
+                <td className={cn(TD_CLASS, 'font-medium text-[var(--color-text-primary)]')}>{p.period_label ?? '—'}</td>
+                <td className={cn(TD_CLASS, 'text-right tabular-nums')}>{formatIDR(p.total_due)}</td>
+                <td className={cn(TD_CLASS, 'text-right tabular-nums')}>{formatIDR(p.total_paid)}</td>
+                <td className={cn(TD_CLASS, 'text-right tabular-nums', p.balance > 0 && 'font-semibold')}>{formatIDR(p.balance)}</td>
+                <td className={TD_CLASS}>
                   <span
-                    style={{
-                      display:       'inline-flex',
-                      borderRadius:  'var(--radius-pill)',
-                      padding:       '2px 10px',
-                      fontSize:      '0.6875rem',
-                      fontWeight:    600,
-                      textTransform: 'capitalize',
-                      letterSpacing: '0.01em',
-                      ...(PAYMENT_STATUS_STYLE[p.payment_status] ?? {}),
-                    }}
+                    className={cn(
+                      'inline-flex rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[0.6875rem] font-semibold capitalize tracking-[0.01em]',
+                      PILL_CLASS[p.payment_status] ?? ''
+                    )}
                   >
                     {p.payment_status}
                   </span>
@@ -273,12 +282,13 @@ function ScopedPaymentsSection({ payments }: { payments: ScopedPayment[] }) {
           </tbody>
         </table>
       </div>
-      <div style={{ marginTop: '12px' }}>
-        <Link href="/my-payments" style={{ fontSize: '0.8125rem', color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 500 }}>
+      <div className="mt-3">
+        <Link href="/my-payments" className="text-[0.8125rem] font-medium text-[var(--color-primary)] no-underline hover:underline">
           View all payments →
         </Link>
       </div>
-    </SectionCard>
+      </div>
+    </Card>
   )
 }
 
@@ -300,107 +310,42 @@ const ACTION_LABELS: Record<string, string> = {
 function RecentActivityFeed({ entries }: { entries: ActivityLogEntry[] }) {
   if (entries.length === 0) {
     return (
-      <div
-        style={{
-          padding:         '14px 16px',
-          borderRadius:    'var(--radius-control)',
-          border:          '1px dashed var(--color-border)',
-          backgroundColor: 'var(--color-surface-subtle)',
-        }}
-      >
-        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.5 }}>
-          No recent updates. Activity will appear as work moves through the pipeline.
+      <div className="flex items-center gap-3 py-2">
+        <div
+          aria-hidden="true"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]"
+        >
+          <Activity className="h-4 w-4" />
+        </div>
+        <p className="m-0 text-[0.8125rem] leading-snug text-[var(--color-text-muted)]">
+          No recent updates — activity across projects, tasks, and deliverables will stream here.
         </p>
       </div>
     )
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {entries.map((entry, i) => {
+    <div className="space-y-1">
+      {entries.map((entry) => {
         const description =
           entry.note ??
           `${ENTITY_LABELS[entry.entity_type] ?? entry.entity_type} ${ACTION_LABELS[entry.action_type] ?? entry.action_type}`
         return (
-          <div
-            key={entry.id}
-            style={{
-              display:     'flex',
-              gap:         '9px',
-              padding:     '7px 0',
-              borderBottom: i < entries.length - 1 ? '1px solid var(--color-border)' : undefined,
-              alignItems:  'flex-start',
-            }}
-          >
+          <div key={entry.id} className="flex items-start gap-2.5 rounded-md px-2 py-2">
             <div
-              style={{
-                width:           '6px',
-                height:          '6px',
-                borderRadius:    '50%',
-                backgroundColor: 'var(--color-primary)',
-                flexShrink:      0,
-                marginTop:       '5px',
-                opacity:         0.45,
-              }}
+              className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ backgroundColor: 'var(--color-primary)' }}
             />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-primary)', lineHeight: 1.35, margin: 0 }}>
+            <div className="min-w-0">
+              <p className="text-[0.8125rem] leading-snug" style={{ color: 'var(--color-text-primary)' }}>
                 {description}
               </p>
-              <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', margin: '2px 0 0' }}>
+              <p className="text-[0.6875rem]" style={{ color: 'var(--color-text-muted)' }}>
                 {entry.actor?.full_name ?? 'System'} · {formatRelativeDate(entry.created_at)}
               </p>
             </div>
           </div>
         )
       })}
-    </div>
-  )
-}
-
-// ── Admin operational signal band ────────────────────────────────────────────
-
-function SignalBand({ riskCount }: { riskCount: number }) {
-  const isClear = riskCount === 0
-  return (
-    <div
-      style={{
-        display:         'flex',
-        alignItems:      'center',
-        gap:             '9px',
-        padding:         '9px 14px',
-        borderRadius:    'var(--radius-control)',
-        backgroundColor: isClear ? 'var(--color-surface-subtle)' : 'var(--color-danger-subtle)',
-        border:          isClear
-          ? '1px solid var(--color-border)'
-          : '1px solid rgba(133,30,30,0.20)',
-        marginBottom:    '28px',
-      }}
-    >
-      {isClear ? (
-        <>
-          <CheckCircle2 size={14} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
-          <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: 1 }}>
-            Pipeline clear — no critical blockers flagged in headline metrics.
-          </span>
-        </>
-      ) : (
-        <>
-          <ShieldAlert size={14} style={{ color: 'var(--color-danger)', flexShrink: 0 }} />
-          <span
-            style={{
-              fontSize:   '0.8125rem',
-              fontWeight: 600,
-              color:      'var(--color-danger)',
-              lineHeight: 1,
-            }}
-          >
-            {riskCount} risk signal{riskCount === 1 ? '' : 's'}
-          </span>
-          <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: 1 }}>
-            — overdue work, client holds, and revision requests need triage.
-          </span>
-        </>
-      )}
     </div>
   )
 }
@@ -417,25 +362,17 @@ export default async function DashboardPage() {
   if (role === 'member') {
     const data = await getMemberDashboard(profile.id)
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader
           title="My Dashboard"
           subtitle={`${profile.full_name} · Your tasks, deliverables, and payment status.`}
-          className="mb-6"
         />
         <ScopedKpiRow kpis={data.kpis} />
-        <div style={{ marginBottom: '20px' }}>
-          <ScopedTasksSection tasks={data.tasks} title="My Open Tasks" />
-        </div>
-        <div
-          style={{
-            display:             'grid',
-            gridTemplateColumns: '2fr 1fr',
-            gap:                 '20px',
-            alignItems:          'start',
-          }}
-        >
-          <ScopedDeliverablesSection deliverables={data.deliverables} title="My Deliverables" />
+        <ScopedTasksSection tasks={data.tasks} title="My Open Tasks" />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          <div className="xl:col-span-2">
+            <ScopedDeliverablesSection deliverables={data.deliverables} title="My Deliverables" />
+          </div>
           <ScopedPaymentsSection payments={data.payments} />
         </div>
       </div>
@@ -446,16 +383,15 @@ export default async function DashboardPage() {
   if (role === 'reviewer') {
     const data = await getReviewerDashboard(profile.id)
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader
           title="Review Dashboard"
           subtitle="Queue and items waiting for your sign-off."
-          className="mb-6"
         />
         <ScopedKpiRow kpis={data.kpis} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
-          <ScopedTasksSection      tasks={data.tasks}             title="Review Tasks"       />
-          <ScopedDeliverablesSection deliverables={data.deliverables} title="Review Deliverables" />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <ScopedTasksSection        tasks={data.tasks}                title="Review Tasks"        />
+          <ScopedDeliverablesSection deliverables={data.deliverables}  title="Review Deliverables" />
         </div>
       </div>
     )
@@ -479,62 +415,62 @@ export default async function DashboardPage() {
       attention.revisionDeliverables.length +
       waiting.length
 
+    if (data.projectIds.length === 0) {
+      return (
+        <div className="space-y-6">
+          <PageHeader
+            title="Coordinator Dashboard"
+            subtitle="Operational view of your assigned projects — workload, deadlines, and blockers."
+          />
+          <ScopedKpiRow kpis={data.kpis} />
+          <SectionShell title="Assignments">
+            <p className="m-0 text-sm text-[var(--color-text-muted)]">
+              No project assignments yet. When you are added to projects, this dashboard will populate.
+            </p>
+          </SectionShell>
+        </div>
+      )
+    }
+
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader
           title="Coordinator Dashboard"
           subtitle="Operational view of your assigned projects — workload, deadlines, and blockers."
-          className="mb-6"
         />
         <ScopedKpiRow kpis={data.kpis} />
 
-        {data.projectIds.length === 0 ? (
-          <SectionCard title="Assignments">
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: 0 }}>
-              No project assignments yet. When you are added to projects, this dashboard will populate.
-            </p>
-          </SectionCard>
-        ) : (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '20px', marginBottom: '20px', alignItems: 'start' }}>
-              <SectionCard title="Operational health" description="Open tasks by status across your projects.">
-                <TaskStatusBarChart counts={pipeline} />
-              </SectionCard>
-              <SectionCard title="Deadline pressure" description="Due dates in the next two weeks.">
-                <DeadlineBucketsChart buckets={buckets} />
-              </SectionCard>
-            </div>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <div className="space-y-6 xl:col-span-8">
+            <SectionShell
+              title="Needs Attention"
+              description="Ranked queue for your portfolio."
+              actions={<FlagCount count={attentionCount} />}
+            >
+              <AttentionQueue attention={attention} waitingClient={waiting} />
+            </SectionShell>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '20px', marginBottom: '20px', alignItems: 'start' }}>
-              <SectionCard
-                title="Needs attention"
-                description="Ranked queue for your portfolio."
-                actions={
-                  attentionCount > 0 ? (
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-danger)' }}>
-                      {attentionCount} flagged
-                    </span>
-                  ) : undefined
-                }
-              >
-                <AttentionQueue attention={attention} waitingClient={waiting} />
-              </SectionCard>
-              <SectionCard title="Recent activity" description="Latest changes in your projects.">
-                <RecentActivityFeed entries={activity} />
-              </SectionCard>
-            </div>
+            <SectionShell title="Tasks by status">
+              <TaskStatusBarChart counts={pipeline} />
+            </SectionShell>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '20px', marginBottom: '20px', alignItems: 'start' }}>
-              <SectionCard title="Team workload" description="Open task load on your projects — highest first.">
-                <WorkloadBars users={workload} />
-              </SectionCard>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <ScopedTasksSection       tasks={data.tasks}             title="Open tasks"        />
-                <ScopedDeliverablesSection deliverables={data.deliverables} title="Active deliverables" />
-              </div>
-            </div>
-          </>
-        )}
+            <SectionShell title="Deadline pressure">
+              <DeadlineBucketsChart buckets={buckets} />
+            </SectionShell>
+
+            <SectionShell title="Team workload" description="Open task load — highest first.">
+              <WorkloadBars users={workload} />
+            </SectionShell>
+          </div>
+
+          <div className="space-y-4 xl:col-span-4">
+            <SectionShell title="Recent activity">
+              <RecentActivityFeed entries={activity} />
+            </SectionShell>
+            <ScopedTasksSection        tasks={data.tasks}               title="Open tasks"          />
+            <ScopedDeliverablesSection deliverables={data.deliverables} title="Active deliverables" />
+          </div>
+        </div>
       </div>
     )
   }
@@ -552,165 +488,182 @@ export default async function DashboardPage() {
       getTeamWorkload(),
     ])
 
-  const queueSignals = kpis.overdueTasks + kpis.waitingClient + kpis.inRevision
-  const totalAttention =
+  const attentionCount =
     attention.overdueTasks.length +
     attention.blockedTasks.length +
     attention.revisionDeliverables.length +
     waitingClient.length
 
   return (
-    <div>
+    <div className="page-content animate-fade-in space-y-6">
       <PageHeader
         title="Dashboard"
         subtitle="Owner / admin control center — pipeline health, deadlines, cash exposure, and team load."
-        className="mb-3"
       />
 
-      {/* Operational signal band */}
-      <SignalBand riskCount={queueSignals} />
-
-      {/* A. KPI strip */}
-      <div
-        style={{
-          display:             'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-          gap:                 '14px',
-          marginBottom:        '28px',
-        }}
-      >
+      {/* ── KPI Strip ─────────────────────────────────────────── */}
+      <KpiStrip>
         <KpiCard
-          variant="dashboard"
-          label="Active Projects"
+          title="Active Projects"
           value={kpis.activeProjects}
-          icon={<FolderKanban size={20} />}
+          icon={FolderKanban}
           accent="primary"
         />
         <KpiCard
-          variant="dashboard"
-          label="Open Tasks"
-          value={kpis.openTasks}
-          icon={<CheckSquare size={20} />}
-          accent={kpis.overdueTasks > 0 ? 'urgent' : 'none'}
-          description={kpis.overdueTasks > 0 ? `${kpis.overdueTasks} overdue` : undefined}
+          title="Overdue Tasks"
+          value={kpis.overdueTasks}
+          icon={AlertCircle}
+          variant={kpis.overdueTasks > 0 ? 'danger' : 'default'}
         />
         <KpiCard
-          variant="dashboard"
-          label="Due This Week"
-          value={kpis.dueThisWeek}
-          icon={<Clock size={20} />}
-        />
-        <KpiCard
-          variant="dashboard"
-          label="Awaiting Review"
+          title="In Review"
           value={kpis.awaitingReview}
-          icon={<FileText size={20} />}
-          accent={kpis.awaitingReview > 0 ? 'primary' : 'none'}
+          icon={FileText}
+          subtitle="Deliverables"
         />
         <KpiCard
-          variant="dashboard"
-          label="Waiting on Client"
-          value={kpis.waitingClient}
-          icon={<CalendarClock size={20} />}
-          accent={kpis.waitingClient > 0 ? 'warning' : 'none'}
-        />
-        <KpiCard
-          variant="dashboard"
-          label="In Revision"
+          title="Revision Needed"
           value={kpis.inRevision}
-          icon={<RotateCcw size={20} />}
-          accent={kpis.inRevision > 0 ? 'warning' : 'none'}
+          icon={AlertTriangle}
+          variant={kpis.inRevision > 0 ? 'warning' : 'default'}
+          subtitle="Projects"
         />
-      </div>
+        <KpiCard
+          title="Waiting on Client"
+          value={kpis.waitingClient}
+          icon={Clock}
+          subtitle="Projects"
+        />
+        <KpiCard
+          title="Pending Payments"
+          value={formatIDR(paymentSnapshot.totalOutstanding)}
+          icon={CalendarClock}
+          variant={paymentSnapshot.unpaidCount > 0 ? 'warning' : 'default'}
+          subtitle={`${paymentSnapshot.unpaidCount + paymentSnapshot.partialCount} payments`}
+        />
+      </KpiStrip>
 
-      {/* B. Main overview row — Operational health + Deadline pressure */}
-      <div
-        style={{
-          display:             'grid',
-          gridTemplateColumns: '1fr 380px',
-          gap:                 '20px',
-          marginBottom:        '20px',
-          alignItems:          'start',
-        }}
-      >
-        <SectionCard
-          title="Operational health"
-          description="Where open work sits in the pipeline — flow vs. friction."
-        >
-          <TaskStatusBarChart counts={pipeline} />
-        </SectionCard>
-        <SectionCard
-          title="Deadline pressure"
-          description="Tasks and projects with target dates in the next 14 days."
-        >
-          <DeadlineBucketsChart buckets={buckets} />
-        </SectionCard>
-      </div>
+      {/* ── Main grid (content + sidebar) ─────────────────────── */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_300px]">
 
-      {/* C. Action / risk row — Needs attention + Payment snapshot */}
-      <div
-        style={{
-          display:             'grid',
-          gridTemplateColumns: '1fr 380px',
-          gap:                 '20px',
-          marginBottom:        '20px',
-          alignItems:          'start',
-        }}
-      >
-        <SectionCard
-          title="Needs attention"
-          description="Ranked queue — overdue, blocked, revision, and client holds."
-          actions={
-            totalAttention > 0 ? (
-              <span
-                style={{
-                  fontSize:        '0.6875rem',
-                  fontWeight:      700,
-                  color:           'var(--color-danger)',
-                  backgroundColor: 'var(--color-danger-subtle)',
-                  padding:         '3px 9px',
-                  borderRadius:    'var(--radius-pill)',
-                  letterSpacing:   '0.02em',
-                }}
-              >
-                {totalAttention} flagged
-              </span>
-            ) : undefined
-          }
-        >
-          <AttentionQueue attention={attention} waitingClient={waitingClient} />
-        </SectionCard>
-        <SectionCard
-          title="Payment snapshot"
-          description="Balance still owed on unpaid and partial rows, status mix, and link to Payments — not full finance."
-        >
-          <PaymentSnapshotCard snapshot={paymentSnapshot} />
-        </SectionCard>
-      </div>
+        {/* Left column — main content */}
+        <div className="space-y-6">
+          <SectionShell
+            title="Needs Attention"
+            description="Overdue tasks, blocked work, revision requests, and client holds."
+            actions={<FlagCount count={attentionCount} />}
+          >
+            <AttentionQueue attention={attention} waitingClient={waitingClient} />
+          </SectionShell>
 
-      {/* D. People / activity row — Team workload + Recent activity */}
-      <div
-        style={{
-          display:             'grid',
-          gridTemplateColumns: '1fr 380px',
-          gap:                 '20px',
-          marginBottom:        '20px',
-          alignItems:          'start',
-        }}
-      >
-        <SectionCard
-          title="Team workload"
-          description="Open assignments by person — overload is obvious."
-        >
-          <WorkloadBars users={workload} />
-        </SectionCard>
-        <SectionCard
-          title="Recent activity"
-          description="What changed recently across the workspace."
-        >
-          <RecentActivityFeed entries={activity} />
-        </SectionCard>
+          <SectionShell title="Tasks by status">
+            <TaskStatusBarChart counts={pipeline} />
+          </SectionShell>
+
+          <SectionShell title="Deadline pressure">
+            <DeadlineBucketsChart buckets={buckets} />
+          </SectionShell>
+
+          <SectionShell title="Team workload" description="Open task load — highest first.">
+            <WorkloadBars users={workload} />
+          </SectionShell>
+        </div>
+
+        {/* Right column — sidebar widgets */}
+        <div className="space-y-4">
+          <SectionShell title="Payment snapshot">
+            <PaymentSnapshotCard snapshot={paymentSnapshot} />
+          </SectionShell>
+
+          <SectionShell title="Recent activity">
+            <RecentActivityFeed entries={activity} />
+          </SectionShell>
+
+          <SectionShell title="Upcoming deadlines">
+            <UpcomingDeadlinesList waitingClient={waitingClient} />
+          </SectionShell>
+        </div>
+
       </div>
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Supporting components
+// ═════════════════════════════════════════════════════════════════════════════
+
+function FlagCount({ count }: { count: number }) {
+  if (count === 0) {
+    return (
+      <span className="rounded-full bg-[var(--color-success-subtle)] px-2.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-success)]">
+        Clear
+      </span>
+    )
+  }
+  return (
+    <span className="rounded-full bg-[var(--color-danger-subtle)] px-2.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-danger)]">
+      {count} flagged
+    </span>
+  )
+}
+
+// Upcoming deadlines — small compact list for the right rail.
+// Uses the waiting-client projects as the closest truthful source of
+// dated project items. Sparse data collapses to a single quiet line.
+function UpcomingDeadlinesList({
+  waitingClient,
+}: {
+  waitingClient: Awaited<ReturnType<typeof getWaitingOnClientProjects>>
+}) {
+  const items = waitingClient.slice(0, 4)
+  if (items.length === 0) {
+    return (
+      <div className="flex items-center gap-3 py-2">
+        <div
+          aria-hidden="true"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]"
+        >
+          <CalendarClock className="h-4 w-4" />
+        </div>
+        <p className="m-0 text-[0.8125rem] leading-snug text-[var(--color-text-muted)]">
+          No deadlines on hold — dated client-side holds will appear here.
+        </p>
+      </div>
+    )
+  }
+  const today = Date.now()
+  return (
+    <div className="space-y-2">
+      {items.map((p) => {
+        const due = new Date(p.target_due_date).getTime()
+        const days = Math.ceil((due - today) / (1000 * 60 * 60 * 24))
+        const urgent = days <= 7
+        return (
+          <Link
+            key={p.id}
+            href={`/projects/${p.id}`}
+            className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] bg-[var(--color-surface-muted)] px-3 py-2.5 text-inherit no-underline transition-colors hover:bg-[var(--color-surface-subtle)]"
+          >
+            <div className="min-w-0">
+              <p className="m-0 truncate text-[0.8125rem] font-medium text-[var(--color-text-primary)]">
+                {p.name}
+              </p>
+              <p className="mt-0.5 truncate text-[0.6875rem] text-[var(--color-text-muted)]">
+                {p.project_code} · {p.clients?.client_name ?? 'Client'}
+              </p>
+            </div>
+            <span
+              className={cn(
+                'shrink-0 text-[0.75rem] font-medium tabular-nums',
+                urgent ? 'text-[var(--color-danger)]' : 'text-[var(--color-text-muted)]'
+              )}
+            >
+              {days <= 0 ? 'Due' : `${days}d`}
+            </span>
+          </Link>
+        )
+      })}
     </div>
   )
 }

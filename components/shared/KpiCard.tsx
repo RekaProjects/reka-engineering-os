@@ -1,91 +1,163 @@
+import React, { type ReactNode } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import { Card } from '@/components/ui/card'
-import type { ReactNode } from 'react'
 
-interface KpiCardProps {
-  label:        string
-  value:        string | number
-  icon?:        ReactNode
-  description?: string
-  className?:   string
-  variant?:     'default' | 'dashboard'
-  accent?:      'none' | 'primary' | 'urgent' | 'warning'
+export interface KpiCardTrend {
+  value:       number
+  label:       string
+  isPositive?: boolean
 }
 
+export interface KpiCardProps {
+  /** v0-ui naming (preferred) */
+  title?:       string
+  /** Legacy naming */
+  label?:       string
+  value:        string | number
+  subtitle?:    string
+  /** Legacy — same role as `subtitle` */
+  description?: string
+  icon?:        LucideIcon | ReactNode
+  trend?:       KpiCardTrend
+  /** v0-ui variant names */
+  variant?:     'default' | 'warning' | 'danger' | 'dashboard'
+  /** Legacy accent names */
+  accent?:      'none' | 'primary' | 'urgent' | 'warning'
+  className?:  string
+}
+
+function resolveVisualTone(
+  variant: KpiCardProps['variant'],
+  accent: KpiCardProps['accent']
+) {
+  const v = variant === 'dashboard' ? 'default' : variant
+  if (v === 'danger' || accent === 'urgent') return 'danger' as const
+  if (v === 'warning' || accent === 'warning') return 'warning' as const
+  if (accent === 'primary') return 'primary' as const
+  return 'default' as const
+}
+
+/**
+ * KpiCard — headline metric tile, stripped to v0 discipline.
+ *
+ *   • p-4 padding, compact tile.
+ *   • Supports `title` or legacy `label`, optional `trend`, `subtitle` / `description`.
+ *   • `variant` (v0) and `accent` (legacy) combine per resolve rules.
+ */
 export function KpiCard({
+  title,
   label,
   value,
-  icon,
+  subtitle,
   description,
+  icon,
+  trend,
   className,
   variant = 'default',
-  accent  = 'none',
+  accent = 'none',
 }: KpiCardProps) {
+  const heading = title ?? label ?? ''
+  const subline = subtitle ?? description
 
-  const accentColor =
-    accent === 'urgent'  ? 'var(--color-danger)'  :
-    accent === 'warning' ? 'var(--color-warning)' :
-    accent === 'primary' ? 'var(--color-primary)'  :
-    'var(--color-text-muted)'
+  const tone = resolveVisualTone(variant, accent)
 
-  const accentBorderColor =
-    accent === 'urgent'  ? 'var(--color-danger)'  :
-    accent === 'warning' ? 'var(--color-warning)' :
-    accent === 'primary' ? 'var(--color-primary)'  :
-    'transparent'
+  const valueTone =
+    tone === 'danger'  ? 'text-[var(--color-danger)]'  :
+    tone === 'warning' ? 'text-[var(--color-warning)]' :
+    'text-[var(--color-text-primary)]'
 
-  const iconBg =
-    accent === 'urgent'  ? 'var(--color-danger-subtle)'  :
-    accent === 'warning' ? 'var(--color-warning-subtle)' :
-    accent === 'primary' ? 'var(--color-primary-subtle)'  :
-    'var(--color-surface-muted)'
+  const iconPill =
+    tone === 'danger'  ? 'bg-[var(--color-danger-subtle)]  text-[var(--color-danger)]'  :
+    tone === 'warning' ? 'bg-[var(--color-warning-subtle)] text-[var(--color-warning)]' :
+    tone === 'primary' ? 'bg-[var(--color-primary-subtle)] text-[var(--color-primary)]' :
+    'bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]'
+
+  const iconContent = icon
+    ? React.isValidElement(icon)
+      ? icon
+      : React.createElement(icon as React.ElementType, { className: 'h-4 w-4' })
+    : null
 
   return (
-    <Card
-      className={cn('relative px-4 pb-4 pt-3.5', className)}
-      style={{ borderTop: `4px solid ${accentBorderColor}` }}
+    <div
+      className={cn(
+        'kpi-card-hover relative overflow-hidden rounded-[var(--radius-card)] p-4',
+        'border bg-[var(--color-surface)]',
+        tone === 'danger'  ? 'border-[var(--color-danger)]/20'  :
+        tone === 'warning' ? 'border-[var(--color-warning)]/20' :
+        'border-[var(--color-border)]',
+        className
+      )}
+      style={{ boxShadow: 'var(--shadow-sm)' }}
     >
-      {/* Icon — top-right */}
-      {icon && (
-        <div
-          aria-hidden="true"
-          className="absolute right-3.5 top-3.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px]"
-          style={{ backgroundColor: iconBg, color: accentColor }}
-        >
-          {icon}
-        </div>
-      )}
-
-      {/* Label */}
-      <p
+      {/* Accent bar — left edge color stripe */}
+      <div
         className={cn(
-          'mb-2.5 text-[0.6875rem] font-semibold uppercase leading-none tracking-[0.06em] text-[var(--color-text-muted)]',
-          icon && 'pr-10'
+          'absolute left-0 top-0 h-full w-0.5',
+          tone === 'danger'  ? 'bg-[var(--color-danger)]'  :
+          tone === 'warning' ? 'bg-[var(--color-warning)]' :
+          tone === 'primary' ? 'bg-[var(--color-primary)]' :
+          'bg-transparent'
         )}
-      >
-        {label}
-      </p>
+      />
 
-      {/* Value */}
-      <p
-        className="text-[2rem] font-bold leading-none tracking-[-0.02em] tabular-nums"
-        style={{ color: accent === 'urgent' ? 'var(--color-danger)' : 'var(--color-text-primary)' }}
-      >
-        {value}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-0.5">
+          <p
+            className="text-[0.625rem] font-semibold uppercase tracking-[0.09em]"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            {heading}
+          </p>
 
-      {/* Optional description */}
-      {description && (
-        <p
-          className="mt-1.5 text-xs leading-snug"
-          style={{
-            color:      accent === 'urgent' ? 'var(--color-danger)' : 'var(--color-text-muted)',
-            fontWeight: accent === 'urgent' ? 600 : 400,
-          }}
-        >
-          {description}
-        </p>
-      )}
-    </Card>
+          <p
+            className={cn(
+              'text-2xl font-semibold leading-none tracking-tight tabular-nums',
+              valueTone
+            )}
+          >
+            {value}
+          </p>
+
+          {trend && (
+            <p
+              className={cn(
+                'flex items-center gap-0.5 text-[0.6875rem] font-medium',
+                trend.isPositive ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
+              )}
+            >
+              {trend.isPositive ? '↑' : '↓'}
+              {Math.abs(trend.value)}% {trend.label}
+            </p>
+          )}
+
+          {subline && (
+            <p className="text-[0.75rem] leading-snug" style={{ color: 'var(--color-text-muted)' }}>
+              {subline}
+            </p>
+          )}
+        </div>
+
+        {icon != null && (
+          <div
+            aria-hidden="true"
+            className={cn(
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
+              iconPill
+            )}
+          >
+            {iconContent}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function KpiStrip({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn('grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6', className)}>
+      {children}
+    </div>
   )
 }

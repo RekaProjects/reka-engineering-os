@@ -4,129 +4,125 @@ import { AlertTriangle, Ban, MessageSquareWarning, RotateCcw } from 'lucide-reac
 
 import type { NeedsAttentionData, WaitingClientProjectRow } from '@/lib/dashboard/queries'
 import { formatDate } from '@/lib/utils/formatters'
+import { cn } from '@/lib/utils/cn'
 
 type RowKind = 'overdue' | 'blocked' | 'revision' | 'waiting_client'
 
 type MergedRow =
-  | { kind: 'overdue';        id: string; title: string; href: string; meta: string; accent: 'urgent'  }
-  | { kind: 'blocked';        id: string; title: string; href: string; meta: string; accent: 'urgent'  }
-  | { kind: 'revision';       id: string; title: string; href: string; meta: string; accent: 'urgent'  }
-  | { kind: 'waiting_client'; id: string; title: string; href: string; meta: string; accent: 'neutral' }
+  | { kind: 'overdue';        id: string; title: string; href: string; project: string; detailLabel: string; detailValue: string }
+  | { kind: 'blocked';        id: string; title: string; href: string; project: string; detailLabel: string; detailValue: string }
+  | { kind: 'revision';       id: string; title: string; href: string; project: string; detailLabel: string; detailValue: string }
+  | { kind: 'waiting_client'; id: string; title: string; href: string; project: string; detailLabel: string; detailValue: string }
 
-function mergeRows(attention: NeedsAttentionData, waitingClient: WaitingClientProjectRow[]): MergedRow[] {
+export function mergeRows(attention: NeedsAttentionData, waitingClient: WaitingClientProjectRow[]): MergedRow[] {
   const rows: MergedRow[] = []
 
   for (const t of attention.overdueTasks) {
-    const code = t.projects?.project_code ?? '—'
     rows.push({
-      kind:   'overdue',
-      id:     t.id,
-      title:  t.title,
-      href:   `/tasks/${t.id}`,
-      meta:   `${code} · Due ${t.due_date ? formatDate(t.due_date) : '—'}`,
-      accent: 'urgent',
+      kind:        'overdue',
+      id:          t.id,
+      title:       t.title,
+      href:        `/tasks/${t.id}`,
+      project:     t.projects?.project_code ?? '—',
+      detailLabel: 'Due',
+      detailValue: t.due_date ? formatDate(t.due_date) : '—',
     })
   }
   for (const t of attention.blockedTasks) {
-    const code = t.projects?.project_code ?? '—'
     rows.push({
-      kind:   'blocked',
-      id:     t.id,
-      title:  t.title,
-      href:   `/tasks/${t.id}`,
-      meta:   `${code}${t.assignee?.full_name ? ` · ${t.assignee.full_name}` : ''}`,
-      accent: 'urgent',
+      kind:        'blocked',
+      id:          t.id,
+      title:       t.title,
+      href:        `/tasks/${t.id}`,
+      project:     t.projects?.project_code ?? '—',
+      detailLabel: 'Assignee',
+      detailValue: t.assignee?.full_name ?? '—',
     })
   }
   for (const d of attention.revisionDeliverables) {
-    const code = d.projects?.project_code ?? '—'
     rows.push({
-      kind:   'revision',
-      id:     d.id,
-      title:  d.name,
-      href:   `/deliverables/${d.id}`,
-      meta:   code,
-      accent: 'urgent',
+      kind:        'revision',
+      id:          d.id,
+      title:       d.name,
+      href:        `/deliverables/${d.id}`,
+      project:     d.projects?.project_code ?? '—',
+      detailLabel: 'Status',
+      detailValue: 'Revision',
     })
   }
   for (const p of waitingClient) {
     rows.push({
-      kind:   'waiting_client',
-      id:     p.id,
-      title:  p.name,
-      href:   `/projects/${p.id}`,
-      meta:   `${p.project_code} · ${p.clients?.client_name ?? 'Client'} · Due ${formatDate(p.target_due_date)}`,
-      accent: 'neutral',
+      kind:        'waiting_client',
+      id:          p.id,
+      title:       p.name,
+      href:        `/projects/${p.id}`,
+      project:     `${p.project_code} · ${p.clients?.client_name ?? 'Client'}`,
+      detailLabel: 'Due',
+      detailValue: formatDate(p.target_due_date),
     })
   }
 
   return rows
 }
 
-const KIND_LABEL: Record<RowKind, string> = {
+export const KIND_LABEL: Record<RowKind, string> = {
   overdue:        'Overdue',
   blocked:        'Blocked',
   revision:       'Revision',
   waiting_client: 'Client hold',
 }
 
-const ICON: Record<RowKind, ReactNode> = {
-  overdue:        <AlertTriangle      size={14} aria-hidden />,
-  blocked:        <Ban                size={14} aria-hidden />,
-  revision:       <RotateCcw          size={14} aria-hidden />,
-  waiting_client: <MessageSquareWarning size={14} aria-hidden />,
+export const KIND_ICON: Record<RowKind, ReactNode> = {
+  overdue:        <AlertTriangle       className="h-3.5 w-3.5" aria-hidden />,
+  blocked:        <Ban                 className="h-3.5 w-3.5" aria-hidden />,
+  revision:       <RotateCcw           className="h-3.5 w-3.5" aria-hidden />,
+  waiting_client: <MessageSquareWarning className="h-3.5 w-3.5" aria-hidden />,
 }
 
-const KIND_COLORS: Record<RowKind, { icon: string; iconBg: string; bar: string }> = {
-  overdue:        { icon: 'var(--color-danger)',  iconBg: 'var(--color-danger-subtle)',  bar: 'var(--color-danger)'  },
-  blocked:        { icon: 'var(--color-danger)',  iconBg: 'var(--color-danger-subtle)',  bar: 'var(--color-danger)'  },
-  revision:       { icon: 'var(--color-warning)', iconBg: 'var(--color-warning-subtle)', bar: 'var(--color-warning)' },
-  waiting_client: { icon: 'var(--color-primary)', iconBg: 'var(--color-primary-subtle)', bar: 'var(--color-primary)' },
+export const KIND_BADGE_CLASS: Record<RowKind, string> = {
+  overdue:        'bg-[var(--color-danger)]/10  text-[var(--color-danger)]',
+  blocked:        'bg-[var(--color-danger)]/10  text-[var(--color-danger)]',
+  revision:       'bg-[var(--color-warning)]/10 text-[var(--color-warning)]',
+  waiting_client: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
 }
 
 export function AttentionQueue({
   attention,
   waitingClient,
-  maxRows = 12,
+  maxRows = 8,
 }: {
   attention:     NeedsAttentionData
   waitingClient: WaitingClientProjectRow[]
   maxRows?:      number
 }) {
-  const rows  = mergeRows(attention, waitingClient)
-  const shown = rows.slice(0, maxRows)
+  const rows   = mergeRows(attention, waitingClient)
+  const shown  = rows.slice(0, maxRows)
   const hidden = rows.length - shown.length
 
   if (rows.length === 0) {
     return (
       <div>
-        <div
-          style={{
-            padding:         '16px',
-            borderRadius:    'var(--radius-control)',
-            border:          '1px dashed var(--color-border)',
-            backgroundColor: 'var(--color-surface-subtle)',
-            marginBottom:    '12px',
-          }}
-        >
-          <p
-            style={{
-              fontSize:  '0.8125rem',
-              color:     'var(--color-text-muted)',
-              margin:    0,
-              lineHeight: 1.5,
-            }}
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div
+            className="mb-3 flex h-10 w-10 items-center justify-center rounded-full"
+            style={{ backgroundColor: 'var(--color-success-subtle)' }}
           >
-            No critical blockers in this queue.{' '}
-            <span style={{ color: 'var(--color-text-secondary)' }}>
-              Overdue tasks, blocked work, revision requests, and client holds will rank here as they arise.
-            </span>
-          </p>
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+              style={{ color: 'var(--color-success)' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>All clear</p>
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>No items need attention right now</p>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px' }}>
-          <Link href="/tasks"       style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Open tasks →</Link>
-          <Link href="/projects"    style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Projects →</Link>
-          <Link href="/deliverables" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Deliverables →</Link>
+        <div className="border-t border-[var(--color-border)] pt-3">
+          <AttentionQueueQuickLinks />
         </div>
       </div>
     )
@@ -134,113 +130,71 @@ export function AttentionQueue({
 
   return (
     <div>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-        {shown.map((row, i) => {
-          const clr = KIND_COLORS[row.kind]
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {shown.map((row) => {
+          const dotBg =
+            row.kind === 'overdue' || row.kind === 'blocked'
+              ? 'var(--color-danger-subtle)'
+              : row.kind === 'revision'
+              ? 'var(--color-warning-subtle)'
+              : 'var(--color-surface-muted)'
+          const dotColor =
+            row.kind === 'overdue' || row.kind === 'blocked'
+              ? 'var(--color-danger)'
+              : row.kind === 'revision'
+              ? 'var(--color-warning)'
+              : 'var(--color-primary)'
+
           return (
-            <li
-              key={`${row.kind}-${row.id}`}
-              style={{
-                borderBottom: i < shown.length - 1 ? '1px solid var(--color-border)' : undefined,
-              }}
-            >
+            <li key={`${row.kind}-${row.id}`}>
               <Link
                 href={row.href}
-                style={{
-                  display:             'grid',
-                  gridTemplateColumns: 'auto 1fr auto',
-                  gap:                 '10px',
-                  alignItems:          'start',
-                  padding:             '10px 2px',
-                  textDecoration:      'none',
-                  color:               'inherit',
-                  borderRadius:        'var(--radius-control)',
-                }}
+                className="group relative flex items-start gap-3 rounded-lg p-3 no-underline transition-colors duration-100 bg-[var(--color-surface-subtle)] hover:bg-[var(--color-surface-muted)]"
               >
-                {/* Icon badge */}
-                <span
-                  style={{
-                    display:         'inline-flex',
-                    alignItems:      'center',
-                    justifyContent:  'center',
-                    width:           '28px',
-                    height:          '28px',
-                    borderRadius:    'var(--radius-control)',
-                    backgroundColor: clr.iconBg,
-                    color:           clr.icon,
-                    flexShrink:      0,
-                    marginTop:       '1px',
-                  }}
+                {/* Status dot */}
+                <div
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: dotBg }}
                 >
-                  {ICON[row.kind]}
-                </span>
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: dotColor }}
+                  />
+                </div>
 
                 {/* Content */}
-                <span style={{ minWidth: 0 }}>
-                  <span
-                    style={{
-                      display:       'block',
-                      fontSize:      '0.625rem',
-                      fontWeight:    700,
-                      letterSpacing: '0.07em',
-                      textTransform: 'uppercase',
-                      marginBottom:  '3px',
-                    }}
-                  >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
                     <span
-                      style={{
-                        display:     'inline-block',
-                        borderLeft:  `3px solid ${clr.bar}`,
-                        paddingLeft: '7px',
-                        color:       clr.icon,
-                        lineHeight:  1.2,
-                      }}
+                      className={cn(
+                        'inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.06em]',
+                        KIND_BADGE_CLASS[row.kind]
+                      )}
                     >
+                      {KIND_ICON[row.kind]}
                       {KIND_LABEL[row.kind]}
                     </span>
-                  </span>
-                  <span
-                    style={{
-                      fontSize:   '0.875rem',
-                      fontWeight: 600,
-                      color:      'var(--color-text-primary)',
-                      lineHeight: 1.35,
-                      display:    'block',
-                      overflow:   'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
+                  </div>
+                  <p className="mt-0.5 truncate text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                     {row.title}
-                  </span>
-                  <span
-                    style={{
-                      fontSize:   '0.75rem',
-                      color:      'var(--color-text-muted)',
-                      marginTop:  '2px',
-                      display:    'block',
-                      overflow:   'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {row.meta}
-                  </span>
-                </span>
+                  </p>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    <span className="font-mono">{row.project}</span>
+                    <span>·</span>
+                    <span>{row.detailLabel}: {row.detailValue}</span>
+                  </div>
+                </div>
 
-                {/* Arrow */}
-                <span
-                  style={{
-                    fontSize:   '0.75rem',
-                    fontWeight: 600,
-                    color:      'var(--color-primary)',
-                    flexShrink: 0,
-                    paddingTop: '6px',
-                    opacity:    0.6,
-                  }}
+                {/* Arrow indicator on hover */}
+                <svg
+                  className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-0 transition-opacity duration-100 group-hover:opacity-40"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
                 >
-                  →
-                </span>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
               </Link>
             </li>
           )
@@ -248,23 +202,24 @@ export function AttentionQueue({
       </ul>
 
       {hidden > 0 && (
-        <p
-          style={{
-            fontSize:   '0.75rem',
-            color:      'var(--color-text-muted)',
-            margin:     '10px 0 0',
-            paddingLeft: '4px',
-          }}
-        >
+        <p className="mt-3 pl-1 text-[0.75rem]" style={{ color: 'var(--color-text-muted)' }}>
           +{hidden} more — use the task and deliverable lists to triage.
         </p>
       )}
 
-      <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '10px 16px' }}>
-        <Link href="/tasks"        style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Open tasks →</Link>
-        <Link href="/projects"     style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Projects →</Link>
-        <Link href="/deliverables" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>Deliverables →</Link>
+      <div className="mt-4 border-t border-[var(--color-border)] pt-3">
+        <AttentionQueueQuickLinks />
       </div>
+    </div>
+  )
+}
+
+export function AttentionQueueQuickLinks() {
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-2">
+      <Link href="/tasks"        className="text-[0.8125rem] font-semibold text-[var(--color-primary)] no-underline hover:underline">Open tasks →</Link>
+      <Link href="/projects"     className="text-[0.8125rem] font-semibold text-[var(--color-primary)] no-underline hover:underline">Projects →</Link>
+      <Link href="/deliverables" className="text-[0.8125rem] font-semibold text-[var(--color-primary)] no-underline hover:underline">Deliverables →</Link>
     </div>
   )
 }

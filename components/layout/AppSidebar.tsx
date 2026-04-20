@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -16,12 +17,20 @@ import {
   Settings,
   LogOut,
   UserCircle,
+  ChevronDown,
 } from 'lucide-react'
 import { logout } from '@/app/auth/login/actions'
 import { getInitials } from '@/lib/utils/formatters'
 import { getNavPermissions } from '@/lib/auth/permissions'
 import { cn } from '@/lib/utils/cn'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import type { SystemRole } from '@/types/database'
 
 // ── Role display helpers ──────────────────────────────────────────────────
@@ -43,7 +52,8 @@ const ROLE_LABEL: Record<string, string> = {
 interface NavItem {
   label: string
   href:  string
-  icon:  React.ReactNode
+  icon:  ReactNode
+  badge?: number
 }
 
 interface NavGroup {
@@ -57,6 +67,12 @@ interface AppSidebarProps {
   systemRole?:   SystemRole | null
 }
 
+/**
+ * AppSidebar — premium vertical navigation rail.
+ *
+ * 248px rail, h-14 brand area, groups separated by whitespace (space-y-6).
+ * Nav items use inline style for active bg to support CSS variable theming.
+ */
 export function AppSidebar({
   userFullName = 'User',
   userEmail    = '',
@@ -68,27 +84,27 @@ export function AppSidebar({
   // ── Build nav groups ────────────────────────────────────────
 
   const mainItems: NavItem[] = [
-    { label: perms.labelDashboard, href: '/dashboard', icon: <LayoutDashboard size={15} /> },
+    { label: perms.labelDashboard, href: '/dashboard', icon: <LayoutDashboard size={16} /> },
   ]
 
   const operationsItems: NavItem[] = [
-    ...(perms.showClients  ? [{ label: 'Clients',      href: '/clients',      icon: <Users size={15} /> }]        : []),
-    ...(perms.showIntakes  ? [{ label: 'Intakes',      href: '/intakes',      icon: <ClipboardList size={15} /> }] : []),
-    { label: perms.labelProjects,     href: '/projects',     icon: <FolderKanban size={15} /> },
-    { label: perms.labelTasks,        href: '/tasks',        icon: <CheckSquare size={15} /> },
-    { label: perms.labelDeliverables, href: '/deliverables', icon: <FileText size={15} /> },
-    { label: perms.labelFiles,        href: '/files',        icon: <Paperclip size={15} /> },
+    ...(perms.showClients  ? [{ label: 'Clients',      href: '/clients',      icon: <Users size={16} /> }]        : []),
+    ...(perms.showIntakes  ? [{ label: 'Intakes',      href: '/intakes',      icon: <ClipboardList size={16} /> }] : []),
+    { label: perms.labelProjects,     href: '/projects',     icon: <FolderKanban size={16} /> },
+    { label: perms.labelTasks,        href: '/tasks',        icon: <CheckSquare size={16} /> },
+    { label: perms.labelDeliverables, href: '/deliverables', icon: <FileText size={16} /> },
+    { label: perms.labelFiles,        href: '/files',        icon: <Paperclip size={16} /> },
   ]
 
   const peopleItems: NavItem[] = [
-    ...(perms.showTeam         ? [{ label: 'Team',         href: '/team',         icon: <UserSquare2 size={15} /> }] : []),
-    ...(perms.showCompensation ? [{ label: 'Compensation', href: '/compensation', icon: <Receipt size={15} /> }]    : []),
-    ...(perms.showPayments     ? [{ label: 'Payments',     href: '/payments',     icon: <Wallet size={15} /> }]     : []),
-    ...(perms.showMyPayments   ? [{ label: 'My Payments',  href: '/my-payments',  icon: <Wallet size={15} /> }]     : []),
+    ...(perms.showTeam         ? [{ label: 'Team',         href: '/team',         icon: <UserSquare2 size={16} /> }] : []),
+    ...(perms.showCompensation ? [{ label: 'Compensation', href: '/compensation', icon: <Receipt size={16} /> }]    : []),
+    ...(perms.showPayments     ? [{ label: 'Payments',     href: '/payments',     icon: <Wallet size={16} /> }]     : []),
+    ...(perms.showMyPayments   ? [{ label: 'My Payments',  href: '/my-payments',  icon: <Wallet size={16} /> }]     : []),
   ]
 
   const bottomItems: NavItem[] = [
-    ...(perms.showSettings ? [{ label: 'Settings', href: '/settings', icon: <Settings size={15} /> }] : []),
+    ...(perms.showSettings ? [{ label: 'Settings', href: '/settings', icon: <Settings size={16} /> }] : []),
   ]
 
   const navGroups: NavGroup[] = [
@@ -111,136 +127,130 @@ export function AppSidebar({
           href={item.href}
           aria-current={active ? 'page' : undefined}
           className={cn(
-            'sidebar-nav-item flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[0.8125rem] no-underline transition-colors duration-[120ms]',
+            'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium transition-all duration-100 no-underline',
             active
-              ? 'bg-[var(--sidebar-active-bg)] font-semibold text-[var(--sidebar-active-text)]'
-              : 'font-normal text-[var(--sidebar-text-muted)]'
+              ? 'text-[var(--sidebar-active-text)]'
+              : 'opacity-70 hover:opacity-100'
           )}
+          style={
+            active
+              ? { backgroundColor: 'var(--sidebar-active-bg)', color: 'var(--sidebar-active-text)' }
+              : { color: 'var(--sidebar-text)' }
+          }
         >
-          <span
-            aria-hidden="true"
-            className={cn(
-              'flex shrink-0 transition-colors duration-[120ms]',
-              active ? 'text-[var(--sidebar-active-text)]' : 'text-[var(--sidebar-text-muted)]'
-            )}
-          >
+          <span className={cn('shrink-0', active ? 'opacity-100' : 'opacity-70')}>
             {item.icon}
           </span>
-          {item.label}
+          <span className="truncate">{item.label}</span>
+          {item.badge != null && item.badge > 0 && (
+            <span
+              className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.5625rem] font-bold"
+              style={{ backgroundColor: 'var(--color-danger)', color: 'var(--color-danger-fg)' }}
+            >
+              {item.badge}
+            </span>
+          )}
         </Link>
       </li>
     )
   }
 
-  // ── My Profile link ─────────────────────────────────────────
-
-  const profileActive = pathname === '/my-profile'
-
   // ── Render ──────────────────────────────────────────────────
 
   return (
     <aside
-      className="sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]"
-      style={{ width: 'var(--sidebar-width)', minWidth: 'var(--sidebar-width)' }}
+      className="flex h-screen w-[var(--sidebar-width)] shrink-0 flex-col overflow-hidden"
+      style={{ backgroundColor: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}
     >
       {/* ── Brand ─────────────────────────────────────────────── */}
       <div
-        className="flex shrink-0 items-center gap-2.5 border-b border-[var(--sidebar-border)] px-4"
-        style={{ height: 'var(--topbar-height)' }}
+        className="flex h-14 shrink-0 items-center gap-2.5 px-4"
+        style={{ borderBottom: '1px solid var(--sidebar-border)' }}
       >
         <div
-          aria-hidden="true"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-[var(--color-primary)] shadow-[0_1px_3px_rgba(20,45,80,0.25)]"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1"
+          style={{ backgroundColor: 'rgba(255,255,255,0.08)', '--tw-ring-color': 'rgba(255,255,255,0.12)' } as React.CSSProperties}
         >
-          <span className="text-[11px] font-bold tracking-[0.02em] text-white">EA</span>
+          <span className="text-xs font-bold" style={{ color: 'var(--sidebar-text)' }}>R</span>
         </div>
         <div className="min-w-0">
-          <span className="block truncate text-[0.875rem] font-bold text-[var(--sidebar-text)]">
-            Agency OS
-          </span>
-          <span className="text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[var(--sidebar-label)]">
-            {systemRole ? (ROLE_CONTEXT[systemRole] ?? 'Engineering Agency') : 'Engineering Agency'}
-          </span>
+          <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--sidebar-text)' }}>ReKa</p>
+          <p className="truncate text-[0.6875rem] leading-tight" style={{ color: 'var(--sidebar-text-muted)' }}>
+            {ROLE_CONTEXT[systemRole ?? 'member'] ?? 'Workspace'}
+          </p>
         </div>
       </div>
 
       {/* ── Nav groups ────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto p-2" aria-label="Main navigation">
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4" aria-label="Main navigation">
         {navGroups.map((group, gi) => (
-          <div key={gi} className="mb-0.5">
+          <div key={gi}>
             {group.label && (
-              <p className="px-2.5 pb-1 pt-3 text-[0.625rem] font-bold uppercase tracking-[0.07em] text-[var(--sidebar-label)]">
+              <p
+                className="mb-1 px-2 text-[0.625rem] font-semibold uppercase tracking-[0.1em]"
+                style={{ color: 'var(--sidebar-label)' }}
+              >
                 {group.label}
               </p>
             )}
-            <ul role="list" className="flex flex-col gap-px">
+            <ul role="list" className="flex flex-col gap-1">
               {group.items.map(renderItem)}
             </ul>
-            {gi < navGroups.length - 1 && (
-              <div className="mx-1 my-1.5 h-px bg-[var(--sidebar-border)] opacity-60" />
-            )}
           </div>
         ))}
       </nav>
 
       {/* ── Footer ────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-[var(--sidebar-border)] p-2">
-        {/* My Profile */}
-        <Link
-          href="/my-profile"
-          aria-current={profileActive ? 'page' : undefined}
-          className={cn(
-            'sidebar-nav-item mb-1.5 flex items-center gap-2.5 rounded-[7px] px-2.5 py-1.5 text-[0.8125rem] no-underline transition-colors duration-[120ms]',
-            profileActive
-              ? 'bg-[var(--sidebar-active-bg)] font-semibold text-[var(--sidebar-active-text)]'
-              : 'font-normal text-[var(--sidebar-text-muted)]'
-          )}
-        >
-          <span
-            aria-hidden="true"
-            className={cn(
-              'flex shrink-0',
-              profileActive ? 'text-[var(--sidebar-active-text)]' : 'text-[var(--sidebar-text-muted)]'
-            )}
-          >
-            <UserCircle size={15} />
-          </span>
-          My Profile
-        </Link>
-
-        {/* User card */}
-        <div className="flex items-center gap-2.5 rounded-[7px] border border-[var(--sidebar-border)] bg-white/[0.06] px-2.5 py-2">
-          <Avatar className="h-7 w-7 shrink-0">
-            <AvatarFallback className="text-[10px]">
-              {getInitials(userFullName)}
-            </AvatarFallback>
-          </Avatar>
-
-          {/* Name + role */}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-[var(--sidebar-text)]">
-              {userFullName}
-            </p>
-            {systemRole && (
-              <span className="mt-0.5 inline-flex items-center rounded-full border border-white/[0.16] bg-white/10 px-1.5 py-px text-[0.5625rem] font-bold uppercase tracking-[0.05em] text-[var(--sidebar-text-muted)] whitespace-nowrap">
-                {ROLE_LABEL[systemRole] ?? systemRole}
-              </span>
-            )}
-          </div>
-
-          {/* Sign out icon button */}
-          <form action={logout}>
+      <div
+        className="shrink-0 px-3 py-3"
+        style={{ borderTop: '1px solid var(--sidebar-border)' }}
+      >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <button
-              type="submit"
-              title="Sign out"
-              aria-label="Sign out"
-              className="signout-btn flex h-6.5 w-6.5 shrink-0 cursor-pointer items-center justify-center rounded-[6px] border border-white/[0.14] bg-white/[0.06] text-[var(--sidebar-text-muted)] transition-colors duration-[120ms]"
-              style={{ width: '26px', height: '26px' }}
+              type="button"
+              className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 transition-colors duration-100 outline-none"
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
-              <LogOut size={12} aria-hidden="true" />
+              <Avatar className="h-7 w-7 shrink-0">
+                <AvatarFallback
+                  className="text-[0.6875rem] font-semibold"
+                  style={{ backgroundColor: 'var(--sidebar-active-bg)', color: 'var(--sidebar-text)' }}
+                >
+                  {getInitials(userFullName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="truncate text-[0.8125rem] font-medium leading-tight" style={{ color: 'var(--sidebar-text)' }}>
+                  {userFullName}
+                </p>
+                <p className="truncate text-[0.6875rem] leading-tight" style={{ color: 'var(--sidebar-text-muted)' }}>
+                  {ROLE_LABEL[systemRole ?? 'member'] ?? systemRole}
+                </p>
+              </div>
+              <ChevronDown size={13} style={{ color: 'var(--sidebar-text-muted)', flexShrink: 0 }} />
             </button>
-          </form>
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" sideOffset={4} className="w-52">
+            <DropdownMenuItem asChild>
+              <Link href="/my-profile" className="flex cursor-pointer items-center gap-2">
+                <UserCircle size={14} className="opacity-60" />
+                My Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="flex cursor-pointer items-center gap-2 text-[var(--color-danger)] focus:text-[var(--color-danger)]"
+              onClick={async () => {
+                await logout()
+              }}
+            >
+              <LogOut size={14} className="opacity-80" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   )
