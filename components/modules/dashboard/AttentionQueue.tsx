@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, Ban, CheckCircle2, ChevronRight, MessageSquareWarning, RotateCcw } from 'lucide-react'
+import { AlertTriangle, Ban, MessageSquareWarning, RotateCcw } from 'lucide-react'
 
 import type { NeedsAttentionData, WaitingClientProjectRow } from '@/lib/dashboard/queries'
 import { formatDate } from '@/lib/utils/formatters'
@@ -79,21 +79,6 @@ export const KIND_ICON: Record<RowKind, ReactNode> = {
   waiting_client: <MessageSquareWarning className="h-3.5 w-3.5" aria-hidden />,
 }
 
-/** v0-ui row shells — overdue (danger), blocked + revision (warning / pending action), client hold (surface). */
-const ROW_OVERDUE =
-  'bg-[var(--color-danger-subtle)] hover:opacity-90 transition-opacity'
-const ROW_REVIEW =
-  'bg-[var(--color-warning-subtle)] hover:opacity-90 transition-opacity'
-const ROW_CLIENT =
-  'bg-[var(--color-surface-subtle)] hover:opacity-90 transition-opacity'
-
-const KIND_ROW_CLASS: Record<RowKind, string> = {
-  overdue:        ROW_OVERDUE,
-  blocked:        ROW_REVIEW,
-  revision:       ROW_REVIEW,
-  waiting_client: ROW_CLIENT,
-}
-
 export const KIND_BADGE_CLASS: Record<RowKind, string> = {
   overdue:        'bg-[var(--color-danger)]/10  text-[var(--color-danger)]',
   blocked:        'bg-[var(--color-danger)]/10  text-[var(--color-danger)]',
@@ -115,28 +100,28 @@ export function AttentionQueue({
   const hidden = rows.length - shown.length
 
   if (rows.length === 0) {
-    // "All clear" composition — matches the live queue's framing weight so
-    // the panel reads as intentional success, not a blank box.
     return (
       <div>
-        <div className="flex items-start gap-3 rounded-[var(--radius-control)] border border-[var(--color-success)]/20 bg-[var(--color-success-subtle)] p-4">
+        <div className="flex flex-col items-center justify-center py-8 text-center">
           <div
-            aria-hidden="true"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-success)]/10 text-[var(--color-success)] ring-1 ring-[var(--color-success)]/20"
+            className="mb-3 flex h-10 w-10 items-center justify-center rounded-full"
+            style={{ backgroundColor: 'var(--color-success-subtle)' }}
           >
-            <CheckCircle2 className="h-4 w-4" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+              style={{ color: 'var(--color-success)' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="m-0 text-[0.875rem] font-semibold text-[var(--color-success)]">
-              All clear — no items flagged
-            </p>
-            <p className="mt-1 text-[0.75rem] leading-snug text-[var(--color-text-secondary)]">
-              Overdue tasks, blocked work, revision requests, and client holds will rank here as they arise.
-            </p>
-          </div>
+          <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>All clear</p>
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>No items need attention right now</p>
         </div>
-
-        <div className="mt-4 border-t border-[var(--color-border)] pt-3">
+        <div className="border-t border-[var(--color-border)] pt-3">
           <AttentionQueueQuickLinks />
         </div>
       </div>
@@ -145,53 +130,79 @@ export function AttentionQueue({
 
   return (
     <div>
-      <ul className="m-0 flex list-none flex-col gap-3 p-0">
-        {shown.map((row) => (
-          <li key={`${row.kind}-${row.id}`}>
-            <Link
-              href={row.href}
-              className={cn(
-                'flex items-center gap-4 rounded-lg p-3 text-inherit no-underline',
-                KIND_ROW_CLASS[row.kind]
-              )}
-            >
-              <div className="min-w-0 flex-1">
-                <div className="mb-1.5 flex items-center gap-2">
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {shown.map((row) => {
+          const dotBg =
+            row.kind === 'overdue' || row.kind === 'blocked'
+              ? 'var(--color-danger-subtle)'
+              : row.kind === 'revision'
+              ? 'var(--color-warning-subtle)'
+              : 'var(--color-surface-muted)'
+          const dotColor =
+            row.kind === 'overdue' || row.kind === 'blocked'
+              ? 'var(--color-danger)'
+              : row.kind === 'revision'
+              ? 'var(--color-warning)'
+              : 'var(--color-primary)'
+
+          return (
+            <li key={`${row.kind}-${row.id}`}>
+              <Link
+                href={row.href}
+                className="group relative flex items-start gap-3 rounded-lg p-3 no-underline transition-colors duration-100 bg-[var(--color-surface-subtle)] hover:bg-[var(--color-surface-muted)]"
+              >
+                {/* Status dot */}
+                <div
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: dotBg }}
+                >
                   <span
-                    className={cn(
-                      'inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.06em]',
-                      KIND_BADGE_CLASS[row.kind]
-                    )}
-                  >
-                    {KIND_ICON[row.kind]}
-                    {KIND_LABEL[row.kind]}
-                  </span>
-                  <span className="truncate font-mono text-[0.6875rem] text-[var(--color-text-muted)]">
-                    {row.project}
-                  </span>
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: dotColor }}
+                  />
                 </div>
-                <p className="truncate text-[0.875rem] font-medium leading-snug text-[var(--color-text-primary)]">
-                  {row.title}
-                </p>
-              </div>
 
-              <div className="hidden shrink-0 text-right sm:block">
-                <p className="text-[0.625rem] font-medium uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
-                  {row.detailLabel}
-                </p>
-                <p className="mt-0.5 truncate text-[0.8125rem] font-medium text-[var(--color-text-secondary)]">
-                  {row.detailValue}
-                </p>
-              </div>
+                {/* Content */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className={cn(
+                        'inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.06em]',
+                        KIND_BADGE_CLASS[row.kind]
+                      )}
+                    >
+                      {KIND_ICON[row.kind]}
+                      {KIND_LABEL[row.kind]}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 truncate text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                    {row.title}
+                  </p>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    <span className="font-mono">{row.project}</span>
+                    <span>·</span>
+                    <span>{row.detailLabel}: {row.detailValue}</span>
+                  </div>
+                </div>
 
-              <ChevronRight size={16} className="ml-auto shrink-0 text-[var(--color-text-muted)]" aria-hidden />
-            </Link>
-          </li>
-        ))}
+                {/* Arrow indicator on hover */}
+                <svg
+                  className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-0 transition-opacity duration-100 group-hover:opacity-40"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </Link>
+            </li>
+          )
+        })}
       </ul>
 
       {hidden > 0 && (
-        <p className="mt-3 pl-1 text-[0.75rem] text-[var(--color-text-muted)]">
+        <p className="mt-3 pl-1 text-[0.75rem]" style={{ color: 'var(--color-text-muted)' }}>
           +{hidden} more — use the task and deliverable lists to triage.
         </p>
       )}

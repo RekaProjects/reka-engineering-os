@@ -1,7 +1,6 @@
 import React, { type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import { Card } from '@/components/ui/card'
 
 export interface KpiCardTrend {
   value:       number
@@ -73,12 +72,6 @@ export function KpiCard({
     tone === 'primary' ? 'bg-[var(--color-primary-subtle)] text-[var(--color-primary)]' :
     'bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]'
 
-  const accentBar =
-    tone === 'danger'  ? 'border-l-2 border-l-[var(--color-danger)]'  :
-    tone === 'warning' ? 'border-l-2 border-l-[var(--color-warning)]' :
-    tone === 'primary' ? 'border-l-2 border-l-[var(--color-primary)]' :
-    ''
-
   const iconContent = icon
     ? React.isValidElement(icon)
       ? icon
@@ -86,32 +79,60 @@ export function KpiCard({
     : null
 
   return (
-    <Card className={cn('kpi-card-hover p-4', accentBar, className)}>
+    <div
+      className={cn(
+        'kpi-card-hover relative overflow-hidden rounded-[var(--radius-card)] p-4',
+        'border bg-[var(--color-surface)]',
+        tone === 'danger'  ? 'border-[var(--color-danger)]/20'  :
+        tone === 'warning' ? 'border-[var(--color-warning)]/20' :
+        'border-[var(--color-border)]',
+        className
+      )}
+      style={{ boxShadow: 'var(--shadow-sm)' }}
+    >
+      {/* Accent bar — left edge color stripe */}
+      <div
+        className={cn(
+          'absolute left-0 top-0 h-full w-0.5',
+          tone === 'danger'  ? 'bg-[var(--color-danger)]'  :
+          tone === 'warning' ? 'bg-[var(--color-warning)]' :
+          tone === 'primary' ? 'bg-[var(--color-primary)]' :
+          'bg-transparent'
+        )}
+      />
+
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
+        <div className="min-w-0 space-y-0.5">
+          <p
+            className="text-[0.625rem] font-semibold uppercase tracking-[0.09em]"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
             {heading}
           </p>
+
           <p
             className={cn(
-              'text-2xl font-semibold leading-tight tracking-tight tabular-nums',
+              'text-2xl font-semibold leading-none tracking-tight tabular-nums',
               valueTone
             )}
           >
             {value}
           </p>
+
           {trend && (
             <p
               className={cn(
-                'mt-1 text-xs font-medium',
-                trend.isPositive ? 'text-[var(--success)]' : 'text-[var(--danger)]'
+                'flex items-center gap-0.5 text-[0.6875rem] font-medium',
+                trend.isPositive ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
               )}
             >
-              {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}% {trend.label}
+              {trend.isPositive ? '↑' : '↓'}
+              {Math.abs(trend.value)}% {trend.label}
             </p>
           )}
+
           {subline && (
-            <p className="text-[0.75rem] leading-snug text-[var(--color-text-muted)]">
+            <p className="text-[0.75rem] leading-snug" style={{ color: 'var(--color-text-muted)' }}>
               {subline}
             </p>
           )}
@@ -121,7 +142,7 @@ export function KpiCard({
           <div
             aria-hidden="true"
             className={cn(
-              'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
               iconPill
             )}
           >
@@ -129,13 +150,13 @@ export function KpiCard({
           </div>
         )}
       </div>
-    </Card>
+    </div>
   )
 }
 
 export function KpiStrip({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6', className)}>
+    <div className={cn('grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6', className)}>
       {children}
     </div>
   )

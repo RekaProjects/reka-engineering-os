@@ -9,8 +9,6 @@ import {
   AlertTriangle,
   CalendarClock,
   Activity,
-  ChevronRight,
-  CheckCircle2,
 } from 'lucide-react'
 
 import { getSessionProfile } from '@/lib/auth/session'
@@ -51,14 +49,7 @@ import {
 
 import { TaskStatusBarChart } from '@/components/modules/dashboard/TaskStatusBarChart'
 import { DeadlineBucketsChart } from '@/components/modules/dashboard/DeadlineBucketsChart'
-import {
-  AttentionQueue,
-  AttentionQueueQuickLinks,
-  KIND_BADGE_CLASS,
-  KIND_ICON,
-  KIND_LABEL,
-  mergeRows,
-} from '@/components/modules/dashboard/AttentionQueue'
+import { AttentionQueue } from '@/components/modules/dashboard/AttentionQueue'
 import { PaymentSnapshotCard } from '@/components/modules/dashboard/PaymentSnapshotCard'
 import { WorkloadBars } from '@/components/modules/dashboard/WorkloadBars'
 
@@ -80,12 +71,29 @@ interface SectionShellProps {
 
 function SectionShell({ title, description, actions, children, className }: SectionShellProps) {
   return (
-    <Card className={cn('p-5', className)}>
-      <SectionHeader title={title} description={description}>
-        {actions}
-      </SectionHeader>
-      <div className="space-y-3">{children}</div>
-    </Card>
+    <div
+      className={cn('rounded-[var(--radius-card)] border p-5', className)}
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        borderColor: 'var(--color-border)',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            {title}
+          </h2>
+          {description && (
+            <p className="mt-0.5 text-[0.8125rem]" style={{ color: 'var(--color-text-muted)' }}>
+              {description}
+            </p>
+          )}
+        </div>
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      </div>
+      {children}
+    </div>
   )
 }
 
@@ -316,19 +324,22 @@ function RecentActivityFeed({ entries }: { entries: ActivityLogEntry[] }) {
     )
   }
   return (
-    <div className="divide-y divide-[var(--color-border)]">
+    <div className="space-y-1">
       {entries.map((entry) => {
         const description =
           entry.note ??
           `${ENTITY_LABELS[entry.entity_type] ?? entry.entity_type} ${ACTION_LABELS[entry.action_type] ?? entry.action_type}`
         return (
-          <div key={entry.id} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
-            <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)] opacity-60" />
-            <div className="min-w-0 flex-1">
-              <p className="m-0 text-[0.8125rem] leading-snug text-[var(--color-text-primary)]">
+          <div key={entry.id} className="flex items-start gap-2.5 rounded-md px-2 py-2">
+            <div
+              className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+            />
+            <div className="min-w-0">
+              <p className="text-[0.8125rem] leading-snug" style={{ color: 'var(--color-text-primary)' }}>
                 {description}
               </p>
-              <p className="mt-0.5 text-[0.6875rem] text-[var(--color-text-muted)]">
+              <p className="text-[0.6875rem]" style={{ color: 'var(--color-text-muted)' }}>
                 {entry.actor?.full_name ?? 'System'} · {formatRelativeDate(entry.created_at)}
               </p>
             </div>
@@ -477,217 +488,102 @@ export default async function DashboardPage() {
       getTeamWorkload(),
     ])
 
+  const attentionCount =
+    attention.overdueTasks.length +
+    attention.blockedTasks.length +
+    attention.revisionDeliverables.length +
+    waitingClient.length
+
   return (
-    <div className="space-y-6">
+    <div className="page-content animate-fade-in space-y-6">
       <PageHeader
         title="Dashboard"
         subtitle="Owner / admin control center — pipeline health, deadlines, cash exposure, and team load."
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <Card className="p-4">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
-            Active Projects
-          </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--color-text-primary)]">
-            {kpis.activeProjects}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
-            Overdue Tasks
-          </p>
-          <p
-            className={cn(
-              'mt-1 text-2xl font-semibold tabular-nums',
-              kpis.overdueTasks > 0 ? 'text-[var(--color-danger)]' : 'text-[var(--color-text-primary)]'
-            )}
-          >
-            {kpis.overdueTasks}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
-            In Review
-          </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--color-text-primary)]">
-            {kpis.awaitingReview}
-          </p>
-          <p className="mt-1 text-[0.75rem] leading-snug text-[var(--color-text-muted)]">Deliverables</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
-            Revision Needed
-          </p>
-          <p
-            className={cn(
-              'mt-1 text-2xl font-semibold tabular-nums',
-              kpis.inRevision > 0 ? 'text-[var(--color-warning)]' : 'text-[var(--color-text-primary)]'
-            )}
-          >
-            {kpis.inRevision}
-          </p>
-          <p className="mt-1 text-[0.75rem] leading-snug text-[var(--color-text-muted)]">Projects</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
-            Waiting on Client
-          </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--color-text-primary)]">
-            {kpis.waitingClient}
-          </p>
-          <p className="mt-1 text-[0.75rem] leading-snug text-[var(--color-text-muted)]">Projects</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
-            Pending Payments
-          </p>
-          <p
-            className={cn(
-              'mt-1 text-2xl font-semibold tabular-nums',
-              paymentSnapshot.unpaidCount > 0 ? 'text-[var(--color-warning)]' : 'text-[var(--color-text-primary)]'
-            )}
-          >
-            {formatIDR(paymentSnapshot.totalOutstanding)}
-          </p>
-          <p className="mt-1 text-[0.75rem] leading-snug text-[var(--color-text-muted)]">
-            {paymentSnapshot.unpaidCount + paymentSnapshot.partialCount} payments
-          </p>
-        </Card>
-      </div>
+      {/* ── KPI Strip ─────────────────────────────────────────── */}
+      <KpiStrip>
+        <KpiCard
+          title="Active Projects"
+          value={kpis.activeProjects}
+          icon={FolderKanban}
+          accent="primary"
+        />
+        <KpiCard
+          title="Overdue Tasks"
+          value={kpis.overdueTasks}
+          icon={AlertCircle}
+          variant={kpis.overdueTasks > 0 ? 'danger' : 'default'}
+        />
+        <KpiCard
+          title="In Review"
+          value={kpis.awaitingReview}
+          icon={FileText}
+          subtitle="Deliverables"
+        />
+        <KpiCard
+          title="Revision Needed"
+          value={kpis.inRevision}
+          icon={AlertTriangle}
+          variant={kpis.inRevision > 0 ? 'warning' : 'default'}
+          subtitle="Projects"
+        />
+        <KpiCard
+          title="Waiting on Client"
+          value={kpis.waitingClient}
+          icon={Clock}
+          subtitle="Projects"
+        />
+        <KpiCard
+          title="Pending Payments"
+          value={formatIDR(paymentSnapshot.totalOutstanding)}
+          icon={CalendarClock}
+          variant={paymentSnapshot.unpaidCount > 0 ? 'warning' : 'default'}
+          subtitle={`${paymentSnapshot.unpaidCount + paymentSnapshot.partialCount} payments`}
+        />
+      </KpiStrip>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <div className="space-y-6 xl:col-span-8">
-          <Card className="p-5">
-            <SectionHeader title="Needs Attention" />
-            <div className="space-y-2">
-              {(() => {
-                const needsAttentionItems = mergeRows(attention, waitingClient)
-                if (needsAttentionItems.length === 0) {
-                  return (
-                    <div>
-                      <div className="flex items-start gap-3 rounded-[var(--radius-control)] border border-[var(--color-success)]/20 bg-[var(--color-success-subtle)] p-4">
-                        <div
-                          aria-hidden="true"
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-success)]/10 text-[var(--color-success)] ring-1 ring-[var(--color-success)]/20"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="m-0 text-[0.875rem] font-semibold text-[var(--color-success)]">
-                            All clear — no items flagged
-                          </p>
-                          <p className="mt-1 text-[0.75rem] leading-snug text-[var(--color-text-secondary)]">
-                            Overdue tasks, blocked work, revision requests, and client holds will rank here as they
-                            arise.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="mt-4 border-t border-[var(--color-border)] pt-3">
-                        <AttentionQueueQuickLinks />
-                      </div>
-                    </div>
-                  )
-                }
-                const shown = needsAttentionItems.slice(0, 8)
-                const hidden = needsAttentionItems.length - shown.length
-                return (
-                  <>
-                    {shown.map((row) => {
-                      const linkType =
-                        row.kind === 'waiting_client'
-                          ? 'waiting'
-                          : row.kind === 'revision' || row.kind === 'blocked'
-                            ? 'revision'
-                            : 'overdue'
-                      return (
-                        <Link
-                          key={`${row.kind}-${row.id}`}
-                          href={row.href}
-                          className={cn(
-                            'flex items-center gap-3 rounded-lg p-3 text-inherit no-underline transition-colors',
-                            linkType === 'overdue' &&
-                              'bg-[var(--color-danger-subtle)] hover:bg-[var(--color-danger-subtle)]/80',
-                            linkType === 'revision' &&
-                              'bg-[var(--color-warning-subtle)] hover:bg-[var(--color-warning-subtle)]/80',
-                            linkType === 'waiting' &&
-                              'bg-[var(--color-surface-subtle)] hover:bg-[var(--color-surface-alt)]'
-                          )}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-1.5 flex items-center gap-2">
-                              <span
-                                className={cn(
-                                  'inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.06em]',
-                                  KIND_BADGE_CLASS[row.kind]
-                                )}
-                              >
-                                {KIND_ICON[row.kind]}
-                                {KIND_LABEL[row.kind]}
-                              </span>
-                              <span className="truncate font-mono text-[0.6875rem] text-[var(--color-text-muted)]">
-                                {row.project}
-                              </span>
-                            </div>
-                            <p className="truncate text-[0.875rem] font-medium leading-snug text-[var(--color-text-primary)]">
-                              {row.title}
-                            </p>
-                          </div>
-                          <div className="hidden shrink-0 text-right sm:block">
-                            <p className="text-[0.625rem] font-medium uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
-                              {row.detailLabel}
-                            </p>
-                            <p className="mt-0.5 truncate text-[0.8125rem] font-medium text-[var(--color-text-secondary)]">
-                              {row.detailValue}
-                            </p>
-                          </div>
-                          <ChevronRight size={16} className="shrink-0 text-[var(--color-text-muted)]" aria-hidden />
-                        </Link>
-                      )
-                    })}
-                    {hidden > 0 && (
-                      <p className="mt-3 pl-1 text-[0.75rem] text-[var(--color-text-muted)]">
-                        +{hidden} more — use the task and deliverable lists to triage.
-                      </p>
-                    )}
-                    <div className="mt-4 border-t border-[var(--color-border)] pt-3">
-                      <AttentionQueueQuickLinks />
-                    </div>
-                  </>
-                )
-              })()}
-            </div>
-          </Card>
+      {/* ── Main grid (content + sidebar) ─────────────────────── */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_300px]">
 
-          <Card className="p-5">
-            <SectionHeader title="Tasks by status" />
+        {/* Left column — main content */}
+        <div className="space-y-6">
+          <SectionShell
+            title="Needs Attention"
+            description="Overdue tasks, blocked work, revision requests, and client holds."
+            actions={<FlagCount count={attentionCount} />}
+          >
+            <AttentionQueue attention={attention} waitingClient={waitingClient} />
+          </SectionShell>
+
+          <SectionShell title="Tasks by status">
             <TaskStatusBarChart counts={pipeline} />
-          </Card>
+          </SectionShell>
 
-          <Card className="p-5">
-            <SectionHeader title="Deadline pressure" />
+          <SectionShell title="Deadline pressure">
             <DeadlineBucketsChart buckets={buckets} />
-          </Card>
+          </SectionShell>
 
-          <Card className="p-5">
-            <SectionHeader title="Team workload" />
+          <SectionShell title="Team workload" description="Open task load — highest first.">
             <WorkloadBars users={workload} />
-          </Card>
+          </SectionShell>
         </div>
 
-        <div className="space-y-4 xl:col-span-4">
-          <PaymentSnapshotCard snapshot={paymentSnapshot} />
+        {/* Right column — sidebar widgets */}
+        <div className="space-y-4">
+          <SectionShell title="Payment snapshot">
+            <PaymentSnapshotCard snapshot={paymentSnapshot} />
+          </SectionShell>
 
-          <Card className="p-5">
-            <SectionHeader title="Recent activity" />
+          <SectionShell title="Recent activity">
             <RecentActivityFeed entries={activity} />
-          </Card>
+          </SectionShell>
 
-          <Card className="p-5">
-            <SectionHeader title="Upcoming deadlines" />
+          <SectionShell title="Upcoming deadlines">
             <UpcomingDeadlinesList waitingClient={waitingClient} />
-          </Card>
+          </SectionShell>
         </div>
+
       </div>
     </div>
   )
