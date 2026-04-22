@@ -24,6 +24,8 @@ export async function createTask(formData: FormData) {
   const title = (formData.get('title') as string)?.trim()
   const projectId = (formData.get('project_id') as string)?.trim()
   const assignedTo = (formData.get('assigned_to_user_id') as string)?.trim()
+  const returnTo = (formData.get('return_to') as string)?.trim() || ''
+  const parentTaskId = (formData.get('parent_task_id') as string)?.trim() || null
 
   if (!title) return { error: 'Task title is required.' }
   if (!projectId) return { error: 'Project is required.' }
@@ -32,12 +34,57 @@ export async function createTask(formData: FormData) {
   const gate = await ensureProjectOperationalMutation(profile, projectId)
   if ('error' in gate) return { error: gate.error }
 
+  let depth = 0
+  let sortOrder = 0
+
+  if (parentTaskId) {
+    const { data: parent, error: pErr } = await supabase
+      .from('tasks')
+      .select('id, project_id, depth')
+      .eq('id', parentTaskId)
+      .maybeSingle()
+
+    if (pErr) return { error: pErr.message }
+    if (!parent) return { error: 'Parent task not found.' }
+    if (parent.project_id !== projectId) {
+      return { error: 'Parent task must belong to the same project.' }
+    }
+
+    depth = (parent.depth ?? 0) + 1
+
+    const { data: sib } = await supabase
+      .from('tasks')
+      .select('sort_order')
+      .eq('project_id', projectId)
+      .eq('parent_task_id', parentTaskId)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const maxS = sib?.sort_order != null ? sib.sort_order : -1
+    sortOrder = maxS + 1
+  } else {
+    const { data: top } = await supabase
+      .from('tasks')
+      .select('sort_order')
+      .eq('project_id', projectId)
+      .is('parent_task_id', null)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const maxS = top?.sort_order != null ? top.sort_order : -1
+    sortOrder = maxS + 1
+  }
+
   const reviewerUserId = (formData.get('reviewer_user_id') as string)?.trim() || null
 
   const payload = {
     title,
     project_id:           projectId,
-    parent_task_id:       (formData.get('parent_task_id') as string)?.trim() || null,
+    parent_task_id:       parentTaskId,
+    depth,
+    sort_order:           sortOrder,
     description:          (formData.get('description') as string)?.trim() || null,
     category:             (formData.get('category') as string)?.trim() || null,
     phase:                (formData.get('phase') as string)?.trim() || null,
@@ -65,6 +112,10 @@ export async function createTask(formData: FormData) {
 
   revalidatePath('/tasks')
   revalidatePath(`/projects/${projectId}`)
+
+  if (returnTo === 'project') {
+    redirect(`/projects/${projectId}?tab=tasks`)
+  }
   redirect(`/tasks/${data.id}`)
 }
 
@@ -232,4 +283,61 @@ export async function updateTask(id: string, formData: FormData) {
   revalidatePath(`/tasks/${id}`)
   revalidatePath(`/projects/${projectId}`)
   redirect(`/tasks/${id}`)
+}
+
+// ─── Quick status update (for inline/kanban) ──────────────────
+export async function updateTaskStatus(id: string, status: string) {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const completedDate = status === 'done' ? new Date().toISOString().split('T')[0] : null
+
+  const { data: task, error: fetchError } = await supabase
+    .from('tasks')
+    .select('project_id')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) throw new Error(fetchError.message)
+
+  const { error } = await supabase
+    .from('tasks')
+    .update({ status, completed_date: completedDate })
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/tasks')
+  revalidatePath(`/tasks/${id}`)
+  if (task?.project_id) revalidatePath(`/projects/${task.project_id}`)
+}
+
+// ─── Mark task problematic (admin / coordinator on project) ────
+export async function markTaskProblematic(
+  taskId: string,
+  isProblematic: boolean,
+  note?: string | null,
+) {
+  const supabase = await createServerClient()
+  const profile = await loadMutationProfile()
+  const task = await getTaskById(taskId)
+  if (!task) throw new Error('Task not found.')
+
+  const gate = await ensureProjectOperationalMutation(profile, task.project_id)
+  if ('error' in gate) throw new Error(gate.error)
+
+  const trimmed = typeof note === 'string' ? note.trim() : ''
+  const { error } = await supabase
+    .from('tasks')
+    .update({
+      is_problematic: isProblematic,
+      problem_note: isProblematic && trimmed ? trimmed : null,
+    })
+    .eq('id', taskId)
+
+  if (error) throw new Error(error.message)
+  revalidatePath('/tasks')
+  revalidatePath(`/tasks/${taskId}`)
+  revalidatePath(`/projects/${task.project_id}`)
 }

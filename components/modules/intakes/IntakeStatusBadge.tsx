@@ -11,6 +11,7 @@ const STATUS_MAP: Record<string, { label: string; variant: StatusVariant }> = {
   awaiting_info: INTAKE_STATUSES.AWAITING_INFO,
   qualified:     INTAKE_STATUSES.QUALIFIED,
   rejected:      INTAKE_STATUSES.REJECTED,
+  closed:        INTAKE_STATUSES.CLOSED,
   converted:     INTAKE_STATUSES.CONVERTED,
 }
 

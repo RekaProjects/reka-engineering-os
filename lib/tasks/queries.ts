@@ -1,14 +1,9 @@
 // Server-side query helpers for the Tasks module
 import { createServerClient } from '@/lib/supabase/server'
-import type { Task } from '@/types/database'
+import { buildTaskTree, type TaskNode, type TaskWithRelations } from './task-tree'
 
-// ─── Types ────────────────────────────────────────────────────
-
-export type TaskWithRelations = Task & {
-  projects: { id: string; name: string; project_code: string } | null
-  assignee: { id: string; full_name: string } | null
-  reviewer: { id: string; full_name: string } | null
-}
+export type { TaskNode, TaskWithRelations }
+export { buildTaskTree }
 
 // ─── List (all tasks, cross-project) ──────────────────────────
 
@@ -100,8 +95,29 @@ export async function getTasksByProjectId(projectId: string): Promise<TaskWithRe
       '*, projects(id, name, project_code), assignee:profiles!assigned_to_user_id(id, full_name), reviewer:profiles!reviewer_user_id(id, full_name)'
     )
     .eq('project_id', projectId)
+    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
 
   if (error) return []
   return (data ?? []) as unknown as TaskWithRelations[]
+}
+
+/** Top-level tasks only (parent_task_id IS NULL); cancelled excluded from total. */
+export async function getProjectTopLevelTaskProgressCounts(
+  projectId: string,
+): Promise<{ total: number; done: number }> {
+  const supabase = await createServerClient()
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('status')
+    .eq('project_id', projectId)
+    .is('parent_task_id', null)
+
+  if (error) throw new Error(error.message)
+
+  const rows = data ?? []
+  const total = rows.filter((r) => r.status !== 'cancelled').length
+  const done = rows.filter((r) => r.status === 'done').length
+  return { total, done }
 }

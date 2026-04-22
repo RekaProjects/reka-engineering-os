@@ -151,3 +151,35 @@ export async function updateFile(id: string, formData: FormData) {
   revalidatePath(`/projects/${projectId}`)
   redirect(`/files/${id}`)
 }
+
+// ─── Approve file version (admin / coordinator on project) ─────
+export async function approveFile(fileId: string) {
+  const supabase = await createServerClient()
+  const profile = await loadMutationProfile()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const f = await getFileById(fileId)
+  if (!f) throw new Error('File not found.')
+
+  const gate = await ensureProjectOperationalMutation(profile, f.project_id)
+  if ('error' in gate) throw new Error(gate.error)
+  if (f.is_approved_version) {
+    revalidatePath(`/files/${fileId}`)
+    revalidatePath(`/projects/${f.project_id}`)
+    return
+  }
+
+  const { error } = await supabase
+    .from('project_files')
+    .update({
+      is_approved_version:  true,
+      approved_at:          new Date().toISOString(),
+      approved_by:          user.id,
+    })
+    .eq('id', fileId)
+
+  if (error) throw new Error(error.message)
+  revalidatePath(`/files/${fileId}`)
+  revalidatePath(`/projects/${f.project_id}`)
+}

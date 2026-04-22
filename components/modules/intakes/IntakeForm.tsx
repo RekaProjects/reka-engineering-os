@@ -66,6 +66,7 @@ export function IntakeForm({ mode, intake, clients, disciplineOptions, projectTy
   const [useExistingClient, setUseExistingClient] = useState<boolean>(
     mode === 'edit' ? !!intake?.client_id : false
   )
+  const [statusValue, setStatusValue] = useState(intake?.status ?? 'new')
 
   function handleSubmit(formData: FormData) {
     setError(null)
@@ -269,13 +270,38 @@ export function IntakeForm({ mode, intake, clients, disciplineOptions, projectTy
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ maxWidth: '280px' }}>
               <Field label="Status" required>
-                <select name="status" defaultValue={intake?.status ?? 'new'} style={inputStyle} required>
-                  {INTAKE_STATUS_OPTIONS.map(o => (
+                <select
+                  name="status"
+                  value={statusValue}
+                  onChange={(e) => setStatusValue(e.target.value)}
+                  style={inputStyle}
+                  required
+                >
+                  {(mode === 'create'
+                    ? INTAKE_STATUS_OPTIONS.filter((o) => o.value !== 'converted')
+                    : INTAKE_STATUS_OPTIONS
+                  ).map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </Field>
             </div>
+            {mode === 'create' && statusValue === 'closed' && (
+              <p
+                style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--color-text-secondary)',
+                  lineHeight: 1.5,
+                  margin: 0,
+                  padding: '8px 10px',
+                  backgroundColor: 'var(--color-surface-subtle)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-control)',
+                }}
+              >
+                Lead dengan status Closed akan langsung bisa dikonversi ke project.
+              </p>
+            )}
             <Field label="Qualification Notes">
               <textarea
                 name="qualification_notes"

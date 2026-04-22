@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
+import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { loadMutationProfile, ensureIntakeMutation } from '@/lib/auth/mutation-policy'
 
 // ─── Create ───────────────────────────────────────────────────
@@ -106,4 +107,44 @@ export async function updateIntake(id: string, formData: FormData) {
   revalidatePath(`/intakes/${id}`)
   if (payload.client_id) revalidatePath(`/clients/${payload.client_id}`)
   redirect(`/intakes/${id}`)
+}
+
+const INTAKE_MUTABLE_STATUSES = new Set([
+  'new',
+  'awaiting_info',
+  'qualified',
+  'rejected',
+  'closed',
+])
+
+/** Update intake status from inline / quick select (not for marking converted — use convert flow). */
+export async function updateIntakeStatus(
+  intakeId: string,
+  newStatus: string,
+): Promise<{ error: string } | void> {
+  const supabase = await createServerClient()
+  const profile = await getSessionProfile()
+  requireRole(profile.system_role, ['admin', 'coordinator'])
+
+  const perm = ensureIntakeMutation(profile)
+  if (perm) return { error: perm }
+
+  if (newStatus === 'converted') {
+    return { error: 'Use “Convert to project” to mark an intake as converted.' }
+  }
+  if (!INTAKE_MUTABLE_STATUSES.has(newStatus)) {
+    return { error: 'Invalid status.' }
+  }
+
+  const { error } = await supabase
+    .from('intakes')
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq('id', intakeId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/intakes')
+  revalidatePath('/leads')
+  revalidatePath(`/intakes/${intakeId}`)
+  revalidatePath(`/leads/${intakeId}`)
 }

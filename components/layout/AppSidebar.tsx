@@ -6,11 +6,9 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
-  ClipboardList,
+  Target,
   FolderKanban,
   CheckSquare,
-  FileText,
-  Paperclip,
   UserSquare2,
   Receipt,
   Wallet,
@@ -18,12 +16,15 @@ import {
   LogOut,
   UserCircle,
   ChevronDown,
+  FileText,
+  Megaphone,
+  TrendingUp,
 } from 'lucide-react'
 import { logout } from '@/app/auth/login/actions'
 import { getInitials } from '@/lib/utils/formatters'
 import { getNavPermissions } from '@/lib/auth/permissions'
 import { cn } from '@/lib/utils/cn'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,8 +33,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { SystemRole } from '@/types/database'
-
-// ── Role display helpers ──────────────────────────────────────────────────
 
 const ROLE_CONTEXT: Record<string, string> = {
   admin:       'Admin Workspace',
@@ -65,42 +64,41 @@ interface AppSidebarProps {
   userFullName?: string
   userEmail?:    string
   systemRole?:   SystemRole | null
+  photoUrl?:     string | null
 }
 
-/**
- * AppSidebar — premium vertical navigation rail.
- *
- * 248px rail, h-14 brand area, groups separated by whitespace (space-y-6).
- * Nav items use inline style for active bg to support CSS variable theming.
- */
 export function AppSidebar({
   userFullName = 'User',
   userEmail    = '',
   systemRole   = null,
+  photoUrl     = null,
 }: AppSidebarProps) {
   const pathname = usePathname()
   const perms    = getNavPermissions(systemRole)
-
-  // ── Build nav groups ────────────────────────────────────────
 
   const mainItems: NavItem[] = [
     { label: perms.labelDashboard, href: '/dashboard', icon: <LayoutDashboard size={16} /> },
   ]
 
   const operationsItems: NavItem[] = [
-    ...(perms.showClients  ? [{ label: 'Clients',      href: '/clients',      icon: <Users size={16} /> }]        : []),
-    ...(perms.showIntakes  ? [{ label: 'Intakes',      href: '/intakes',      icon: <ClipboardList size={16} /> }] : []),
-    { label: perms.labelProjects,     href: '/projects',     icon: <FolderKanban size={16} /> },
-    { label: perms.labelTasks,        href: '/tasks',        icon: <CheckSquare size={16} /> },
-    { label: perms.labelDeliverables, href: '/deliverables', icon: <FileText size={16} /> },
-    { label: perms.labelFiles,        href: '/files',        icon: <Paperclip size={16} /> },
+    // Leads first (above Clients)
+    ...(perms.showLeads    ? [{ label: 'Leads',    href: '/leads',    icon: <Target size={16} /> }]       : []),
+    ...(perms.showOutreach ? [{ label: 'Outreach', href: '/outreach', icon: <Megaphone size={16} /> }]    : []),
+    ...(perms.showClients  ? [{ label: 'Clients',  href: '/clients',  icon: <Users size={16} /> }]        : []),
+    { label: perms.labelProjects, href: '/projects', icon: <FolderKanban size={16} /> },
+    { label: perms.labelTasks,    href: '/tasks',    icon: <CheckSquare size={16} /> },
+  ]
+
+  const financeItems: NavItem[] = [
+    ...(perms.showFinance       ? [{ label: 'Invoices',     href: '/finance/invoices',  icon: <FileText size={16} /> }]  : []),
+    ...(perms.showCompensation  ? [{ label: 'Compensation', href: '/compensation',      icon: <Receipt size={16} /> }]   : []),
+    ...(perms.showFinance       ? [{ label: 'Payslips',     href: '/finance/payslips',  icon: <Receipt size={16} /> }]   : []),
+    ...(perms.showPayments      ? [{ label: 'Payments',     href: '/payments',          icon: <Wallet size={16} /> }]    : []),
+    ...(perms.showMyPayments    ? [{ label: 'My Payments',  href: '/my-payments',       icon: <Wallet size={16} /> }]    : []),
   ]
 
   const peopleItems: NavItem[] = [
-    ...(perms.showTeam         ? [{ label: 'Team',         href: '/team',         icon: <UserSquare2 size={16} /> }] : []),
-    ...(perms.showCompensation ? [{ label: 'Compensation', href: '/compensation', icon: <Receipt size={16} /> }]    : []),
-    ...(perms.showPayments     ? [{ label: 'Payments',     href: '/payments',     icon: <Wallet size={16} /> }]     : []),
-    ...(perms.showMyPayments   ? [{ label: 'My Payments',  href: '/my-payments',  icon: <Wallet size={16} /> }]     : []),
+    ...(perms.showTeam ? [{ label: 'Team', href: '/team', icon: <UserSquare2 size={16} /> }] : []),
   ]
 
   const bottomItems: NavItem[] = [
@@ -110,11 +108,10 @@ export function AppSidebar({
   const navGroups: NavGroup[] = [
     { items: mainItems },
     { label: 'Operations',  items: operationsItems },
-    ...(peopleItems.length  ? [{ label: 'People',     items: peopleItems }]  : []),
-    ...(bottomItems.length  ? [{ label: 'Admin',      items: bottomItems }]  : []),
+    ...(financeItems.length ? [{ label: 'Finance',    items: financeItems }]  : []),
+    ...(peopleItems.length  ? [{ label: 'People',     items: peopleItems }]   : []),
+    ...(bottomItems.length  ? [{ label: 'Admin',      items: bottomItems }]   : []),
   ]
-
-  // ── Nav item renderer ───────────────────────────────────────
 
   const isActive = (href: string) =>
     href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
@@ -128,9 +125,7 @@ export function AppSidebar({
           aria-current={active ? 'page' : undefined}
           className={cn(
             'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium transition-all duration-100 no-underline',
-            active
-              ? 'text-[var(--sidebar-active-text)]'
-              : 'opacity-70 hover:opacity-100'
+            active ? 'text-[var(--sidebar-active-text)]' : 'opacity-70 hover:opacity-100'
           )}
           style={
             active
@@ -138,9 +133,7 @@ export function AppSidebar({
               : { color: 'var(--sidebar-text)' }
           }
         >
-          <span className={cn('shrink-0', active ? 'opacity-100' : 'opacity-70')}>
-            {item.icon}
-          </span>
+          <span className={cn('shrink-0', active ? 'opacity-100' : 'opacity-70')}>{item.icon}</span>
           <span className="truncate">{item.label}</span>
           {item.badge != null && item.badge > 0 && (
             <span
@@ -155,18 +148,13 @@ export function AppSidebar({
     )
   }
 
-  // ── Render ──────────────────────────────────────────────────
-
   return (
     <aside
       className="flex h-screen w-[var(--sidebar-width)] shrink-0 flex-col overflow-hidden"
       style={{ backgroundColor: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}
     >
-      {/* ── Brand ─────────────────────────────────────────────── */}
-      <div
-        className="flex h-14 shrink-0 items-center gap-2.5 px-4"
-        style={{ borderBottom: '1px solid var(--sidebar-border)' }}
-      >
+      {/* Brand */}
+      <div className="flex h-14 shrink-0 items-center gap-2.5 px-4" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
         <div
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1"
           style={{ backgroundColor: 'rgba(255,255,255,0.08)', '--tw-ring-color': 'rgba(255,255,255,0.12)' } as React.CSSProperties}
@@ -181,15 +169,12 @@ export function AppSidebar({
         </div>
       </div>
 
-      {/* ── Nav groups ────────────────────────────────────────── */}
+      {/* Nav groups */}
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4" aria-label="Main navigation">
         {navGroups.map((group, gi) => (
           <div key={gi}>
             {group.label && (
-              <p
-                className="mb-1 px-2 text-[0.625rem] font-semibold uppercase tracking-[0.1em]"
-                style={{ color: 'var(--sidebar-label)' }}
-              >
+              <p className="mb-1 px-2 text-[0.625rem] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--sidebar-label)' }}>
                 {group.label}
               </p>
             )}
@@ -200,11 +185,8 @@ export function AppSidebar({
         ))}
       </nav>
 
-      {/* ── Footer ────────────────────────────────────────────── */}
-      <div
-        className="shrink-0 px-3 py-3"
-        style={{ borderTop: '1px solid var(--sidebar-border)' }}
-      >
+      {/* Footer */}
+      <div className="shrink-0 px-3 py-3" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -214,6 +196,7 @@ export function AppSidebar({
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <Avatar className="h-7 w-7 shrink-0">
+                {photoUrl && <AvatarImage src={photoUrl} alt={userFullName} />}
                 <AvatarFallback
                   className="text-[0.6875rem] font-semibold"
                   style={{ backgroundColor: 'var(--sidebar-active-bg)', color: 'var(--sidebar-text)' }}
@@ -242,9 +225,7 @@ export function AppSidebar({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="flex cursor-pointer items-center gap-2 text-[var(--color-danger)] focus:text-[var(--color-danger)]"
-              onClick={async () => {
-                await logout()
-              }}
+              onClick={async () => { await logout() }}
             >
               <LogOut size={14} className="opacity-80" />
               Sign out

@@ -1,5 +1,4 @@
-// TypeScript types mirroring the PRD data model
-// These are type stubs — full Supabase-generated types added in later stages
+// TypeScript types mirroring the full data model (V2)
 
 export type UserRole = 'admin' | 'staff'
 export type SystemRole = 'admin' | 'coordinator' | 'reviewer' | 'member'
@@ -9,6 +8,11 @@ export type AvailabilityStatus = 'available' | 'partially_available' | 'unavaila
 export type RateType = 'hourly' | 'daily' | 'per_task' | 'per_deliverable' | 'per_project' | 'monthly_fixed'
 export type CompensationStatus = 'draft' | 'confirmed' | 'paid' | 'cancelled'
 export type PaymentStatus = 'unpaid' | 'partial' | 'paid'
+export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'void'
+export type PayslipStatus = 'draft' | 'sent' | 'paid'
+export type OutreachStatus = 'to_contact' | 'contacted' | 'replied' | 'in_discussion' | 'converted' | 'declined'
+export type Currency = 'IDR' | 'USD' | 'EUR' | 'SGD'
+export type PaymentAccountType = 'wise' | 'paypal' | 'bank' | 'ewallet' | 'other'
 
 export interface UserProfile {
   id: string
@@ -19,7 +23,6 @@ export interface UserProfile {
   is_active: boolean
   created_at: string
   updated_at: string
-  // V2 team/freelancer fields
   phone: string | null
   system_role: SystemRole | null
   functional_role: string | null
@@ -39,9 +42,9 @@ export interface UserProfile {
   bank_account_number: string | null
   ewallet_type: string | null
   ewallet_number: string | null
-  // Sprint 02 onboarding fields
   profile_completed_at: string | null
   skill_tags: string[]
+  photo_url: string | null
 }
 
 export interface Invite {
@@ -87,7 +90,11 @@ export interface Intake {
   project_type: string
   proposed_deadline: string | null
   budget_estimate: number | null
+  budget_currency: Currency
   estimated_complexity: string | null
+  complexity_score: number | null
+  contact_channel: string | null
+  contact_value: string | null
   qualification_notes: string | null
   status: string
   received_date: string
@@ -104,6 +111,7 @@ export interface Project {
   intake_id: string | null
   name: string
   source: string
+  source_platform: string | null
   external_reference_url: string | null
   discipline: string
   project_type: string
@@ -117,6 +125,8 @@ export interface Project {
   status: string
   progress_percent: number
   waiting_on: string | null
+  is_problematic: boolean
+  problem_note: string | null
   google_drive_folder_id: string | null
   google_drive_folder_link: string | null
   notes_internal: string | null
@@ -129,6 +139,10 @@ export interface Task {
   id: string
   project_id: string
   parent_task_id: string | null
+  /** Nesting: 0 = top-level, parent.depth + 1 for subtasks. */
+  depth: number
+  /** Order within the same project + parent. */
+  sort_order: number
   title: string
   description: string | null
   category: string | null
@@ -144,6 +158,8 @@ export interface Task {
   status: string
   progress_percent: number
   blocked_reason: string | null
+  is_problematic: boolean
+  problem_note: string | null
   drive_link: string | null
   notes: string | null
   created_by: string
@@ -187,6 +203,9 @@ export interface ProjectFile {
   extension: string | null
   revision_number: number | null
   version_label: string | null
+  is_approved_version: boolean
+  approved_at: string | null
+  approved_by: string | null
   notes: string | null
   uploaded_by_user_id: string
   created_at: string
@@ -248,4 +267,137 @@ export interface PaymentRecord {
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+export interface FxRate {
+  id: string
+  from_currency: string
+  to_currency: string
+  rate: number
+  effective_date: string
+  notes: string | null
+  set_by: string | null
+  created_at: string
+}
+
+export interface PaymentAccount {
+  id: string
+  name: string
+  account_type: PaymentAccountType
+  currency: string
+  account_identifier: string | null
+  description: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Payslip {
+  id: string
+  payslip_code: string
+  profile_id: string
+  period_month: number
+  period_year: number
+  base_amount: number
+  currency: string
+  bonus_amount: number
+  deduction_amount: number
+  net_amount: number
+  payment_account_id: string | null
+  status: PayslipStatus
+  notes: string | null
+  generated_by: string | null
+  paid_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ClientInvoice {
+  id: string
+  invoice_code: string
+  project_id: string | null
+  client_id: string | null
+  issue_date: string
+  due_date: string | null
+  currency: Currency
+  gross_amount: number
+  platform_type: string | null
+  platform_fee_pct: number
+  platform_fee_amount: number
+  gateway_fee_pct: number
+  gateway_fee_amount: number
+  net_amount: number
+  fx_rate_snapshot: number | null
+  destination_account_id: string | null
+  status: InvoiceStatus
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface InvoiceLineItem {
+  id: string
+  invoice_id: string
+  description: string
+  task_id: string | null
+  deliverable_id: string | null
+  qty: number
+  unit_price: number
+  subtotal: number
+  sort_order: number
+  created_at: string
+}
+
+export interface IncomingPayment {
+  id: string
+  invoice_id: string
+  payment_date: string
+  amount_received: number
+  currency: string
+  fx_rate_snapshot: number | null
+  account_id: string | null
+  payment_reference: string | null
+  proof_link: string | null
+  notes: string | null
+  recorded_by: string | null
+  created_at: string
+}
+
+export interface OutreachCompany {
+  id: string
+  company_name: string
+  contact_person: string | null
+  contact_channel: string | null
+  contact_value: string | null
+  status: OutreachStatus
+  last_contact_date: string | null
+  next_followup_date: string | null
+  converted_intake_id: string | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DeadlineChange {
+  id: string
+  entity_type: 'project' | 'task'
+  entity_id: string
+  old_due_date: string | null
+  new_due_date: string
+  reason: string | null
+  changed_by: string | null
+  changed_at: string
+}
+
+export interface SettingOption {
+  id: string
+  domain: string
+  value: string
+  label: string
+  sort_order: number
+  is_active: boolean
+  created_at: string
 }

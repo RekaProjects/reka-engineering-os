@@ -118,7 +118,9 @@ export async function convertIntakeToProject(formData: FormData) {
 
   revalidatePath('/projects')
   revalidatePath('/intakes')
+  revalidatePath('/leads')
   revalidatePath(`/intakes/${intakeId}`)
+  revalidatePath(`/leads/${intakeId}`)
   revalidatePath(`/clients/${clientId}`)
   redirect(`/projects/${newProject.id}`)
 }

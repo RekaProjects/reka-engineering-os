@@ -20,9 +20,11 @@ export interface KpiCardProps {
   icon?:        LucideIcon | ReactNode
   trend?:       KpiCardTrend
   /** v0-ui variant names */
-  variant?:     'default' | 'warning' | 'danger' | 'dashboard'
+  variant?:     'default' | 'warning' | 'danger' | 'dashboard' | 'success'
   /** Legacy accent names */
   accent?:      'none' | 'primary' | 'urgent' | 'warning'
+  /** Muted headline value (e.g. contra-revenue lines). */
+  muted?:       boolean
   className?:  string
 }
 
@@ -33,6 +35,7 @@ function resolveVisualTone(
   const v = variant === 'dashboard' ? 'default' : variant
   if (v === 'danger' || accent === 'urgent') return 'danger' as const
   if (v === 'warning' || accent === 'warning') return 'warning' as const
+  if (v === 'success') return 'success' as const
   if (accent === 'primary') return 'primary' as const
   return 'default' as const
 }
@@ -55,20 +58,24 @@ export function KpiCard({
   className,
   variant = 'default',
   accent = 'none',
+  muted = false,
 }: KpiCardProps) {
   const heading = title ?? label ?? ''
   const subline = subtitle ?? description
 
   const tone = resolveVisualTone(variant, accent)
 
-  const valueTone =
-    tone === 'danger'  ? 'text-[var(--color-danger)]'  :
+  const valueTone = muted
+    ? 'text-[var(--color-text-muted)]'
+    : tone === 'danger'  ? 'text-[var(--color-danger)]'  :
     tone === 'warning' ? 'text-[var(--color-warning)]' :
+    tone === 'success' ? 'text-[var(--color-success)]' :
     'text-[var(--color-text-primary)]'
 
   const iconPill =
     tone === 'danger'  ? 'bg-[var(--color-danger-subtle)]  text-[var(--color-danger)]'  :
     tone === 'warning' ? 'bg-[var(--color-warning-subtle)] text-[var(--color-warning)]' :
+    tone === 'success' ? 'bg-[var(--color-success-subtle)] text-[var(--color-success)]' :
     tone === 'primary' ? 'bg-[var(--color-primary-subtle)] text-[var(--color-primary)]' :
     'bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]'
 
@@ -85,6 +92,7 @@ export function KpiCard({
         'border bg-[var(--color-surface)]',
         tone === 'danger'  ? 'border-[var(--color-danger)]/20'  :
         tone === 'warning' ? 'border-[var(--color-warning)]/20' :
+        tone === 'success' ? 'border-[var(--color-success)]/20' :
         'border-[var(--color-border)]',
         className
       )}
@@ -96,6 +104,7 @@ export function KpiCard({
           'absolute left-0 top-0 h-full w-0.5',
           tone === 'danger'  ? 'bg-[var(--color-danger)]'  :
           tone === 'warning' ? 'bg-[var(--color-warning)]' :
+          tone === 'success' ? 'bg-[var(--color-success)]' :
           tone === 'primary' ? 'bg-[var(--color-primary)]' :
           'bg-transparent'
         )}

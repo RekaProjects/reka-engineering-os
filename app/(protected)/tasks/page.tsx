@@ -9,156 +9,70 @@ import { FilterBar } from '@/components/shared/FilterBar'
 import { DataTable } from '@/components/shared/DataTable'
 import type { Column } from '@/components/shared/DataTable'
 import { TaskStatusBadge } from '@/components/modules/tasks/TaskStatusBadge'
+import { InlineStatusSelect } from '@/components/shared/InlineStatusSelect'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
+import { TasksKanban } from '@/components/modules/tasks/TasksKanban'
 import { getViewableProjectIdsForUser } from '@/lib/projects/queries'
 import { getTasks } from '@/lib/tasks/queries'
+import { updateTaskStatus } from '@/lib/tasks/actions'
+import { getAllUsers } from '@/lib/users/queries'
 import type { TaskWithRelations } from '@/lib/tasks/queries'
 import { formatDate } from '@/lib/utils/formatters'
-import { CheckSquare, Plus, AlertTriangle } from 'lucide-react'
+import { CheckSquare, Plus, AlertTriangle, List, LayoutGrid } from 'lucide-react'
+import { TasksViewWrapper } from '@/components/modules/tasks/TasksViewWrapper'
 
 export const metadata = { title: 'Tasks — ReKa Engineering OS' }
 
 interface PageProps {
-  searchParams: Promise<{ search?: string; status?: string; priority?: string; project_id?: string }>
-}
-
-function taskColumns(today: string): Column<TaskWithRelations>[] {
-  return [
-    {
-      key: 'title',
-      header: 'Task',
-      render: (task) => {
-        const isOverdue = task.due_date && task.due_date < today && task.status !== 'done'
-        return (
-          <Link href={`/tasks/${task.id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {isOverdue && <AlertTriangle size={13} style={{ color: 'var(--color-warning)', flexShrink: 0 }} aria-hidden="true" />}
-            <span style={{
-              fontWeight: 500,
-              color: 'var(--color-text-primary)',
-              fontSize: '0.8125rem',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}>
-              {task.title}
-            </span>
-          </Link>
-        )
-      },
-    },
-    {
-      key: 'project',
-      header: 'Project',
-      render: (task) => (
-        task.projects ? (
-          <Link href={`/projects/${task.projects.id}`} style={{ textDecoration: 'none', color: 'var(--color-primary)', fontWeight: 500, fontSize: '0.75rem' }}>
-            {task.projects.project_code}
-          </Link>
-        ) : '—'
-      ),
-    },
-    {
-      key: 'category',
-      header: 'Category',
-      render: (task) => (
-        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
-          {task.category?.replace(/_/g, ' ') ?? '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'assignee',
-      header: 'Assigned To',
-      render: (task) => (
-        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
-          {task.assignee?.full_name ?? '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'due_date',
-      header: 'Due Date',
-      render: (task) => {
-        const isOverdue = task.due_date && task.due_date < today && task.status !== 'done'
-        return (
-          <span style={{
-            fontSize: '0.75rem',
-            color: isOverdue ? 'var(--color-warning)' : 'var(--color-text-muted)',
-            fontWeight: isOverdue ? 600 : 400,
-            whiteSpace: 'nowrap',
-          }}>
-            {formatDate(task.due_date)}
-          </span>
-        )
-      },
-    },
-    {
-      key: 'priority',
-      header: 'Priority',
-      render: (task) => (
-        <PriorityBadge priority={task.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'} />
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (task) => <TaskStatusBadge status={task.status} />,
-    },
-    {
-      key: 'progress',
-      header: 'Progress',
-      render: (task) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '90px' }}>
-          <ProgressBar value={task.progress_percent} height={5} />
-          <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-            {task.progress_percent}%
-          </span>
-        </div>
-      ),
-    },
-  ]
-}
-
-function taskRowStyle(task: TaskWithRelations, today: string): CSSProperties | undefined {
-  const isOverdue = task.due_date && task.due_date < today && task.status !== 'done'
-  const isBlocked = task.status === 'blocked'
-  if (isBlocked) return { boxShadow: 'inset 3px 0 0 var(--color-danger)' }
-  if (isOverdue) return { boxShadow: 'inset 3px 0 0 var(--color-warning)' }
-  return undefined
+  searchParams: Promise<{
+    search?: string
+    status?: string
+    priority?: string
+    project_id?: string
+    assigned_to?: string
+    view?: string
+  }>
 }
 
 export default async function TasksPage({ searchParams }: PageProps) {
   const profile = await getSessionProfile()
-  const role = effectiveRole(profile.system_role)
-  const params = await searchParams
+  const role    = effectiveRole(profile.system_role)
+  const params  = await searchParams
 
   const scopeOpts =
-    role === 'member' ? { scopeAssignedTo: profile.id } :
-    role === 'reviewer' ? { scopeReviewerId: profile.id } :
-    role === 'coordinator'
-      ? { scopeProjectIds: (await getViewableProjectIdsForUser(profile.id, profile.system_role)) ?? [] }
-      : {}
+    role === 'member'      ? { scopeAssignedTo: profile.id } :
+    role === 'reviewer'    ? { scopeReviewerId: profile.id } :
+    role === 'coordinator' ? { scopeProjectIds: (await getViewableProjectIdsForUser(profile.id, profile.system_role)) ?? [] } :
+    {}
 
-  const tasks = await getTasks({
-    search: params.search,
-    status: params.status,
-    priority: params.priority,
-    project_id: params.project_id,
-    ...scopeOpts,
-  }).catch(() => [] as TaskWithRelations[])
+  const [tasks, allUsers] = await Promise.all([
+    getTasks({
+      search:      params.search,
+      status:      params.status,
+      priority:    params.priority,
+      project_id:  params.project_id,
+      assigned_to: params.assigned_to,
+      ...scopeOpts,
+    }).catch(() => [] as TaskWithRelations[]),
+    (role === 'admin' || role === 'coordinator') ? getAllUsers().catch(() => []) : Promise.resolve([]),
+  ])
 
-  const pageTitle = role === 'member' ? 'My Tasks' : 'Tasks'
-  const pageSubtitle = role === 'member'
-    ? 'Tasks assigned to you.'
-    : role === 'reviewer'
-      ? 'Tasks where you are the reviewer.'
-      : role === 'coordinator'
-        ? 'Tasks in your assigned projects.'
-        : 'Executable work items assigned to team members across all projects.'
-  const canCreate = canAccessTasksDeliverablesFilesNewRoute(profile.system_role)
-  const hasActiveFilters = Boolean(params.search || params.status || params.priority || params.project_id)
-  const today = new Date().toISOString().split('T')[0]
+  const pageTitle    = role === 'member' ? 'My Tasks' : 'Tasks'
+  const pageSubtitle =
+    role === 'member'      ? 'Tasks assigned to you.' :
+    role === 'reviewer'    ? 'Tasks where you are the reviewer.' :
+    role === 'coordinator' ? 'Tasks in your assigned projects.' :
+    'All executable work items across projects.'
+
+  const canCreate       = canAccessTasksDeliverablesFilesNewRoute(profile.system_role)
+  const hasActiveFilters = Boolean(params.search || params.status || params.priority || params.project_id || params.assigned_to)
+  const today           = new Date().toISOString().split('T')[0]
+
+  async function handleStatusUpdate(taskId: string, newStatus: string) {
+    'use server'
+    await updateTaskStatus(taskId, newStatus)
+  }
 
   return (
     <div>
@@ -166,31 +80,23 @@ export default async function TasksPage({ searchParams }: PageProps) {
         title={pageTitle}
         subtitle={pageSubtitle}
         actions={
-          canCreate ? <Link
-            href="/tasks/new"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              backgroundColor: 'var(--color-primary)',
-              color: 'var(--color-primary-fg)',
-              borderRadius: 'var(--radius-control)',
-              fontSize: '0.8125rem',
-              fontWeight: 500,
-              textDecoration: 'none',
-            }}
-          >
-            <Plus size={14} aria-hidden="true" />
-            New Task
-          </Link> : undefined
+          canCreate ? (
+            <Link
+              href="/tasks/new"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-fg)', borderRadius: 'var(--radius-control)', fontSize: '0.8125rem', fontWeight: 500, textDecoration: 'none' }}
+            >
+              <Plus size={14} /> New Task
+            </Link>
+          ) : undefined
         }
       />
 
       <form method="GET">
         <FilterBar>
-          <input name="search" type="search" defaultValue={params.search ?? ''} placeholder="Search tasks…" className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors min-w-[200px]" />
-          <select name="status" defaultValue={params.status ?? ''} className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text-primary)] outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer transition-colors">
+          <input name="search" type="search" defaultValue={params.search ?? ''} placeholder="Search tasks…"
+            className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm placeholder:text-[var(--color-text-muted)] outline-none focus:ring-2 focus:ring-[var(--color-primary)] min-w-[180px]" />
+          <select name="status" defaultValue={params.status ?? ''}
+            className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer">
             <option value="">All Statuses</option>
             <option value="to_do">To Do</option>
             <option value="in_progress">In Progress</option>
@@ -199,87 +105,54 @@ export default async function TasksPage({ searchParams }: PageProps) {
             <option value="blocked">Blocked</option>
             <option value="done">Done</option>
           </select>
-          <select name="priority" defaultValue={params.priority ?? ''} className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text-primary)] outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer transition-colors">
+          <select name="priority" defaultValue={params.priority ?? ''}
+            className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer">
             <option value="">All Priorities</option>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
             <option value="urgent">Urgent</option>
           </select>
-          <button type="submit" className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-muted)] transition-colors whitespace-nowrap cursor-pointer">Filter</button>
+          {/* Filter by person — only for admin/coordinator */}
+          {(role === 'admin' || role === 'coordinator') && allUsers.length > 0 && (
+            <select name="assigned_to" defaultValue={params.assigned_to ?? ''}
+              className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer">
+              <option value="">All People</option>
+              {allUsers.map(u => (
+                <option key={u.id} value={u.id}>{u.full_name}</option>
+              ))}
+            </select>
+          )}
+          <button type="submit" className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-medium hover:bg-[var(--color-surface-muted)] cursor-pointer">
+            Filter
+          </button>
           {hasActiveFilters && (
-            <Link href="/tasks" className="px-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] font-medium transition-colors whitespace-nowrap no-underline">Clear filters</Link>
+            <Link href="/tasks" className="px-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] font-medium no-underline">
+              Clear filters
+            </Link>
           )}
         </FilterBar>
       </form>
 
       <SectionCard noPadding>
-        <TasksTable
-          tasks={tasks}
-          today={today}
-          hasActiveFilters={hasActiveFilters}
-          canCreate={canCreate}
-        />
+        {tasks.length === 0 ? (
+          <EmptyState
+            compact={hasActiveFilters}
+            icon={<CheckSquare size={hasActiveFilters ? 16 : 22} />}
+            title={hasActiveFilters ? 'No tasks match your filters' : 'No tasks yet'}
+            description={hasActiveFilters ? 'Try different criteria or clear filters.' : 'Create your first task to start tracking work items.'}
+            action={
+              hasActiveFilters
+                ? <Link href="/tasks" className="px-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] font-medium no-underline">Clear filters</Link>
+                : canCreate
+                  ? <Link href="/tasks/new" style={{ padding: '9px 18px', backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-fg)', borderRadius: 'var(--radius-control)', fontSize: '0.8125rem', fontWeight: 600, textDecoration: 'none' }}>Create first task</Link>
+                  : undefined
+            }
+          />
+        ) : (
+          <TasksViewWrapper tasks={tasks} today={today} onStatusUpdate={handleStatusUpdate} />
+        )}
       </SectionCard>
     </div>
-  )
-}
-
-function TasksTable({
-  tasks,
-  today,
-  hasActiveFilters,
-  canCreate,
-}: {
-  tasks: TaskWithRelations[]
-  today: string
-  hasActiveFilters: boolean
-  canCreate: boolean
-}) {
-  if (tasks.length === 0) {
-    if (hasActiveFilters) {
-      return (
-        <EmptyState
-          compact
-          icon={<CheckSquare size={16} aria-hidden="true" />}
-          title="No tasks match your filters"
-          description="Try different criteria or clear filters to see all tasks in scope."
-          action={<Link href="/tasks" className="inline-flex items-center px-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] font-medium transition-colors whitespace-nowrap no-underline">Clear filters</Link>}
-        />
-      )
-    }
-    return (
-      <EmptyState
-        icon={<CheckSquare size={22} />}
-        title="No tasks yet"
-        description="Create your first task to start tracking work items, assignments, and progress."
-        action={
-          canCreate ? (
-            <Link
-              href="/tasks/new"
-              style={{
-                padding: '9px 18px',
-                backgroundColor: 'var(--color-primary)',
-                color: 'var(--color-primary-fg)',
-                borderRadius: 'var(--radius-control)',
-                fontSize: '0.8125rem',
-                fontWeight: 600,
-                textDecoration: 'none',
-              }}
-            >
-              Create first task
-            </Link>
-          ) : undefined
-        }
-      />
-    )
-  }
-
-  return (
-    <DataTable
-      columns={taskColumns(today)}
-      data={tasks}
-      getRowStyle={(task) => taskRowStyle(task, today)}
-    />
   )
 }

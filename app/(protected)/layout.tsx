@@ -20,6 +20,7 @@ export default async function ProtectedLayout({
         userFullName={profile.full_name}
         userEmail={profile.email}
         systemRole={profile.system_role}
+        photoUrl={profile.photo_url}
       />
 
       <div className="flex flex-1 flex-col overflow-hidden">

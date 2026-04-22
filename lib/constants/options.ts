@@ -143,6 +143,7 @@ export const INTAKE_STATUS_OPTIONS = [
   { value: 'awaiting_info', label: 'Awaiting Info' },
   { value: 'qualified',     label: 'Qualified' },
   { value: 'rejected',      label: 'Rejected' },
+  { value: 'closed',        label: 'Closed' },
   { value: 'converted',     label: 'Converted' },
 ] as const
 

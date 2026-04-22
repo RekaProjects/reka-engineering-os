@@ -8,6 +8,8 @@ import { DataTable } from '@/components/shared/DataTable'
 import type { Column } from '@/components/shared/DataTable'
 import { ClientStatusBadge } from '@/components/modules/clients/ClientStatusBadge'
 import { getClients } from '@/lib/clients/queries'
+import { getRevenueByClient } from '@/lib/invoices/queries'
+import { getUsdToIdrRate } from '@/lib/fx/queries'
 import { formatDate } from '@/lib/utils/formatters'
 import { Users, Plus } from 'lucide-react'
 import type { Client } from '@/types/database'
@@ -18,7 +20,10 @@ interface PageProps {
   searchParams: Promise<{ search?: string; status?: string; source?: string }>
 }
 
-const clientColumns: Column<Client>[] = [
+type ClientWithRevenue = Client & { _revenue?: { total_net: number; invoice_count: number; currency: string } }
+
+function clientColumns(revenueMap: Record<string, { total_gross: number; total_net: number; currency: string; invoice_count: number }>, fxRate: number): Column<ClientWithRevenue>[] {
+  return [
   {
     key: 'client_name',
     header: 'Client Name',
@@ -78,6 +83,28 @@ const clientColumns: Column<Client>[] = [
     ),
   },
   {
+    key: 'revenue',
+    header: 'Revenue',
+    width: '140px',
+    render: (row) => {
+      const rev = revenueMap[row.id]
+      if (!rev || rev.invoice_count === 0) return <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>—</span>
+      return (
+        <div>
+          <p style={{ fontSize: '0.8125rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+            {rev.currency} {rev.total_net.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </p>
+          {rev.currency === 'USD' && (
+            <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
+              ≈ {(rev.total_net * fxRate).toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </p>
+          )}
+          <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>{rev.invoice_count} invoice{rev.invoice_count !== 1 ? 's' : ''}</p>
+        </div>
+      )
+    },
+  },
+  {
     key: 'status',
     header: 'Status',
     width: '110px',
@@ -93,18 +120,23 @@ const clientColumns: Column<Client>[] = [
       </span>
     ),
   },
-]
+  ]
+}
 
 export default async function ClientsPage({ searchParams }: PageProps) {
   const _sp = await getSessionProfile()
   requireRole(_sp.system_role, ['admin', 'coordinator'])
 
   const params = await searchParams
-  const clients = await getClients({
-    search: params.search,
-    status: params.status,
-    source: params.source,
-  }).catch(() => [] as Client[])
+  const [clients, revenueMap, fxRate] = await Promise.all([
+    getClients({
+      search: params.search,
+      status: params.status,
+      source: params.source,
+    }).catch(() => [] as Client[]),
+    getRevenueByClient().catch(() => ({} as Record<string, { total_gross: number; total_net: number; currency: string; invoice_count: number }>)),
+    getUsdToIdrRate().catch(() => 16400),
+  ])
 
   const hasActiveFilters = Boolean(params.search || params.status || params.source)
 
@@ -161,13 +193,13 @@ export default async function ClientsPage({ searchParams }: PageProps) {
       </form>
 
       <SectionCard noPadding>
-        <ClientsTable clients={clients} hasActiveFilters={hasActiveFilters} />
+        <ClientsTable clients={clients} hasActiveFilters={hasActiveFilters} revenueMap={revenueMap} fxRate={fxRate} />
       </SectionCard>
     </div>
   )
 }
 
-function ClientsTable({ clients, hasActiveFilters }: { clients: Client[]; hasActiveFilters: boolean }) {
+function ClientsTable({ clients, hasActiveFilters, revenueMap, fxRate }: { clients: Client[]; hasActiveFilters: boolean; revenueMap: Record<string, { total_gross: number; total_net: number; currency: string; invoice_count: number }>; fxRate: number }) {
   if (clients.length === 0) {
     if (hasActiveFilters) {
       return (
@@ -205,5 +237,5 @@ function ClientsTable({ clients, hasActiveFilters }: { clients: Client[]; hasAct
     )
   }
 
-  return <DataTable columns={clientColumns} data={clients} />
+  return <DataTable columns={clientColumns(revenueMap, fxRate)} data={clients as ClientWithRevenue[]} />
 }

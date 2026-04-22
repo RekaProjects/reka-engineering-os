@@ -29,6 +29,7 @@ export type TeamMember = {
   notes_internal:       string | null
   skill_tags:           string[]
   profile_completed_at: string | null
+  photo_url:            string | null
   is_active:            boolean
   created_at:           string
   updated_at:           string
@@ -43,7 +44,7 @@ const TEAM_SELECT = `
   ewallet_type, ewallet_number,
   city, portfolio_link, notes_internal,
   skill_tags, profile_completed_at,
-  is_active, created_at, updated_at
+  photo_url, is_active, created_at, updated_at
 `.trim()
 
 export async function getTeamMembers(): Promise<TeamMember[]> {
@@ -69,4 +70,68 @@ export async function getMemberById(id: string): Promise<TeamMember | null> {
 
   if (error) return null
   return data as unknown as TeamMember
+}
+
+export type TalentMetrics = {
+  userId: string
+  projectCount: number
+  completedTasks: number
+  onTimeTasks: number
+  onTimePct: number | null
+  totalPaid: number
+  totalPending: number
+  currencyCode: string
+}
+
+/** Fetch talent metrics for all members in one batch */
+export async function getAllTalentMetrics(): Promise<Record<string, TalentMetrics>> {
+  const supabase = await createServerClient()
+
+  const [tasksRes, compRes] = await Promise.all([
+    supabase
+      .from('tasks')
+      .select('assigned_to_user_id, due_date, completed_date, status')
+      .eq('status', 'done')
+      .not('assigned_to_user_id', 'is', null),
+    supabase
+      .from('compensation_records')
+      .select('member_id, subtotal_amount, currency_code, status'),
+  ])
+
+  const tasks = (tasksRes.data ?? []) as { assigned_to_user_id: string; due_date: string | null; completed_date: string | null; status: string }[]
+  const comps = (compRes.data ?? []) as { member_id: string; subtotal_amount: number; currency_code: string; status: string }[]
+
+  const metrics: Record<string, TalentMetrics> = {}
+
+  function ensure(userId: string, currencyCode = 'IDR'): TalentMetrics {
+    if (!metrics[userId]) {
+      metrics[userId] = { userId, projectCount: 0, completedTasks: 0, onTimeTasks: 0, onTimePct: null, totalPaid: 0, totalPending: 0, currencyCode }
+    }
+    return metrics[userId]
+  }
+
+  for (const t of tasks) {
+    if (!t.assigned_to_user_id) continue
+    const m = ensure(t.assigned_to_user_id)
+    m.completedTasks++
+    if (t.due_date && t.completed_date && t.completed_date <= t.due_date) {
+      m.onTimeTasks++
+    }
+  }
+
+  for (const c of comps) {
+    if (!c.member_id) continue
+    const m = ensure(c.member_id, c.currency_code)
+    if (c.status === 'paid') m.totalPaid += c.subtotal_amount ?? 0
+    else if (c.status !== 'cancelled') m.totalPending += c.subtotal_amount ?? 0
+  }
+
+  // Calculate on-time %
+  for (const m of Object.values(metrics)) {
+    if (m.completedTasks > 0) {
+      m.onTimePct = Math.round((m.onTimeTasks / m.completedTasks) * 100)
+    }
+  }
+
+  return metrics
 }

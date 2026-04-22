@@ -4,7 +4,7 @@ import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
-import { IntakeStatusBadge } from '@/components/modules/intakes/IntakeStatusBadge'
+import { IntakeStatusUpdater } from '@/components/modules/intakes/IntakeStatusUpdater'
 import { ConvertToProjectButton } from '@/components/modules/intakes/ConvertToProjectButton'
 import { getIntakeById } from '@/lib/intakes/queries'
 import { formatDate } from '@/lib/utils/formatters'
@@ -37,9 +37,9 @@ export default async function IntakeDetailPage({ params }: PageProps) {
     : intake.temp_client_name ?? '—'
   const clientIsLinked = !!intake.clients
 
-  // Determine if conversion is possible
-  const canConvert = intake.status === 'qualified'
   const isConverted = intake.status === 'converted'
+  // Qualified or closed (not yet converted) — same convert flow as list
+  const canConvert = !isConverted && (intake.status === 'qualified' || intake.status === 'closed')
 
   return (
     <div>
@@ -76,7 +76,15 @@ export default async function IntakeDetailPage({ params }: PageProps) {
       />
 
       <EntityStatusStrip
-        statusBadge={<IntakeStatusBadge status={intake.status} />}
+        statusBadge={
+          <IntakeStatusUpdater
+            intakeId={intake.id}
+            currentStatus={intake.status}
+            leadTitle={intake.title}
+            clientName={clientDisplay}
+            readOnly={isConverted}
+          />
+        }
         dueDate={intake.proposed_deadline}
       />
 

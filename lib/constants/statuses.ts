@@ -13,6 +13,7 @@ export const INTAKE_STATUSES = {
   AWAITING_INFO: { label: 'Awaiting Info', variant: 'review'   },
   QUALIFIED:     { label: 'Qualified',     variant: 'active'   },
   REJECTED:      { label: 'Rejected',      variant: 'danger'   },
+  CLOSED:        { label: 'Closed',         variant: 'neutral'  },
   CONVERTED:     { label: 'Converted',     variant: 'success'  },
 } as const
 

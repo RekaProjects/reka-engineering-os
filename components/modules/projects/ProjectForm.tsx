@@ -2,7 +2,10 @@
 
 import { useTransition, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 import { createProject, updateProject } from '@/lib/projects/actions'
+import { buildRekaDriveFolderName } from '@/lib/files/drive-service'
+import { CopyDriveFolderNameButton } from '@/components/modules/projects/CopyDriveFolderNameButton'
 import { cn } from '@/lib/utils/cn'
 import {
   SOURCE_PLATFORMS,
@@ -317,13 +320,22 @@ export function ProjectForm({
               </Field>
               <Field label="Progress (%)">
                 <input
-                  name="progress_percent"
+                  key={`progress-${project?.id ?? 'new'}-${project?.progress_percent ?? 0}`}
                   type="number"
                   min={0}
                   max={100}
+                  readOnly
+                  tabIndex={-1}
                   defaultValue={project?.progress_percent ?? 0}
-                  className={controlClass}
+                  aria-readonly="true"
+                  className={cn(
+                    controlClass,
+                    'cursor-default bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]',
+                  )}
                 />
+                <p className="mt-1.5 text-[0.75rem] text-[var(--color-text-muted)]">
+                  Dikalkulasi otomatis dari tasks
+                </p>
               </Field>
             </div>
           </div>
@@ -332,13 +344,24 @@ export function ProjectForm({
         <ProjectFormSection title="Links & notes" description="Drive folder and internal-only context.">
           <div className="space-y-5">
             <Field label="Google Drive Folder Link">
-              <input
-                name="google_drive_folder_link"
-                type="url"
-                defaultValue={project?.google_drive_folder_link ?? ''}
-                placeholder="https://drive.google.com/drive/folders/…"
-                className={controlClass}
-              />
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-2">
+                <input
+                  name="google_drive_folder_link"
+                  type="url"
+                  defaultValue={project?.google_drive_folder_link ?? ''}
+                  placeholder="https://drive.google.com/drive/folders/…"
+                  className={cn(controlClass, 'sm:min-w-0 sm:flex-1')}
+                />
+                {mode === 'edit' && project?.project_code ? (
+                  <CopyDriveFolderNameButton
+                    className="inline-flex h-10 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 text-[0.75rem] font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-border)] disabled:cursor-not-allowed disabled:opacity-50"
+                    folderName={buildRekaDriveFolderName({
+                      clientCode: clients.find((c) => c.id === project.client_id)?.client_code ?? '',
+                      projectCode: project.project_code,
+                    })}
+                  />
+                ) : null}
+              </div>
             </Field>
             <Field label="Internal Notes">
               <textarea
@@ -375,9 +398,18 @@ export function ProjectForm({
           <button
             type="submit"
             disabled={isPending}
-            className="btn-primary rounded-md px-4 py-2 text-[0.875rem] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-primary inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-[0.875rem] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isPending ? 'Saving…' : mode === 'create' ? 'Create Project' : 'Save Changes'}
+            {isPending ? (
+              <>
+                <Loader2 size={14} className="animate-spin shrink-0" aria-hidden />
+                Saving…
+              </>
+            ) : mode === 'create' ? (
+              'Create Project'
+            ) : (
+              'Save Changes'
+            )}
           </button>
         </div>
       </div>

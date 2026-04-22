@@ -1,15 +1,32 @@
+export type ProgressBarTone = 'neutral' | 'danger' | 'warning' | 'primary' | 'success'
+
+const TONE_FILL: Record<ProgressBarTone, string> = {
+  neutral: 'var(--color-neutral)',
+  danger: 'var(--color-danger)',
+  warning: 'var(--color-warning)',
+  primary: 'var(--color-primary)',
+  success: 'var(--color-success)',
+}
+
 interface ProgressBarProps {
   value: number
   height?: number
   className?: string
+  /** When set, overrides default fill color rules. */
+  tone?: ProgressBarTone
 }
 
-export function ProgressBar({ value, height = 6, className }: ProgressBarProps) {
+export function ProgressBar({ value, height = 6, className, tone }: ProgressBarProps) {
   const clamped = Math.max(0, Math.min(100, value))
 
-  let fillColor = 'var(--color-neutral)'
-  if (clamped > 0 && clamped < 100) fillColor = 'var(--color-primary)'
-  if (clamped === 100) fillColor = 'var(--color-success)'
+  let fillColor: string
+  if (tone) {
+    fillColor = TONE_FILL[tone]
+  } else {
+    fillColor = 'var(--color-neutral)'
+    if (clamped > 0 && clamped < 100) fillColor = 'var(--color-primary)'
+    if (clamped === 100) fillColor = 'var(--color-success)'
+  }
 
   return (
     <div

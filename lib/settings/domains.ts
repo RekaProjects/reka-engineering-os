@@ -1,8 +1,6 @@
 /**
  * lib/settings/domains.ts
  * Typed domain constants and fallback map for the setting_options table.
- * The fallback arrays are sourced from lib/constants/options.ts so
- * that if the DB table is empty for a domain, the app still works.
  */
 
 import {
@@ -27,6 +25,12 @@ export const SETTING_DOMAINS = [
   'deliverable_type',
   'file_category',
   'payment_method',
+  'contact_channel',
+  'outreach_channel',
+  'source_platform',
+  'lead_status',
+  'invoice_status',
+  'outreach_status',
 ] as const
 
 export type SettingDomain = (typeof SETTING_DOMAINS)[number]
@@ -42,11 +46,13 @@ export const DOMAIN_LABELS: Record<SettingDomain, string> = {
   deliverable_type: 'Deliverable Types',
   file_category:    'File Categories',
   payment_method:   'Payment Methods',
+  contact_channel:  'Contact Channels',
+  outreach_channel: 'Outreach Channels',
+  source_platform:  'Source Platforms',
+  lead_status:      'Lead Statuses',
+  invoice_status:   'Invoice Statuses',
+  outreach_status:  'Outreach Statuses',
 }
-
-// ── Fallback map ─────────────────────────────────────────────
-// Each fallback is the same shape as {value, label}[] so queries
-// can return these if the DB has no rows for a domain.
 
 type OptionPair = { value: string; label: string }
 
@@ -63,4 +69,51 @@ export const DOMAIN_FALLBACKS: Record<SettingDomain, OptionPair[]> = {
   deliverable_type: toPlain(DELIVERABLE_TYPE_OPTIONS),
   file_category:    toPlain(FILE_CATEGORY_OPTIONS),
   payment_method:   toPlain(PAYMENT_METHOD_OPTIONS),
+  contact_channel:  [
+    { value: 'whatsapp', label: 'WhatsApp' },
+    { value: 'email', label: 'Email' },
+    { value: 'linkedin', label: 'LinkedIn' },
+    { value: 'instagram', label: 'Instagram' },
+    { value: 'telegram', label: 'Telegram' },
+    { value: 'phone', label: 'Phone' },
+    { value: 'other', label: 'Other' },
+  ],
+  outreach_channel: [
+    { value: 'upwork', label: 'Upwork' },
+    { value: 'linkedin', label: 'LinkedIn' },
+    { value: 'email', label: 'Email' },
+    { value: 'direct', label: 'Direct' },
+    { value: 'instagram', label: 'Instagram' },
+    { value: 'other', label: 'Other' },
+  ],
+  source_platform: [
+    { value: 'fiverr', label: 'Fiverr' },
+    { value: 'upwork', label: 'Upwork' },
+    { value: 'direct', label: 'Direct' },
+    { value: 'referral', label: 'Referral' },
+    { value: 'other', label: 'Other' },
+  ],
+  lead_status: [
+    { value: 'new', label: 'New' },
+    { value: 'awaiting_info', label: 'Awaiting Info' },
+    { value: 'qualified', label: 'Qualified' },
+    { value: 'rejected', label: 'Rejected' },
+    { value: 'converted', label: 'Converted' },
+  ],
+  invoice_status: [
+    { value: 'draft', label: 'Draft' },
+    { value: 'sent', label: 'Sent' },
+    { value: 'partial', label: 'Partial' },
+    { value: 'paid', label: 'Paid' },
+    { value: 'overdue', label: 'Overdue' },
+    { value: 'void', label: 'Void' },
+  ],
+  outreach_status: [
+    { value: 'to_contact', label: 'To Contact' },
+    { value: 'contacted', label: 'Contacted' },
+    { value: 'replied', label: 'Replied' },
+    { value: 'in_discussion', label: 'In Discussion' },
+    { value: 'converted', label: 'Converted' },
+    { value: 'declined', label: 'Declined' },
+  ],
 }

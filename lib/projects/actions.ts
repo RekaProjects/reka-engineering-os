@@ -49,7 +49,8 @@ export async function createProject(formData: FormData) {
     reviewer_user_id:       reviewerUserId,
     priority:               (formData.get('priority') as string) || 'medium',
     status:                 (formData.get('status') as string) || 'new',
-    progress_percent:       parseInt((formData.get('progress_percent') as string) || '0', 10),
+    /* progress_percent is maintained by DB trigger from top-level tasks */
+    progress_percent:       0,
     waiting_on:             (formData.get('waiting_on') as string) || 'none',
     google_drive_folder_link: (formData.get('google_drive_folder_link') as string)?.trim() || null,
     notes_internal:         (formData.get('notes_internal') as string)?.trim() || null,
@@ -115,7 +116,6 @@ export async function updateProject(id: string, formData: FormData) {
     reviewer_user_id:       reviewerUserId,
     priority:               (formData.get('priority') as string),
     status:                 (formData.get('status') as string),
-    progress_percent:       parseInt((formData.get('progress_percent') as string) || '0', 10),
     waiting_on:             (formData.get('waiting_on') as string),
     google_drive_folder_link: (formData.get('google_drive_folder_link') as string)?.trim() || null,
     notes_internal:         (formData.get('notes_internal') as string)?.trim() || null,
@@ -140,4 +140,43 @@ export async function updateProject(id: string, formData: FormData) {
   revalidatePath(`/projects/${id}`)
   revalidatePath(`/clients/${clientId}`)
   redirect(`/projects/${id}`)
+}
+
+// ─── Quick status update (for inline/kanban) ──────────────────
+export async function updateProjectStatus(id: string, status: string) {
+  const supabase = await createServerClient()
+  const profile = await loadMutationProfile()
+  const gate = await ensureProjectOperationalMutation(profile, id)
+  if ('error' in gate) throw new Error(gate.error)
+
+  const { error } = await supabase.from('projects').update({ status }).eq('id', id)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/projects')
+  revalidatePath(`/projects/${id}`)
+}
+
+// ─── Mark project problematic (admin / coordinator on project) ─
+export async function markProjectProblematic(
+  projectId: string,
+  isProblematic: boolean,
+  note?: string | null,
+) {
+  const supabase = await createServerClient()
+  const profile = await loadMutationProfile()
+  const gate = await ensureProjectOperationalMutation(profile, projectId)
+  if ('error' in gate) throw new Error(gate.error)
+
+  const trimmed = typeof note === 'string' ? note.trim() : ''
+  const { error } = await supabase
+    .from('projects')
+    .update({
+      is_problematic: isProblematic,
+      problem_note: isProblematic && trimmed ? trimmed : null,
+    })
+    .eq('id', projectId)
+
+  if (error) throw new Error(error.message)
+  revalidatePath('/projects')
+  revalidatePath(`/projects/${projectId}`)
 }

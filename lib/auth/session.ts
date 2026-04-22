@@ -36,6 +36,7 @@ export type SessionProfile = {
   email: string
   system_role: SystemRole | null
   profile_completed_at: string | null
+  photo_url: string | null
 }
 
 // ── Core session helper ──────────────────────────────────────
@@ -53,7 +54,7 @@ export async function getSessionProfile(): Promise<SessionProfile> {
 
   const { data } = await supabase
     .from('profiles')
-    .select('id, full_name, email, system_role, profile_completed_at')
+    .select('id, full_name, email, system_role, profile_completed_at, photo_url')
     .eq('id', user.id)
     .single()
 
@@ -63,6 +64,7 @@ export async function getSessionProfile(): Promise<SessionProfile> {
     email:                data?.email ?? user.email ?? '',
     system_role:          (data?.system_role as SystemRole | null) ?? null,
     profile_completed_at: data?.profile_completed_at ?? null,
+    photo_url:            data?.photo_url ?? null,
   }
 }
 

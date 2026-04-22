@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { UserSquare2, Plus, Mail, Clock } from 'lucide-react'
 
@@ -11,7 +10,7 @@ import type { Column } from '@/components/shared/DataTable'
 import { AvailabilityBadge } from '@/components/modules/team/AvailabilityBadge'
 import { WorkerTypeBadge } from '@/components/modules/team/WorkerTypeBadge'
 import { CopyLinkButton } from '@/components/modules/onboarding/CopyLinkButton'
-import { getTeamMembers, type TeamMember } from '@/lib/team/queries'
+import { getTeamMembers, getAllTalentMetrics, type TeamMember, type TalentMetrics } from '@/lib/team/queries'
 import { getPendingInvites, type InviteWithInviter } from '@/lib/invites/queries'
 import { revokeInvite as _revokeInvite } from '@/lib/invites/actions'
 import { formatDate, formatIDR } from '@/lib/utils/formatters'
@@ -50,26 +49,33 @@ function formatRateAmount(n: number | null | undefined, currencyCode: string | n
 
 function memberColumns(
   FUNCTIONAL_LABEL: Record<string, string>,
+  metricsMap: Record<string, TalentMetrics>,
 ): Column<TeamMember>[] {
   return [
     {
       key: 'name',
       header: 'Name',
       render: (m) => (
-        <div style={{ maxWidth: '200px' }}>
-          <Link
-            href={`/team/${m.id}`}
-            style={{
-              fontWeight: 500,
-              color: 'var(--color-text-primary)',
-              textDecoration: 'none',
-            }}
-            className="hover:underline"
-          >
-            {m.full_name}
-          </Link>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: '1px' }}>
-            {m.email}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '220px' }}>
+          {/* Avatar */}
+          <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--color-surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>
+            {m.photo_url ? (
+              <img src={m.photo_url} alt={m.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              m.full_name.charAt(0).toUpperCase()
+            )}
+          </div>
+          <div>
+            <Link
+              href={`/team/${m.id}`}
+              style={{ fontWeight: 500, color: 'var(--color-text-primary)', textDecoration: 'none' }}
+              className="hover:underline"
+            >
+              {m.full_name}
+            </Link>
+            <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: '1px' }}>
+              {m.email}
+            </div>
           </div>
         </div>
       ),
@@ -129,6 +135,40 @@ function memberColumns(
               <span style={{ color: 'var(--color-text-muted)', fontSize: '0.6875rem', display: 'block', marginTop: '2px' }}>
                 {rateType}
               </span>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      key: 'metrics',
+      header: 'Performance',
+      render: (m) => {
+        const met = metricsMap[m.id]
+        if (!met || (met.completedTasks === 0 && met.totalPaid === 0)) {
+          return <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>—</span>
+        }
+        return (
+          <div style={{ fontSize: '0.75rem' }}>
+            {met.completedTasks > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>{met.completedTasks} tasks</span>
+                {met.onTimePct !== null && (
+                  <span style={{ padding: '1px 5px', borderRadius: '999px', fontSize: '0.625rem', fontWeight: 600, backgroundColor: met.onTimePct >= 80 ? 'var(--color-success-subtle)' : met.onTimePct >= 60 ? 'var(--color-warning-subtle)' : 'var(--color-danger-subtle)', color: met.onTimePct >= 80 ? 'var(--color-success)' : met.onTimePct >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
+                    {met.onTimePct}% on-time
+                  </span>
+                )}
+              </div>
+            )}
+            {met.totalPaid > 0 && (
+              <div style={{ color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
+                {formatIDR(met.totalPaid)}
+              </div>
+            )}
+            {met.totalPending > 0 && (
+              <div style={{ color: 'var(--color-warning)', fontFamily: 'monospace', fontSize: '0.6875rem' }}>
+                +{formatIDR(met.totalPending)} pending
+              </div>
             )}
           </div>
         )
@@ -248,11 +288,12 @@ export default async function TeamPage({
   requireRole(_sp.system_role, ['admin'])
 
   const { invited } = await searchParams
-  const [members, pendingInvites, funcOpts, wtOpts] = await Promise.all([
+  const [members, pendingInvites, funcOpts, wtOpts, metricsMap] = await Promise.all([
     getTeamMembers(),
     getPendingInvites(),
     getSettingOptions('functional_role'),
     getSettingOptions('worker_type'),
+    getAllTalentMetrics().catch(() => ({} as Record<string, TalentMetrics>)),
   ])
   const FUNCTIONAL_LABEL = Object.fromEntries(funcOpts.map((r) => [r.value, r.label]))
   const WORKER_TYPE_LABEL = Object.fromEntries(wtOpts.map((r) => [r.value, r.label]))
@@ -333,7 +374,7 @@ export default async function TeamPage({
             }
           />
         ) : (
-          <DataTable columns={memberColumns(FUNCTIONAL_LABEL)} data={members} />
+          <DataTable columns={memberColumns(FUNCTIONAL_LABEL, metricsMap)} data={members} />
         )}
       </SectionCard>
 

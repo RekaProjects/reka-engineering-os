@@ -95,3 +95,23 @@ export class DriveService implements IDriveService {
 
 // Singleton instance
 export const driveService = new DriveService()
+
+// ─── Drive folder naming (manual copy / paste; no API) ─────────
+
+/**
+ * Suggested Google Drive folder name for a project (clipboard helper).
+ * Format: `REKA-[CLIENT_CODE]-[PROJECT_CODE]-[YEAR]` (e.g. REKA-PT001-PRJ042-2026).
+ * `year` defaults to the current calendar year when omitted.
+ */
+export function buildRekaDriveFolderName(params: {
+  clientCode: string
+  projectCode: string
+  year?: number
+}): string {
+  const y = params.year ?? new Date().getFullYear()
+  const sanitize = (raw: string) => {
+    const t = raw.replace(/[^a-zA-Z0-9_-]+/g, '').toUpperCase()
+    return t || 'UNKNOWN'
+  }
+  return `REKA-${sanitize(params.clientCode)}-${sanitize(params.projectCode)}-${y}`
+}

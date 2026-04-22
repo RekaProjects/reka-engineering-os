@@ -90,3 +90,8 @@ export async function getUsersForCoordinatorProjectPortfolio(coordinatorUserId: 
   if (error) return []
   return data ?? []
 }
+
+/** Alias — semua active users, dipakai di admin/coordinator pages */
+export async function getAllUsers(): Promise<UserSelectRow[]> {
+  return getUsersForSelect()
+}

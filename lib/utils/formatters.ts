@@ -49,10 +49,68 @@ const idrFormatter = new Intl.NumberFormat('id-ID', {
   maximumFractionDigits: 0,
 })
 
+const usdFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+})
+
 /** Format a number as IDR currency, e.g. 2500000 → "Rp 2.500.000" */
 export function formatIDR(amount: number | string | null | undefined): string {
   if (amount == null || amount === '') return '—'
   const n = typeof amount === 'string' ? parseFloat(amount) : amount
   if (isNaN(n)) return '—'
   return idrFormatter.format(n)
+}
+
+/** Format a number as USD currency, e.g. 1000 → "USD 1,000" */
+export function formatUSD(amount: number | string | null | undefined): string {
+  if (amount == null || amount === '') return '—'
+  const n = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (isNaN(n)) return '—'
+  return 'USD ' + usdFormatter.format(n).replace('$', '').trim()
+}
+
+/** Format amount in a given currency */
+export function formatMoney(
+  amount: number | string | null | undefined,
+  currency: string = 'IDR'
+): string {
+  if (amount == null || amount === '') return '—'
+  const n = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (isNaN(n)) return '—'
+  if (currency === 'IDR') return idrFormatter.format(n)
+  if (currency === 'USD') return 'USD ' + usdFormatter.format(n).replace('$', '').trim()
+  return `${currency} ${n.toLocaleString()}`
+}
+
+/**
+ * Format amount with conversion hint.
+ * e.g. formatMoneyWithConversion(1000, 'USD', 16400) → "USD 1,000 (~Rp 16.400.000)"
+ */
+export function formatMoneyWithConversion(
+  amount: number | string | null | undefined,
+  currency: string,
+  fxRateToIDR: number | null | undefined,
+  showConversion = true
+): string {
+  const primary = formatMoney(amount, currency)
+  if (primary === '—') return '—'
+
+  if (!showConversion || !fxRateToIDR || currency === 'IDR') return primary
+
+  const n = typeof amount === 'string' ? parseFloat(amount as string) : (amount as number)
+  if (isNaN(n)) return primary
+
+  const idrEquiv = n * fxRateToIDR
+  return `${primary} (~${idrFormatter.format(idrEquiv)})`
+}
+
+/** Compact number format for dashboard widgets, e.g. 1500000 → "1.5M" */
+export function formatCompact(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`
+  return n.toString()
 }
