@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 
 export async function createOutreachCompany(formData: FormData) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['bd'])
 
   const supabase = await createServerClient()
   const { error } = await supabase.from('outreach_companies').insert({
@@ -27,7 +27,7 @@ export async function createOutreachCompany(formData: FormData) {
 
 export async function updateOutreachStatus(id: string, status: string) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['bd'])
 
   const supabase = await createServerClient()
   const { error } = await supabase
@@ -41,7 +41,7 @@ export async function updateOutreachStatus(id: string, status: string) {
 
 export async function updateOutreachCompany(id: string, formData: FormData) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['bd'])
 
   const supabase = await createServerClient()
   const { error } = await supabase.from('outreach_companies').update({
@@ -61,7 +61,7 @@ export async function updateOutreachCompany(id: string, formData: FormData) {
 
 export async function deleteOutreachCompany(id: string) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['bd'])
 
   const supabase = await createServerClient()
   const { error } = await supabase.from('outreach_companies').delete().eq('id', id)
@@ -71,41 +71,16 @@ export async function deleteOutreachCompany(id: string) {
 
 export async function convertOutreachToLead(id: string) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['bd'])
 
   const supabase = await createServerClient()
 
-  const { data: company } = await supabase
-    .from('outreach_companies')
-    .select('*')
-    .eq('id', id)
-    .single()
+  /** DB function SECURITY DEFINER — avoids intakes INSERT RLS blocking this flow. */
+  const { data: intake, error } = await supabase.rpc('convert_outreach_to_intake', {
+    p_outreach_id: id,
+  })
 
-  if (!company) throw new Error('Company not found')
-
-  const { data: intake, error: intakeError } = await supabase
-    .from('intakes')
-    .insert({
-      title: `Lead from ${company.company_name}`,
-      source: company.contact_channel ?? 'other',
-      temp_client_name: company.company_name,
-      discipline: 'other',
-      project_type: 'other',
-      status: 'new',
-      contact_channel: company.contact_channel,
-      contact_value: company.contact_value,
-      received_date: new Date().toISOString().split('T')[0],
-      created_by: sp.id,
-    })
-    .select()
-    .single()
-
-  if (intakeError) throw new Error(intakeError.message)
-
-  await supabase
-    .from('outreach_companies')
-    .update({ status: 'converted', converted_intake_id: intake.id })
-    .eq('id', id)
+  if (error) throw new Error(error.message)
 
   revalidatePath('/outreach')
   revalidatePath('/leads')

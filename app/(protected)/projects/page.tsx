@@ -1,46 +1,73 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { getSessionProfile } from '@/lib/auth/session'
-import { canAccessProjectsNewRoute, effectiveRole } from '@/lib/auth/permissions'
+import {
+  canAccessProjectsNewRoute,
+  effectiveRole,
+  isDirektur,
+  isFreelancer,
+  isManajer,
+  isSenior,
+} from '@/lib/auth/permissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { FilterBar } from '@/components/shared/FilterBar'
 import { ProjectsViewToggle } from '@/components/modules/projects/ProjectsViewToggle'
-import { getProjects } from '@/lib/projects/queries'
+import { getPendingApprovalProjects, getProjects } from '@/lib/projects/queries'
 import { updateProjectStatus } from '@/lib/projects/actions'
 import type { ProjectWithRelations } from '@/lib/projects/queries'
 import { FolderKanban, Plus } from 'lucide-react'
+import { parsePagination, totalPages } from '@/lib/utils/pagination'
+import { Pagination } from '@/components/shared/Pagination'
 
 export const metadata = { title: 'Projects — ReKa Engineering OS' }
 
 interface PageProps {
-  searchParams: Promise<{ search?: string; status?: string; discipline?: string; priority?: string }>
+  searchParams: Promise<{
+    search?: string
+    status?: string
+    discipline?: string
+    priority?: string
+    page?: string
+    pageSize?: string
+  }>
 }
 
 export default async function ProjectsPage({ searchParams }: PageProps) {
   const profile = await getSessionProfile()
   const role    = effectiveRole(profile.system_role)
   const params  = await searchParams
+  const { page, pageSize } = parsePagination(params)
 
   const scopeOpts =
-    role === 'member'      ? { assignedUserId: profile.id } :
-    role === 'coordinator' ? { assignedUserId: profile.id } :
-    role === 'reviewer'    ? { reviewerUserId: profile.id } :
+    role === 'member' || isFreelancer(role) ? { assignedUserId: profile.id } :
+    isManajer(role) ? { assignedUserId: profile.id } :
+    isSenior(role) ? { reviewerUserId: profile.id } :
     {}
 
-  const projects = await getProjects({
+  const projectList = await getProjects({
     search:     params.search,
     status:     params.status,
     discipline: params.discipline,
     priority:   params.priority,
+    page,
+    pageSize,
     ...scopeOpts,
-  }).catch(() => [] as ProjectWithRelations[])
+  }).catch(() => ({ rows: [] as ProjectWithRelations[], count: 0 }))
+
+  const projects = projectList.rows
+  const projectTotalCount = projectList.count
+
+  const pendingApproval = isDirektur(profile.system_role)
+    ? await getPendingApprovalProjects().catch(() => [] as ProjectWithRelations[])
+    : []
 
   const pageTitle = role === 'member' ? 'My Projects' : 'Projects'
   const pageSubtitle =
-    role === 'member'      ? 'Projects you are assigned to.' :
-    role === 'reviewer'    ? 'Projects where you are assigned as reviewer.' :
-    role === 'coordinator' ? 'Projects in your operational scope.' :
+    role === 'member' || isFreelancer(role) ? 'Projects you are assigned to.' :
+    isSenior(role) ? 'Projects where you are assigned as reviewer.' :
+    isManajer(role) ? 'Projects in your operational scope.' :
     'Active and historical engineering project work.'
 
   const hasActiveFilters = Boolean(params.search || params.status || params.discipline || params.priority)
@@ -68,6 +95,38 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
         }
       />
 
+      {pendingApproval.length > 0 ? (
+        <div
+          className="mb-4 rounded-lg border px-4 py-3"
+          style={{
+            borderColor: 'var(--color-border-strong)',
+            backgroundColor: 'var(--color-warning-subtle)',
+          }}
+        >
+          <p className="m-0 text-[0.8125rem] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            Perlu perhatian: {pendingApproval.length} project menunggu persetujuan Anda
+          </p>
+          <ul className="mt-2 mb-0 list-none space-y-1 p-0">
+            {pendingApproval.slice(0, 5).map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/projects/${p.id}`}
+                  className="text-[0.8125rem] font-medium text-[var(--color-primary)] no-underline hover:underline"
+                >
+                  {p.project_code ? `${p.project_code} · ` : ''}
+                  {p.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {pendingApproval.length > 5 ? (
+            <p className="mt-2 mb-0 text-[0.75rem]" style={{ color: 'var(--color-text-muted)' }}>
+              Dan {pendingApproval.length - 5} lainnya — saring status &quot;Pending Approval&quot; untuk daftar penuh.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <form method="GET">
         <FilterBar>
           <input name="search" type="search" defaultValue={params.search ?? ''} placeholder="Search projects…"
@@ -75,6 +134,8 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
           <select name="status" defaultValue={params.status ?? ''}
             className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer">
             <option value="">All Statuses</option>
+            <option value="pending_approval">Pending Approval</option>
+            <option value="rejected">Rejected</option>
             <option value="new">New</option>
             <option value="ready_to_start">Ready to Start</option>
             <option value="ongoing">Ongoing</option>
@@ -132,6 +193,14 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
           <ProjectsViewToggle projects={projects} onStatusUpdate={handleStatusUpdate} />
         )}
       </SectionCard>
+      <Suspense fallback={null}>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages(projectTotalCount, pageSize)}
+          pageSize={pageSize}
+          totalCount={projectTotalCount}
+        />
+      </Suspense>
     </div>
   )
 }

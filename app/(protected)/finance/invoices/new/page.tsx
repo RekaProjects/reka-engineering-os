@@ -12,7 +12,7 @@ export const metadata = { title: 'New Invoice — ReKa Engineering OS' }
 
 export default async function NewInvoicePage() {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const supabase = await createServerClient()
   const [clients, accounts, fxRate, { data: projectsRaw }] = await Promise.all([

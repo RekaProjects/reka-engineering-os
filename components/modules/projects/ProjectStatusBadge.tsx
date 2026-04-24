@@ -3,6 +3,8 @@ import { PROJECT_STATUSES } from '@/lib/constants/statuses'
 
 // Maps a project status DB value (e.g. "ongoing") to the correct badge
 const STATUS_MAP: Record<string, { label: string; variant: 'neutral' | 'active' | 'review' | 'success' | 'danger' }> = {
+  pending_approval: PROJECT_STATUSES.PENDING_APPROVAL,
+  rejected:         PROJECT_STATUSES.REJECTED,
   new:              PROJECT_STATUSES.NEW,
   ready_to_start:   PROJECT_STATUSES.READY_TO_START,
   ongoing:          PROJECT_STATUSES.ONGOING,

@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function EditIntakePage({ params }: PageProps) {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin', 'coordinator'])
+  requireRole(_sp.system_role, ['direktur', 'technical_director', 'manajer', 'bd'])
 
   const { id } = await params
   const [intake, clients, disciplineOptions, projectTypeOptions] = await Promise.all([

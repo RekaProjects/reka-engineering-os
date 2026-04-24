@@ -5,6 +5,9 @@ import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/activity/actions'
 import { loadMutationProfile, ensureCreateProjectMutation } from '@/lib/auth/mutation-policy'
+import { isDirektur } from '@/lib/auth/permissions'
+import { parseContractFromForm } from '@/lib/projects/contract-from-form'
+import { ensureDefaultTerminsForProject } from '@/lib/termins/ensure-default-termins'
 
 /**
  * Convert a qualified intake into a project.
@@ -50,6 +53,26 @@ export async function convertIntakeToProject(formData: FormData) {
 
   const reviewerUserId = (formData.get('reviewer_user_id') as string)?.trim() || null
 
+  const hasContractFields =
+    formData.get('project_source_type') != null ||
+    Boolean((formData.get('contract_value') as string)?.trim())
+  const contract = hasContractFields
+    ? parseContractFromForm(formData)
+    : {
+        source_type: 'PLATFORM' as const,
+        contract_value: null as number | null,
+        contract_currency: 'IDR',
+        has_retention: false,
+        retention_percentage: 5,
+      }
+  if (contract.source_type === 'DOMESTIC' && (contract.contract_value == null || contract.contract_value <= 0)) {
+    return { error: 'Nilai kontrak wajib diisi untuk project Domestic.' }
+  }
+
+  const byDirektur = isDirektur(profile.system_role)
+  const initialStatus = byDirektur ? 'new' : 'pending_approval'
+  const approvalRequestedAt = byDirektur ? null : new Date().toISOString()
+
   // ─── 1. Create project ──────────────────────────────────────
   const projectPayload = {
     name,
@@ -65,12 +88,14 @@ export async function convertIntakeToProject(formData: FormData) {
     project_lead_user_id:   leadUserId,
     reviewer_user_id:       reviewerUserId,
     priority:               (formData.get('priority') as string) || 'medium',
-    status:                 'new',
+    status:                   initialStatus,
+    approval_requested_at:    approvalRequestedAt,
     progress_percent:       0,
     waiting_on:             'none',
     notes_internal:         (formData.get('notes_internal') as string)?.trim() || null,
     created_by:             user.id,
     project_code:           '', // trigger will generate
+    ...contract,
   }
 
   const { data: newProject, error: projectErr } = await supabase
@@ -80,6 +105,20 @@ export async function convertIntakeToProject(formData: FormData) {
     .single()
 
   if (projectErr) return { error: `Failed to create project: ${projectErr.message}` }
+
+  const terminSlice = {
+    id: newProject.id,
+    status: initialStatus,
+    source_type: contract.source_type,
+    contract_value: contract.contract_value,
+    contract_currency: contract.contract_currency,
+    has_retention: contract.has_retention,
+    retention_percentage: contract.retention_percentage,
+  }
+  const terminErr = await ensureDefaultTerminsForProject(supabase, terminSlice)
+  if (terminErr.error) {
+    console.error('ensureDefaultTerminsForProject:', terminErr.error)
+  }
 
   // ─── 2. Update intake status to converted ───────────────────
   const { error: updateErr } = await supabase

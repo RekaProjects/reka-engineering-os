@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
+import { isFinance } from '@/lib/auth/permissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { MoneyDisplay } from '@/components/shared/MoneyDisplay'
@@ -10,6 +11,7 @@ import { getPaymentAccounts } from '@/lib/payment-accounts/queries'
 import { updateInvoiceStatus, recordIncomingPayment } from '@/lib/invoices/actions'
 import { formatDate } from '@/lib/utils/formatters'
 import { ArrowLeft } from 'lucide-react'
+import { DownloadInvoicePdfButton } from '@/components/modules/invoices/DownloadInvoicePdfButton'
 import { RecordPaymentForm } from '@/components/modules/invoices/RecordPaymentForm'
 
 export const metadata = { title: 'Invoice — ReKa Engineering OS' }
@@ -29,7 +31,7 @@ interface PageProps {
 
 export default async function InvoiceDetailPage({ params }: PageProps) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const { id } = await params
   const [invoice, fxRate, accounts] = await Promise.all([
@@ -41,8 +43,8 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
   if (!invoice) notFound()
 
   const statusStyle = STATUS_STYLES[invoice.status] ?? STATUS_STYLES.draft
-  const canRecord = sp.system_role === 'admin' && invoice.status !== 'paid' && invoice.status !== 'void'
-  const canUpdateStatus = sp.system_role === 'admin'
+  const canRecord = isFinance(sp.system_role) && invoice.status !== 'paid' && invoice.status !== 'void'
+  const canUpdateStatus = isFinance(sp.system_role)
 
   async function handleStatusUpdate(formData: FormData) {
     'use server'
@@ -71,9 +73,12 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
         title={invoice.invoice_code || 'Invoice'}
         subtitle={`${invoice.clients?.client_name ?? 'Unknown client'} · ${invoice.projects ? invoice.projects.project_code : 'No project'}`}
         actions={
-          <span style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '0.8125rem', fontWeight: 600, backgroundColor: statusStyle.bg, color: statusStyle.color }}>
-            {statusStyle.label}
-          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+            <DownloadInvoicePdfButton invoiceId={invoice.id} invoiceNumber={invoice.invoice_code || invoice.id} />
+            <span style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '0.8125rem', fontWeight: 600, backgroundColor: statusStyle.bg, color: statusStyle.color }}>
+              {statusStyle.label}
+            </span>
+          </div>
         }
       />
 

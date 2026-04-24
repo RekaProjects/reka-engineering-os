@@ -3,11 +3,18 @@
 import { useState, useEffect } from 'react'
 import { formatMoney } from '@/lib/utils/formatters'
 
+interface CurrencyOption {
+  value: string
+  label: string
+}
+
 interface MoneyInputProps {
   name: string
   currencyName?: string
   defaultAmount?: number | null
   defaultCurrency?: string
+  /** When set, replaces the default IDR/USD pair (e.g. contract currencies). */
+  currencies?: readonly CurrencyOption[]
   fxRateToIDR?: number | null
   label?: string
   required?: boolean
@@ -19,11 +26,17 @@ interface MoneyInputProps {
  * Combined currency selector + amount input.
  * Shows IDR conversion hint when USD is selected.
  */
+const DEFAULT_CURRENCIES: CurrencyOption[] = [
+  { value: 'IDR', label: 'IDR' },
+  { value: 'USD', label: 'USD' },
+]
+
 export function MoneyInput({
   name,
   currencyName,
   defaultAmount,
   defaultCurrency = 'IDR',
+  currencies,
   fxRateToIDR,
   label,
   required = false,
@@ -34,6 +47,8 @@ export function MoneyInput({
   const [amount, setAmount] = useState<string>(
     defaultAmount != null ? String(defaultAmount) : ''
   )
+
+  const currencyOptions = currencies ?? DEFAULT_CURRENCIES
 
   const conversionText =
     currency === 'USD' && fxRateToIDR && amount
@@ -91,8 +106,11 @@ export function MoneyInput({
           disabled={disabled}
           style={selectStyle}
         >
-          <option value="IDR">IDR</option>
-          <option value="USD">USD</option>
+          {currencyOptions.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
         </select>
         <input
           type="number"

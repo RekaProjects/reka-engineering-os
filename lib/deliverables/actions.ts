@@ -1,10 +1,10 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/activity/actions'
-import { effectiveRole } from '@/lib/auth/permissions'
+import { effectiveRole, isFreelancer, isManajer, isManagement, isSenior } from '@/lib/auth/permissions'
 import {
   loadMutationProfile,
   ensureAdminOrCoordinator,
@@ -65,6 +65,7 @@ export async function createDeliverable(formData: FormData) {
 
   revalidatePath('/deliverables')
   revalidatePath(`/projects/${projectId}`)
+  revalidateTag('dashboard')
   redirect(`/deliverables/${data.id}`)
 }
 
@@ -82,7 +83,7 @@ export async function updateDeliverable(id: string, formData: FormData) {
   const role = effectiveRole(profile.system_role)
 
   // ── Reviewer: review outcome / client feedback only ──
-  if (role === 'reviewer') {
+  if (isSenior(role)) {
     const status = (formData.get('status') as string)
 
     let submittedDate = (formData.get('submitted_to_client_date') as string) || d.submitted_to_client_date
@@ -116,11 +117,12 @@ export async function updateDeliverable(id: string, formData: FormData) {
     revalidatePath('/deliverables')
     revalidatePath(`/deliverables/${id}`)
     revalidatePath(`/projects/${d.project_id}`)
+    revalidateTag('dashboard')
     redirect(`/deliverables/${id}`)
   }
 
   // ── Member preparer: own submission fields (no internal review notes) ──
-  if (role === 'member') {
+  if (role === 'member' || isFreelancer(role)) {
     if (d.prepared_by_user_id !== user.id) return { error: MUTATION_FORBIDDEN }
 
     const name = (formData.get('name') as string)?.trim()
@@ -170,11 +172,12 @@ export async function updateDeliverable(id: string, formData: FormData) {
     revalidatePath('/deliverables')
     revalidatePath(`/deliverables/${id}`)
     revalidatePath(`/projects/${d.project_id}`)
+    revalidateTag('dashboard')
     redirect(`/deliverables/${id}`)
   }
 
   // ── Admin / coordinator: full edit ──
-  if (role !== 'admin' && role !== 'coordinator') {
+  if (!isManagement(role) && !isManajer(role)) {
     return { error: MUTATION_FORBIDDEN }
   }
 
@@ -188,7 +191,7 @@ export async function updateDeliverable(id: string, formData: FormData) {
   if (!type) return { error: 'Deliverable type is required.' }
   if (!preparedBy) return { error: 'Prepared by is required.' }
 
-  if (role === 'coordinator') {
+  if (isManajer(role)) {
     const dest = await ensureProjectOperationalMutation(profile, projectId)
     if ('error' in dest) return { error: dest.error }
   }
@@ -240,5 +243,6 @@ export async function updateDeliverable(id: string, formData: FormData) {
   revalidatePath('/deliverables')
   revalidatePath(`/deliverables/${id}`)
   revalidatePath(`/projects/${projectId}`)
+  revalidateTag('dashboard')
   redirect(`/deliverables/${id}`)
 }

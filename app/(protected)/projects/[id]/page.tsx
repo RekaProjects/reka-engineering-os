@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getSessionProfile } from '@/lib/auth/session'
-import { isAdminOrCoordinator } from '@/lib/auth/permissions'
+import { isBD, isDirektur, isFinance, isManajer, isManagement, isOpsLead, isTD } from '@/lib/auth/permissions'
 import { requireProjectView, userCanEditProjectMetadata } from '@/lib/auth/access-surface'
 import { SectionHeader } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -13,6 +13,8 @@ import { AddTeamMemberForm } from '@/components/modules/projects/AddTeamMemberFo
 import { ProjectTasksTable } from '@/components/modules/projects/ProjectTasksTable'
 import { DeliverableStatusBadge } from '@/components/modules/deliverables/DeliverableStatusBadge'
 import { getProjectById } from '@/lib/projects/queries'
+import { getTerminsByProject } from '@/lib/termins/queries'
+import { TerminTable } from '@/components/modules/projects/TerminTable'
 import { getTeamByProjectId } from '@/lib/projects/team-queries'
 import { getProjectTopLevelTaskProgressCounts, getTasksByProjectId } from '@/lib/tasks/queries'
 import { getDeliverablesByProjectId, type DeliverableWithRelations } from '@/lib/deliverables/queries'
@@ -21,6 +23,7 @@ import { getUsersForSelect } from '@/lib/users/queries'
 import { getProjectActivity, type ActivityLogEntry } from '@/lib/activity/queries'
 import { getDeadlineHistory } from '@/lib/deadline-changes/actions'
 import { ExtendDeadlineButton } from '@/components/modules/projects/ExtendDeadlineButton'
+import { ProjectApprovalBanner } from '@/components/modules/projects/ProjectApprovalBanner'
 import { ProjectProblematicBanner } from '@/components/modules/projects/ProjectProblematicBanner'
 import { ProblemToggle } from '@/components/shared/ProblemToggle'
 import { markProjectProblematic } from '@/lib/projects/actions'
@@ -28,7 +31,7 @@ import { markTaskProblematic } from '@/lib/tasks/actions'
 import { ApproveFileButton } from '@/components/modules/files/ApproveFileButton'
 import { CopyDriveFolderNameButton } from '@/components/modules/projects/CopyDriveFolderNameButton'
 import { buildRekaDriveFolderName } from '@/lib/files/drive-service'
-import { formatDate } from '@/lib/utils/formatters'
+import { formatDate, formatMoney } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils/cn'
 import { Card } from '@/components/ui/card'
 import {
@@ -41,6 +44,7 @@ import {
   Users,
   Activity,
   Plus,
+  Banknote,
 } from 'lucide-react'
 
 interface PageProps {
@@ -66,9 +70,19 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
   const project = await getProjectById(id)
   if (!project) notFound()
 
+  const sourceType = project.source_type ?? 'DOMESTIC'
+  if (activeTab === 'termin' && sourceType !== 'DOMESTIC') {
+    redirect(`/projects/${id}`)
+  }
+
   await requireProjectView(profile, project)
   const canEditProjectMeta = await userCanEditProjectMetadata(profile, project)
-  const showClientIntakeLinks = isAdminOrCoordinator(profile.system_role)
+  const allowOps =
+    project.status !== 'pending_approval' && project.status !== 'rejected'
+  const showResubmitCta =
+    project.status === 'rejected' && isOpsLead(profile.system_role) && canEditProjectMeta
+  const showClientIntakeLinks =
+    isManagement(profile.system_role) || isOpsLead(profile.system_role) || isBD(profile.system_role)
 
   const taskProgressTopLevel = await getProjectTopLevelTaskProgressCounts(id)
 
@@ -89,9 +103,21 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
 
   const deadlineHistory = activeTab === 'overview' ? await getDeadlineHistory('project', id) : []
 
+  const termins =
+    activeTab === 'termin' && sourceType === 'DOMESTIC'
+      ? await getTerminsByProject(id).catch(() => [])
+      : []
+
+  const isManajerLead = isManajer(profile.system_role) && project.project_lead_user_id === profile.id
+  const isTDOrDirektur = isTD(profile.system_role) || isDirektur(profile.system_role)
+  const isFinanceUser = isFinance(profile.system_role)
+
   const tabs = [
     { key: 'overview', label: 'Overview', icon: <ClipboardList size={13} /> },
     { key: 'team', label: 'Team', icon: <Users size={13} /> },
+    ...(sourceType === 'DOMESTIC'
+      ? [{ key: 'termin' as const, label: 'Termin', icon: <Banknote size={13} /> }]
+      : []),
     { key: 'tasks', label: 'Tasks', icon: <CheckSquare size={13} /> },
     { key: 'deliverables', label: 'Deliverables & Files', icon: <FileText size={13} /> },
     { key: 'activity', label: 'Activity', icon: <Activity size={13} /> },
@@ -128,7 +154,7 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
                 Waiting: {(project.waiting_on ?? 'none').charAt(0).toUpperCase() + (project.waiting_on ?? 'none').slice(1)}
               </span>
             ) : null}
-            {canEditProjectMeta ? (
+            {allowOps && canEditProjectMeta ? (
               <ProblemToggle
                 entityId={project.id}
                 entityType="project"
@@ -178,10 +204,16 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
           <ProjectProblematicBanner
             projectId={project.id}
             problemNote={project.problem_note}
-            canResolve={canEditProjectMeta}
+            canResolve={allowOps && canEditProjectMeta}
           />
         ) : null}
       </div>
+
+      <ProjectApprovalBanner
+        project={project}
+        isDirektur={isDirektur(profile.system_role)}
+        showResubmitCta={showResubmitCta}
+      />
 
       <div className="mb-6 flex flex-wrap gap-1 border-b-2 border-[var(--color-border)]">
         {tabs.map((t) => (
@@ -209,9 +241,22 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
           reviewerName={reviewerName}
           showClientIntakeLinks={showClientIntakeLinks}
           canEditProjectMeta={canEditProjectMeta}
+          allowOps={allowOps}
           deadlineHistory={deadlineHistory}
           taskProgressTopLevel={taskProgressTopLevel}
+          sourceType={sourceType}
         />
+      )}
+      {activeTab === 'termin' && sourceType === 'DOMESTIC' && (
+        <section className="space-y-4">
+          <SectionHeader title="Termin & pembayaran" />
+          <TerminTable
+            termins={termins}
+            isManajerLead={isManajerLead}
+            isTDOrDirektur={isTDOrDirektur}
+            isFinance={isFinanceUser}
+          />
+        </section>
       )}
       {activeTab === 'team' && (
         <TeamTab
@@ -220,15 +265,15 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
           users={users}
           leadName={leadName}
           reviewerName={reviewerName}
-          canManageTeam={canEditProjectMeta}
+          canManageTeam={allowOps && canEditProjectMeta}
         />
       )}
       {activeTab === 'tasks' && (
         <ProjectTasksTable
           projectId={project.id}
           tasks={projectTasks}
-          showAddTask={canEditProjectMeta}
-          canFlagProblems={canEditProjectMeta}
+          showAddTask={allowOps && canEditProjectMeta}
+          canFlagProblems={allowOps && canEditProjectMeta}
           markTaskProblematic={markTaskProblematic}
         />
       )}
@@ -237,10 +282,10 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
           projectId={project.id}
           deliverables={projectDeliverables}
           files={projectFiles}
-          showAddDeliverable={canEditProjectMeta}
-          showAddFile={canEditProjectMeta}
+          showAddDeliverable={allowOps && canEditProjectMeta}
+          showAddFile={allowOps && canEditProjectMeta}
           driveFolderLink={project.google_drive_folder_link}
-          canApproveFiles={canEditProjectMeta}
+          canApproveFiles={allowOps && canEditProjectMeta}
         />
       )}
       {activeTab === 'activity' && <ActivityTab logs={projectActivity} />}
@@ -264,8 +309,10 @@ function OverviewTab({
   reviewerName,
   showClientIntakeLinks,
   canEditProjectMeta,
+  allowOps,
   deadlineHistory,
   taskProgressTopLevel,
+  sourceType,
 }: {
   project: Awaited<ReturnType<typeof getProjectById>> & {}
   clientName: string
@@ -273,8 +320,10 @@ function OverviewTab({
   reviewerName: string | null
   showClientIntakeLinks: boolean
   canEditProjectMeta: boolean
+  allowOps: boolean
   deadlineHistory: Awaited<ReturnType<typeof getDeadlineHistory>>
   taskProgressTopLevel: { total: number; done: number }
+  sourceType: string
 }) {
   if (!project) return null
 
@@ -293,6 +342,14 @@ function OverviewTab({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
+        {sourceType === 'PLATFORM' ? (
+          <Card className="border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+            <p className="m-0 text-[0.8125rem] text-[var(--color-text-secondary)]">
+              Project via platform — penagihan dan pembayaran dikelola oleh platform (Fiverr/Upwork). Tidak ada tracking
+              termin atau BAST di modul ini.
+            </p>
+          </Card>
+        ) : null}
         {project.progress_percent != null && (
           <Card className="p-6">
             <SectionHeader title="Progress proyek" />
@@ -325,6 +382,21 @@ function OverviewTab({
             <DetailField label="Source">
               <span className="capitalize">{project.source}</span>
             </DetailField>
+            <DetailField label="Jenis billing">
+              <span>{sourceType === 'DOMESTIC' ? 'Domestic (termin & BAST)' : 'Platform'}</span>
+            </DetailField>
+            {sourceType === 'DOMESTIC' && project.contract_value != null ? (
+              <DetailField label="Nilai kontrak">
+                <span className="font-medium">
+                  {formatMoney(project.contract_value, project.contract_currency ?? 'IDR')}
+                </span>
+                {project.has_retention ? (
+                  <span className="mt-1 block text-[0.75rem] text-[var(--color-text-muted)]">
+                    Retensi: {project.retention_percentage ?? 5}%
+                  </span>
+                ) : null}
+              </DetailField>
+            ) : null}
             <DetailField label="Discipline">
               <span className="capitalize">{project.discipline}</span>
             </DetailField>
@@ -336,7 +408,7 @@ function OverviewTab({
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span>{formatDate(project.target_due_date)}</span>
-                  {canEditProjectMeta ? (
+                  {allowOps && canEditProjectMeta ? (
                     <ExtendDeadlineButton
                       projectId={project.id}
                       currentDueDate={project.target_due_date}

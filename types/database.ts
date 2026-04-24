@@ -1,7 +1,25 @@
 // TypeScript types mirroring the full data model (V2)
 
 export type UserRole = 'admin' | 'staff'
-export type SystemRole = 'admin' | 'coordinator' | 'reviewer' | 'member'
+
+export type SystemRole =
+  | 'direktur'
+  | 'technical_director'
+  | 'finance'
+  | 'manajer'
+  | 'bd'
+  | 'senior'
+  | 'member'
+  | 'freelancer'
+
+/** Three top management roles */
+export type ManagementRole = 'direktur' | 'technical_director' | 'finance'
+
+/** Roles that create & lead projects */
+export type OpsLeadRole = 'technical_director' | 'manajer'
+
+/** Personal dashboard / own work only */
+export type PersonalOnlyRole = 'member' | 'freelancer' | 'senior'
 export type WorkerType = 'internal' | 'freelancer' | 'subcontractor'
 export type ActiveStatus = 'active' | 'inactive' | 'archived'
 export type AvailabilityStatus = 'available' | 'partially_available' | 'unavailable' | 'on_leave'
@@ -12,6 +30,19 @@ export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 
 export type PayslipStatus = 'draft' | 'sent' | 'paid'
 export type OutreachStatus = 'to_contact' | 'contacted' | 'replied' | 'in_discussion' | 'converted' | 'declined'
 export type Currency = 'IDR' | 'USD' | 'EUR' | 'SGD'
+
+/** Billing model: domestic milestones vs platform-handled. */
+export type ProjectSourceType = 'DOMESTIC' | 'PLATFORM'
+
+/** Milestone payment lifecycle (DOMESTIC projects). */
+export type TerminStatus =
+  | 'BELUM_DIMULAI'
+  | 'SIAP_DIKLAIM'
+  | 'MENUNGGU_VERIFIKASI'
+  | 'INVOICE_DITERBITKAN'
+  | 'MENUNGGU_TTD_CLIENT'
+  | 'MENUNGGU_PEMBAYARAN'
+  | 'LUNAS'
 export type PaymentAccountType = 'wise' | 'paypal' | 'bank' | 'ewallet' | 'other'
 
 export interface UserProfile {
@@ -123,6 +154,10 @@ export interface Project {
   reviewer_user_id: string | null
   priority: string
   status: string
+  approval_requested_at: string | null
+  approval_reviewed_by: string | null
+  approval_reviewed_at: string | null
+  rejection_note: string | null
   progress_percent: number
   waiting_on: string | null
   is_problematic: boolean
@@ -130,7 +165,38 @@ export interface Project {
   google_drive_folder_id: string | null
   google_drive_folder_link: string | null
   notes_internal: string | null
+  source_type: ProjectSourceType
+  contract_value: number | null
+  contract_currency: string
+  has_retention: boolean
+  retention_percentage: number | null
   created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ProjectTermin {
+  id: string
+  project_id: string
+  termin_number: number
+  label: string
+  percentage: number
+  amount: number | null
+  currency: string
+  trigger_condition: string | null
+  status: TerminStatus
+  invoice_id: string | null
+  claimed_by: string | null
+  claimed_at: string | null
+  verified_by: string | null
+  verified_at: string | null
+  bast_signed_at: string | null
+  bast_signed_by: string | null
+  client_signed_bast_at: string | null
+  paid_at: string | null
+  notes: string | null
+  is_retention: boolean
+  retention_due_date: string | null
   created_at: string
   updated_at: string
 }
@@ -187,12 +253,18 @@ export interface Deliverable {
   updated_at: string
 }
 
+export type FileProvider = 'manual' | 'google_drive' | 'r2'
+
 export interface ProjectFile {
   id: string
   project_id: string
   task_id: string | null
   deliverable_id: string | null
   file_name: string
+  file_code: string | null
+  revision_code: string
+  discipline_code: string | null
+  doc_type_code: string | null
   file_category: string
   provider: string
   manual_link: string | null
@@ -201,6 +273,9 @@ export interface ProjectFile {
   google_web_view_link: string | null
   mime_type: string | null
   extension: string | null
+  file_size_bytes: number | null
+  r2_key: string | null
+  r2_url: string | null
   revision_number: number | null
   version_label: string | null
   is_approved_version: boolean
@@ -248,6 +323,14 @@ export interface CompensationRecord {
   created_by: string | null
   created_at: string
   updated_at: string
+  /** TD / Manajer who proposed this row (Stage D workflow). */
+  proposed_by: string | null
+  proposed_at: string | null
+  return_note: string | null
+  finance_note: string | null
+  confirmed_by: string | null
+  confirmed_at: string | null
+  is_monthly_fixed_direct: boolean
 }
 
 export interface PaymentRecord {
@@ -291,6 +374,17 @@ export interface PaymentAccount {
   sort_order: number
   created_at: string
   updated_at: string
+}
+
+export interface Notification {
+  id: string
+  user_id: string
+  type: string
+  title: string
+  body: string | null
+  link: string | null
+  read_at: string | null
+  created_at: string
 }
 
 export interface Payslip {

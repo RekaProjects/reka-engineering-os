@@ -1,6 +1,8 @@
 // Server-side query helpers for the Projects module
+import { unstable_cache } from 'next/cache'
+import { cache } from 'react'
 import { createServerClient } from '@/lib/supabase/server'
-import { effectiveRole } from '@/lib/auth/permissions'
+import { effectiveRole, isManagement } from '@/lib/auth/permissions'
 import type { Project, SystemRole } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────
@@ -10,6 +12,11 @@ export type ProjectWithRelations = Project & {
   lead: { id: string; full_name: string } | null
   reviewer: { id: string; full_name: string } | null
   intakes: { id: string; intake_code: string; title: string } | null
+}
+
+export interface GetProjectsResult {
+  rows: ProjectWithRelations[]
+  count: number
 }
 
 // ─── Scoping helper ──────────────────────────────────────────
@@ -25,7 +32,7 @@ export async function getAssignedProjectIdsForUser(userId: string): Promise<stri
 }
 
 /** True if the user has a row in project_team_assignments for this project. */
-export async function isUserAssignedToProject(userId: string, projectId: string): Promise<boolean> {
+export const isUserAssignedToProject = cache(async (userId: string, projectId: string): Promise<boolean> => {
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('project_team_assignments')
@@ -36,7 +43,7 @@ export async function isUserAssignedToProject(userId: string, projectId: string)
     .maybeSingle()
   if (error) return false
   return data != null
-}
+})
 
 /**
  * Project IDs the user may open on the hub (mirrors userCanViewProject in access-surface).
@@ -47,7 +54,7 @@ export async function getViewableProjectIdsForUser(
   userId: string,
   systemRole: SystemRole | null | undefined,
 ): Promise<string[] | null> {
-  if (effectiveRole(systemRole) === 'admin') return null
+  if (isManagement(systemRole)) return null
 
   const assigned = await getAssignedProjectIdsForUser(userId)
   const supabase = await createServerClient()
@@ -72,14 +79,29 @@ export async function getProjects(opts?: {
   assignedUserId?: string
   /** Restrict to projects where user is lead or reviewer (lead + project_lead / reviewer_user_id) */
   reviewerUserId?: string
-}): Promise<ProjectWithRelations[]> {
+  page?: number
+  pageSize?: number
+}): Promise<GetProjectsResult> {
   const supabase = await createServerClient()
+
+  const selectCols =
+    '*, clients(id, client_name, client_code), lead:profiles!project_lead_user_id(id, full_name), reviewer:profiles!reviewer_user_id(id, full_name), intakes:intakes!intake_id(id, intake_code, title)'
+
+  let assignedProjectIds: string[] | null = null
+  if (opts?.assignedUserId) {
+    assignedProjectIds = await getAssignedProjectIdsForUser(opts.assignedUserId)
+    if (assignedProjectIds.length === 0) return { rows: [], count: 0 }
+  }
+
+  const paginate = opts?.page != null && opts?.pageSize != null
+  const page = opts?.page ?? 1
+  const pageSize = opts?.pageSize ?? 50
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from('projects')
-    .select(
-      '*, clients(id, client_name, client_code), lead:profiles!project_lead_user_id(id, full_name), reviewer:profiles!reviewer_user_id(id, full_name), intakes:intakes!intake_id(id, intake_code, title)'
-    )
+    .select(selectCols, paginate ? { count: 'exact' } : undefined)
     .order('created_at', { ascending: false })
 
   if (opts?.status && opts.status !== 'all') {
@@ -91,25 +113,28 @@ export async function getProjects(opts?: {
   if (opts?.priority && opts.priority !== 'all') {
     query = query.eq('priority', opts.priority)
   }
-  if (opts?.search) {
-    query = query.or(
-      `name.ilike.%${opts.search}%,project_code.ilike.%${opts.search}%`
-    )
+  const q = opts?.search?.trim() ?? ''
+  if (q.length >= 3) {
+    query = query.textSearch('search_tsv', q, { type: 'websearch', config: 'simple' })
+  } else if (q.length > 0) {
+    query = query.or(`name.ilike.${q}%,project_code.ilike.${q}%`)
   }
 
-  // Role-scoped filters
-  if (opts?.assignedUserId) {
-    const ids = await getAssignedProjectIdsForUser(opts.assignedUserId)
-    if (ids.length === 0) return []
-    query = query.in('id', ids)
+  if (assignedProjectIds) {
+    query = query.in('id', assignedProjectIds)
   }
   if (opts?.reviewerUserId) {
     query = query.eq('reviewer_user_id', opts.reviewerUserId)
   }
 
-  const { data, error } = await query
+  if (paginate) {
+    query = query.range(from, to)
+  }
+
+  const { data, error, count } = await query
   if (error) throw new Error(error.message)
-  return (data ?? []) as unknown as ProjectWithRelations[]
+  const rows = (data ?? []) as unknown as ProjectWithRelations[]
+  return { rows, count: paginate ? count ?? 0 : rows.length }
 }
 
 // ─── Single ───────────────────────────────────────────────────
@@ -127,6 +152,28 @@ export async function getProjectById(id: string): Promise<ProjectWithRelations |
 
   if (error) return null
   return data as unknown as ProjectWithRelations
+}
+
+/** Projects waiting on Direktur approval (dashboard / needs attention). */
+async function _getPendingApprovalProjects(): Promise<ProjectWithRelations[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('projects')
+    .select(
+      '*, clients(id, client_name, client_code), lead:profiles!project_lead_user_id(id, full_name), reviewer:profiles!reviewer_user_id(id, full_name), intakes:intakes!intake_id(id, intake_code, title)'
+    )
+    .eq('status', 'pending_approval')
+    .order('approval_requested_at', { ascending: true, nullsFirst: false })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []) as unknown as ProjectWithRelations[]
+}
+
+export async function getPendingApprovalProjects(): Promise<ProjectWithRelations[]> {
+  return unstable_cache(_getPendingApprovalProjects, ['pending-approval-projects'], {
+    revalidate: 300,
+    tags: ['dashboard', 'dashboard:attention', 'projects'],
+  })()
 }
 
 // ─── By Client ────────────────────────────────────────────────

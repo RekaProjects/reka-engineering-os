@@ -3,16 +3,29 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getAssignedProjectIdsForUser } from '@/lib/projects/queries'
 import type { Client } from '@/types/database'
 
+export interface GetClientsResult {
+  rows: Client[]
+  count: number
+}
+
 export async function getClients(opts?: {
   search?: string
   status?: string
   source?: string
-}): Promise<Client[]> {
+  page?: number
+  pageSize?: number
+}): Promise<GetClientsResult> {
   const supabase = await createServerClient()
+
+  const paginate = opts?.page != null && opts?.pageSize != null
+  const page = opts?.page ?? 1
+  const pageSize = opts?.pageSize ?? 50
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from('clients')
-    .select('*')
+    .select('*', paginate ? { count: 'exact' } : undefined)
     .order('created_at', { ascending: false })
 
   if (opts?.status && opts.status !== 'all') {
@@ -23,13 +36,18 @@ export async function getClients(opts?: {
   }
   if (opts?.search) {
     query = query.or(
-      `client_name.ilike.%${opts.search}%,primary_contact_name.ilike.%${opts.search}%,client_code.ilike.%${opts.search}%`
+      `client_name.ilike.%${opts.search}%,primary_contact_name.ilike.%${opts.search}%,client_code.ilike.%${opts.search}%`,
     )
   }
 
-  const { data, error } = await query
+  if (paginate) {
+    query = query.range(from, to)
+  }
+
+  const { data, error, count } = await query
   if (error) throw new Error(error.message)
-  return (data ?? []) as Client[]
+  const rows = (data ?? []) as Client[]
+  return { rows, count: paginate ? count ?? 0 : rows.length }
 }
 
 export async function getClientsForSelect(): Promise<{ id: string; client_name: string; client_code: string }[]> {

@@ -17,7 +17,19 @@ export const INTAKE_STATUSES = {
   CONVERTED:     { label: 'Converted',     variant: 'success'  },
 } as const
 
+export const TERMIN_STATUSES = {
+  BELUM_DIMULAI:         { label: 'Belum Dimulai',          variant: 'neutral'  },
+  SIAP_DIKLAIM:          { label: 'Siap Diklaim',           variant: 'active'   },
+  MENUNGGU_VERIFIKASI:   { label: 'Menunggu Verifikasi',    variant: 'review'   },
+  INVOICE_DITERBITKAN:   { label: 'Invoice Diterbitkan',    variant: 'active'   },
+  MENUNGGU_TTD_CLIENT:   { label: 'Menunggu TTD Client',    variant: 'review'   },
+  MENUNGGU_PEMBAYARAN:   { label: 'Menunggu Pembayaran',    variant: 'review'   },
+  LUNAS:                 { label: 'Lunas',                  variant: 'success'  },
+} as const
+
 export const PROJECT_STATUSES = {
+  PENDING_APPROVAL: { label: 'Pending Approval', variant: 'review'   },
+  REJECTED:         { label: 'Rejected',         variant: 'danger'   },
   NEW:             { label: 'New',             variant: 'neutral'  },
   READY_TO_START:  { label: 'Ready to Start',  variant: 'neutral'  },
   ONGOING:         { label: 'Ongoing',          variant: 'active'   },

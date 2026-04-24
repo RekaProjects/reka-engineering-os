@@ -1,14 +1,16 @@
 'use server'
 
+import Decimal from 'decimal.js'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { getUsdToIdrRate } from '@/lib/fx/queries'
 import { generateNextInvoiceCode, isInvoiceCodeTaken } from '@/lib/invoices/queries'
+import { calcMoneyPercent, calcMoneyProduct } from '@/lib/compensation/helpers'
 
 export async function createInvoice(formData: FormData) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const supabase = await createServerClient()
 
@@ -25,9 +27,10 @@ export async function createInvoice(formData: FormData) {
   const platform_fee_pct = parseFloat(formData.get('platform_fee_pct') as string) || 0
   const gateway_fee_pct = parseFloat(formData.get('gateway_fee_pct') as string) || 0
 
-  const platform_fee_amount = gross_amount * platform_fee_pct / 100
-  const gateway_fee_amount = (gross_amount - platform_fee_amount) * gateway_fee_pct / 100
-  const net_amount = gross_amount - platform_fee_amount - gateway_fee_amount
+  const platform_fee_amount = calcMoneyPercent(gross_amount, platform_fee_pct)
+  const baseAfterPlatform = new Decimal(String(gross_amount)).minus(platform_fee_amount)
+  const gateway_fee_amount = calcMoneyPercent(baseAfterPlatform.toString(), gateway_fee_pct)
+  const net_amount = baseAfterPlatform.minus(gateway_fee_amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber()
 
   const fxRate = currency === 'USD' ? await getUsdToIdrRate() : null
 
@@ -65,7 +68,7 @@ export async function createInvoice(formData: FormData) {
           description: item.description,
           qty: item.qty,
           unit_price: item.unit_price,
-          subtotal: item.qty * item.unit_price,
+          subtotal: calcMoneyProduct(item.qty, item.unit_price),
           sort_order: i,
         }))
       )
@@ -73,12 +76,13 @@ export async function createInvoice(formData: FormData) {
   }
 
   revalidatePath('/finance/invoices')
+  revalidateTag('dashboard')
   return data
 }
 
 export async function updateInvoiceStatus(id: string, status: string) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const supabase = await createServerClient()
   const { error } = await supabase
@@ -89,11 +93,12 @@ export async function updateInvoiceStatus(id: string, status: string) {
   if (error) throw new Error(error.message)
   revalidatePath('/finance/invoices')
   revalidatePath(`/finance/invoices/${id}`)
+  revalidateTag('dashboard')
 }
 
 export async function recordIncomingPayment(formData: FormData) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const supabase = await createServerClient()
 
@@ -137,4 +142,5 @@ export async function recordIncomingPayment(formData: FormData) {
 
   revalidatePath('/finance/invoices')
   revalidatePath(`/finance/invoices/${invoice_id}`)
+  revalidateTag('dashboard')
 }

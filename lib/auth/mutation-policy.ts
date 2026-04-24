@@ -4,7 +4,17 @@
  */
 
 import { getSessionProfile, type SessionProfile } from '@/lib/auth/session'
-import { effectiveRole } from '@/lib/auth/permissions'
+import {
+  canOperateFinance,
+  canProposeCompensation,
+  isBD,
+  isDirektur,
+  isFinance,
+  isManajer,
+  isManagement,
+  isOpsLead,
+  isTD,
+} from '@/lib/auth/permissions'
 import {
   userCanEditDeliverable,
   userCanEditFile,
@@ -23,50 +33,87 @@ export async function loadMutationProfile(): Promise<SessionProfile> {
   return getSessionProfile()
 }
 
+export function ensureFinanceOrDirektur(profile: SessionProfile): string | null {
+  if (!isDirektur(profile.system_role) && !isFinance(profile.system_role)) return MUTATION_FORBIDDEN
+  return null
+}
+
+export function ensureFinance(profile: SessionProfile): string | null {
+  if (!isFinance(profile.system_role)) return MUTATION_FORBIDDEN
+  return null
+}
+
+export function ensureTD(profile: SessionProfile): string | null {
+  if (!isTD(profile.system_role)) return MUTATION_FORBIDDEN
+  return null
+}
+
+export function ensureOpsLead(profile: SessionProfile): string | null {
+  if (!isOpsLead(profile.system_role)) return MUTATION_FORBIDDEN
+  return null
+}
+
+export function ensureManagement(profile: SessionProfile): string | null {
+  if (!isManagement(profile.system_role)) return MUTATION_FORBIDDEN
+  return null
+}
+
+export function ensureCanProposeCompensation(profile: SessionProfile): string | null {
+  if (!canProposeCompensation(profile.system_role)) return MUTATION_FORBIDDEN
+  return null
+}
+
+export function ensureCanConfirmCompensation(profile: SessionProfile): string | null {
+  if (!canOperateFinance(profile.system_role)) return MUTATION_FORBIDDEN
+  return null
+}
+
+/** @deprecated Prefer ensureManagement() */
 export function ensureAdmin(profile: SessionProfile): string | null {
-  if (effectiveRole(profile.system_role) !== 'admin') return MUTATION_FORBIDDEN
-  return null
+  return ensureManagement(profile)
 }
 
+/** @deprecated Prefer ensureOpsLead() or ensureManagement() */
 export function ensureAdminOrCoordinator(profile: SessionProfile): string | null {
-  const r = effectiveRole(profile.system_role)
-  if (r !== 'admin' && r !== 'coordinator') return MUTATION_FORBIDDEN
+  if (!isManagement(profile.system_role) && !isOpsLead(profile.system_role)) {
+    return MUTATION_FORBIDDEN
+  }
   return null
 }
 
-/** Admin or coordinator who may operate on this project (tasks, deliverables, files, team roster). */
 export async function ensureProjectOperationalMutation(
   profile: SessionProfile,
   projectId: string,
 ): Promise<{ error: string } | { project: ProjectWithRelations }> {
   const project = await getProjectById(projectId)
   if (!project) return { error: 'Project not found.' }
+  if (project.status === 'pending_approval' || project.status === 'rejected') {
+    return { error: 'This project is not active for operational changes until it is approved.' }
+  }
   if (!(await userCanEditProjectMetadata(profile, project))) return { error: MUTATION_FORBIDDEN }
   return { project }
 }
 
-/** Global project creation (createProject, intake conversion that creates a project). */
 export function ensureCreateProjectMutation(profile: SessionProfile): string | null {
-  if (effectiveRole(profile.system_role) !== 'admin') return MUTATION_FORBIDDEN
-  return null
+  return ensureOpsLead(profile)
 }
 
-/** Client create/update — admin only (coordinators are read-only on clients in the approved matrix). */
 export function ensureClientMutation(profile: SessionProfile): string | null {
-  return ensureAdmin(profile)
+  const r = profile.system_role
+  if (isBD(r) || isFinance(r) || isTD(r) || isDirektur(r)) return null
+  return MUTATION_FORBIDDEN
 }
 
-/** Intake create/update — admin or coordinator. */
 export function ensureIntakeMutation(profile: SessionProfile): string | null {
-  return ensureAdminOrCoordinator(profile)
+  const r = profile.system_role
+  if (isTD(r) || isManajer(r) || isBD(r)) return null
+  return MUTATION_FORBIDDEN
 }
 
-/** Compensation / payment mutations — admin only. */
 export function ensureCompensationOrPaymentMutation(profile: SessionProfile): string | null {
-  return ensureAdmin(profile)
+  return ensureFinance(profile)
 }
 
-/** View + edit deliverable for mutation (update body). */
 export async function ensureDeliverableUpdateAccess(
   profile: SessionProfile,
   deliverableId: string,
@@ -79,7 +126,6 @@ export async function ensureDeliverableUpdateAccess(
   return { d }
 }
 
-/** View + edit file for mutation. */
 export async function ensureFileUpdateAccess(
   profile: SessionProfile,
   fileId: string,
@@ -92,13 +138,15 @@ export async function ensureFileUpdateAccess(
   return { f }
 }
 
-/** Project must exist and caller may attach team members. */
 export async function ensureProjectTeamMutation(
   profile: SessionProfile,
   projectId: string,
 ): Promise<{ error: string } | { project: ProjectWithRelations }> {
   const project = await getProjectById(projectId)
   if (!project) return { error: 'Project not found.' }
+  if (project.status === 'pending_approval' || project.status === 'rejected') {
+    return { error: 'Team changes are not allowed until the project is approved.' }
+  }
   if (!(await userCanViewProject(profile, project))) return { error: MUTATION_FORBIDDEN }
   if (!(await userCanEditProjectMetadata(profile, project))) return { error: MUTATION_FORBIDDEN }
   return { project }

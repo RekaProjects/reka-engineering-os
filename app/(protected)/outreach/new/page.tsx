@@ -9,7 +9,7 @@ export const metadata = { title: 'Add Outreach Company — ReKa Engineering OS' 
 
 export default async function NewOutreachPage() {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['bd'])
 
   async function handleCreate(formData: FormData) {
     'use server'

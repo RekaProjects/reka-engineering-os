@@ -4,7 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { InlineStatusSelect } from '@/components/shared/InlineStatusSelect'
 import { IntakeStatusBadge } from '@/components/modules/intakes/IntakeStatusBadge'
-import { ConvertLeadButton } from '@/components/modules/leads/ConvertLeadButton'
+import {
+  ConvertLeadButton,
+  type ConvertLeadClientOption,
+  type ConvertLeadUserOption,
+} from '@/components/modules/leads/ConvertLeadButton'
 import { INTAKE_STATUS_OPTIONS } from '@/lib/constants/options'
 import { updateIntakeStatus } from '@/lib/intakes/actions'
 
@@ -18,6 +22,9 @@ interface IntakeStatusUpdaterProps {
   currentStatus: string
   leadTitle: string
   clientName: string
+  clients: ConvertLeadClientOption[]
+  users: ConvertLeadUserOption[]
+  linkedClientId?: string | null
   /** If true, show badge only (e.g. already converted). */
   readOnly?: boolean
 }
@@ -27,6 +34,9 @@ export function IntakeStatusUpdater({
   currentStatus,
   leadTitle,
   clientName,
+  clients,
+  users,
+  linkedClientId = null,
   readOnly,
 }: IntakeStatusUpdaterProps) {
   const router = useRouter()
@@ -165,6 +175,9 @@ export function IntakeStatusUpdater({
           leadId={intakeId}
           leadTitle={leadTitle}
           leadClientName={clientName}
+          clients={clients}
+          users={users}
+          linkedClientId={linkedClientId}
           showTrigger={false}
           startOpen
           onFormClose={() => setShowConvertForm(false)}

@@ -1,6 +1,12 @@
 import Link from 'next/link'
 import { getSessionProfile } from '@/lib/auth/session'
-import { canAccessTasksDeliverablesFilesNewRoute, effectiveRole } from '@/lib/auth/permissions'
+import {
+  canAccessTasksDeliverablesFilesNewRoute,
+  effectiveRole,
+  isFreelancer,
+  isManajer,
+  isSenior,
+} from '@/lib/auth/permissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -147,11 +153,13 @@ export default async function DeliverablesPage({ searchParams }: PageProps) {
   const params = await searchParams
 
   const scopeOpts =
-    role === 'member' ? { scopePreparerId: profile.id } :
-    role === 'reviewer' ? { scopeReviewerId: profile.id } :
-    role === 'coordinator'
-      ? { scopeProjectIds: (await getViewableProjectIdsForUser(profile.id, profile.system_role)) ?? [] }
-      : {}
+    role === 'member' || isFreelancer(role)
+      ? { scopePreparerId: profile.id }
+      : isSenior(role)
+        ? { scopeReviewerId: profile.id }
+        : isManajer(role)
+          ? { scopeProjectIds: (await getViewableProjectIdsForUser(profile.id, profile.system_role)) ?? [] }
+          : {}
 
   const deliverables = await getDeliverables({
     search: params.search,
@@ -161,14 +169,15 @@ export default async function DeliverablesPage({ searchParams }: PageProps) {
     ...scopeOpts,
   }).catch(() => [] as DeliverableWithRelations[])
 
-  const pageTitle = role === 'member' ? 'My Deliverables' : 'Deliverables'
-  const pageSubtitle = role === 'member'
-    ? 'Deliverables you prepared.'
-    : role === 'reviewer'
-      ? 'Deliverables assigned to you for review.'
-      : role === 'coordinator'
-        ? 'Deliverables in your assigned projects.'
-        : 'Project outputs tracked through review, revision, and final issuance.'
+  const pageTitle = role === 'member' || isFreelancer(role) ? 'My Deliverables' : 'Deliverables'
+  const pageSubtitle =
+    role === 'member' || isFreelancer(role)
+      ? 'Deliverables you prepared.'
+      : isSenior(role)
+        ? 'Deliverables assigned to you for review.'
+        : isManajer(role)
+          ? 'Deliverables in your assigned projects.'
+          : 'Project outputs tracked through review, revision, and final issuance.'
   const canCreate = canAccessTasksDeliverablesFilesNewRoute(profile.system_role)
   const hasActiveFilters = Boolean(params.search || params.status || params.type || params.project_id)
 

@@ -11,7 +11,7 @@ export const metadata = { title: 'Generate payslip — ReKa Engineering OS' }
 
 export default async function NewPayslipPage() {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const [members, accounts, fxRate] = await Promise.all([
     getProfilesForPayslipForm(),

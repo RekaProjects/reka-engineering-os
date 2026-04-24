@@ -5,7 +5,7 @@ import { redirect }       from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient }  from '@/lib/supabase/admin'
 import { AVAILABILITY_STATUS_OPTIONS } from '@/lib/constants/options'
-import { loadMutationProfile, ensureAdmin } from '@/lib/auth/mutation-policy'
+import { loadMutationProfile, ensureTD } from '@/lib/auth/mutation-policy'
 
 // ── Create invite (admin) ─────────────────────────────────────
 
@@ -15,7 +15,7 @@ export async function createInvite(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const perm = ensureAdmin(profile)
+  const perm = ensureTD(profile)
   if (perm) return { error: perm }
 
   const email     = (formData.get('email') as string)?.trim().toLowerCase()
@@ -63,7 +63,7 @@ export async function revokeInvite(id: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const perm = ensureAdmin(profile)
+  const perm = ensureTD(profile)
   if (perm) return { error: perm }
 
   const admin = createAdminClient()

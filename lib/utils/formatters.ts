@@ -32,6 +32,21 @@ export function truncate(str: string, maxLength: number): string {
   return str.slice(0, maxLength).trimEnd() + '…'
 }
 
+/** Human-readable byte size (binary units). */
+export function formatBytes(bytes: number | null | undefined): string {
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return '—'
+  const units = ['B', 'KB', 'MB', 'GB'] as const
+  let n = bytes
+  let i = 0
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024
+    i++
+  }
+  if (i === 0) return `${Math.round(n)} ${units[i]}`
+  const rounded = n < 10 ? Math.round(n * 10) / 10 : Math.round(n)
+  return `${rounded} ${units[i]}`
+}
+
 /** Get initials from a full name, e.g. "John Doe" → "JD" */
 export function getInitials(name: string): string {
   return name

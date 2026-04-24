@@ -13,6 +13,8 @@ import type { ProjectWithRelations } from '@/lib/projects/queries'
 import { formatDate } from '@/lib/utils/formatters'
 import Link from 'next/link'
 
+const WORKFLOW_STATUSES = new Set(['pending_approval', 'rejected'])
+
 const PROJECT_STATUS_OPTIONS = [
   { value: 'new',             label: 'New' },
   { value: 'ready_to_start',  label: 'Ready to Start' },
@@ -77,14 +79,17 @@ export function ProjectsViewToggle({ projects, onStatusUpdate }: ProjectsViewTog
     {
       key: 'status',
       header: 'Status',
-      render: (p) => (
-        <InlineStatusSelect
-          currentStatus={p.status}
-          options={PROJECT_STATUS_OPTIONS}
-          onUpdate={(newStatus) => onStatusUpdate(p.id, newStatus)}
-          renderBadge={(s) => <ProjectStatusBadge status={s} />}
-        />
-      ),
+      render: (p) =>
+        WORKFLOW_STATUSES.has(p.status) ? (
+          <ProjectStatusBadge status={p.status} />
+        ) : (
+          <InlineStatusSelect
+            currentStatus={p.status}
+            options={PROJECT_STATUS_OPTIONS}
+            onUpdate={(newStatus) => onStatusUpdate(p.id, newStatus)}
+            renderBadge={(s) => <ProjectStatusBadge status={s} />}
+          />
+        ),
     },
     {
       key: 'due',

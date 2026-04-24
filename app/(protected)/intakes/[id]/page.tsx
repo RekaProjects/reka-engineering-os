@@ -7,6 +7,8 @@ import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { IntakeStatusUpdater } from '@/components/modules/intakes/IntakeStatusUpdater'
 import { ConvertToProjectButton } from '@/components/modules/intakes/ConvertToProjectButton'
 import { getIntakeById } from '@/lib/intakes/queries'
+import { getClientsForSelect } from '@/lib/clients/queries'
+import { getUsersForSelect } from '@/lib/users/queries'
 import { formatDate } from '@/lib/utils/formatters'
 import {
   Pencil,
@@ -26,10 +28,14 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function IntakeDetailPage({ params }: PageProps) {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin', 'coordinator'])
+  requireRole(_sp.system_role, ['direktur', 'technical_director', 'manajer', 'bd'])
 
   const { id } = await params
-  const intake = await getIntakeById(id)
+  const [intake, clients, users] = await Promise.all([
+    getIntakeById(id),
+    getClientsForSelect(),
+    getUsersForSelect(),
+  ])
   if (!intake) notFound()
 
   const clientDisplay = intake.clients
@@ -82,6 +88,9 @@ export default async function IntakeDetailPage({ params }: PageProps) {
             currentStatus={intake.status}
             leadTitle={intake.title}
             clientName={clientDisplay}
+            clients={clients}
+            users={users}
+            linkedClientId={intake.client_id}
             readOnly={isConverted}
           />
         }

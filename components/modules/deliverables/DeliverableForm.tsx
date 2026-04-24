@@ -3,10 +3,7 @@
 import { useTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createDeliverable, updateDeliverable } from '@/lib/deliverables/actions'
-import {
-  DELIVERABLE_STATUS_OPTIONS,
-  DELIVERABLE_TYPE_OPTIONS,
-} from '@/lib/constants/options'
+import { DELIVERABLE_STATUS_OPTIONS } from '@/lib/constants/options'
 import type { DeliverableEditFormScope } from '@/lib/auth/edit-form-scopes'
 import type { DeliverableWithRelations } from '@/lib/deliverables/queries'
 import { FormSection } from '@/components/shared/FormSection'
@@ -20,7 +17,7 @@ interface DeliverableFormProps {
   users: { id: string; full_name: string; email: string; discipline: string | null }[]
   tasks?: { id: string; title: string }[]
   defaultProjectId?: string
-  deliverableTypeOptions?: OptionPair[]
+  deliverableTypeOptions: OptionPair[]
   deliverableEditScope?: DeliverableEditFormScope
 }
 
@@ -159,7 +156,7 @@ export function DeliverableForm({
     })
   }
 
-  const typeOpts = deliverableTypeOptions ?? DELIVERABLE_TYPE_OPTIONS
+  const typeOpts = deliverableTypeOptions
 
   if (mode === 'edit' && scope === 'reviewer' && deliverable) {
     const typeLabel = typeOpts.find(t => t.value === deliverable.type)?.label ?? deliverable.type

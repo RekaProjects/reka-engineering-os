@@ -8,7 +8,7 @@ export const metadata = { title: 'Add Member — ReKa Engineering OS' }
 
 export default async function NewTeamMemberPage() {
   const profile = await getSessionProfile()
-  requireRole(profile.system_role, ['admin'])
+  requireRole(profile.system_role, ['technical_director'])
 
   const [functionalRoleOptions, disciplineOptions, workerTypeOptions] = await Promise.all([
     getSettingOptions('functional_role'),

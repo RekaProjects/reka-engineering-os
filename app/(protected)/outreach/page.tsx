@@ -123,7 +123,7 @@ function outreachColumns(
 
 export default async function OutreachPage({ searchParams }: PageProps) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['bd', 'direktur', 'technical_director'])
 
   const params = await searchParams
   const companies = await getOutreachCompanies({

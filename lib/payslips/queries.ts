@@ -2,7 +2,14 @@ import { createServerClient } from '@/lib/supabase/server'
 import type { Payslip, SystemRole } from '@/types/database'
 
 export type PayslipWithProfile = Payslip & {
-  profile: { full_name: string; photo_url: string | null; functional_role: string | null; system_role: SystemRole | null } | null
+  profile: {
+    full_name: string
+    photo_url: string | null
+    functional_role: string | null
+    system_role: SystemRole | null
+    bank_name: string | null
+    bank_account_number: string | null
+  } | null
   payment_accounts: { name: string } | null
 }
 
@@ -27,7 +34,7 @@ export async function getPayslips(opts: GetPayslipsOptions = {}): Promise<Paysli
     .from('payslips')
     .select(`
       *,
-      profile:profiles!payslips_profile_id_fkey ( full_name, photo_url, functional_role, system_role ),
+      profile:profiles!payslips_profile_id_fkey ( full_name, photo_url, functional_role, system_role, bank_name, bank_account_number ),
       payment_accounts ( name )
     `)
     .order('created_at', { ascending: false })
@@ -58,7 +65,7 @@ export async function getPayslipById(id: string): Promise<PayslipWithProfile | n
     .from('payslips')
     .select(`
       *,
-      profile:profiles!payslips_profile_id_fkey ( full_name, photo_url, functional_role, system_role ),
+      profile:profiles!payslips_profile_id_fkey ( full_name, photo_url, functional_role, system_role, bank_name, bank_account_number ),
       payment_accounts ( name )
     `)
     .eq('id', id)
@@ -91,14 +98,14 @@ export async function getNextPayslipCode(year: number, month: number): Promise<s
   return `${prefix}${String(nextSeq).padStart(3, '0')}`
 }
 
-/** Members and coordinators eligible for payslip generation */
+/** Profiles eligible for payslip generation (internal payroll roles) */
 export async function getProfilesForPayslipForm(): Promise<PayslipMemberOption[]> {
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name, system_role, photo_url')
     .eq('is_active', true)
-    .in('system_role', ['member', 'coordinator'])
+    .in('system_role', ['member', 'manajer', 'senior', 'technical_director', 'finance', 'direktur', 'freelancer'])
     .order('full_name', { ascending: true })
 
   if (error) return []

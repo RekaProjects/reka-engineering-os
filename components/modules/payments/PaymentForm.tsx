@@ -2,7 +2,6 @@
 
 import { useActionState } from 'react'
 import type { CSSProperties } from 'react'
-import { PAYMENT_METHOD_OPTIONS } from '@/lib/constants/options'
 import { FormSection } from '@/components/shared/FormSection'
 
 type MemberOption = { id: string; full_name: string }
@@ -106,7 +105,7 @@ export function PaymentForm({ members, defaultValues: dv = {}, action, submitLab
               <label style={LABEL}>Payment Method</label>
               <select name="payment_method" defaultValue={(dv.payment_method as string) ?? ''} style={INPUT}>
                 <option value="">Select…</option>
-                {(paymentMethodOptions ?? PAYMENT_METHOD_OPTIONS).map((o) => (
+                {(paymentMethodOptions ?? []).map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>

@@ -116,7 +116,7 @@ function invoiceColumns(fxRate: number): Column<InvoiceWithRelations>[] {
 
 export default async function InvoicesPage({ searchParams }: PageProps) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const params = await searchParams
   const [invoices, fxRate] = await Promise.all([

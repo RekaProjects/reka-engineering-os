@@ -127,7 +127,7 @@ function payslipColumns(fxRate: number): Column<PayslipWithProfile>[] {
 
 export default async function PayslipsPage({ searchParams }: PageProps) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const params = await searchParams
   const month = params.month ? parseInt(params.month, 10) : undefined

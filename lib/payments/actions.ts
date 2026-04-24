@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { loadMutationProfile, ensureCompensationOrPaymentMutation } from '@/lib/auth/mutation-policy'
@@ -30,6 +30,7 @@ export async function createPayment(formData: FormData) {
 
   revalidatePath('/payments')
   revalidatePath('/my-payments')
+  revalidateTag('dashboard')
   redirect(`/payments/${data.id}`)
 }
 
@@ -57,6 +58,7 @@ export async function updatePayment(id: string, formData: FormData) {
   revalidatePath('/payments')
   revalidatePath(`/payments/${id}`)
   revalidatePath('/my-payments')
+  revalidateTag('dashboard')
   redirect(`/payments/${id}`)
 }
 
@@ -78,5 +80,6 @@ export async function deletePayment(id: string) {
 
   revalidatePath('/payments')
   revalidatePath('/my-payments')
+  revalidateTag('dashboard')
   redirect('/payments')
 }

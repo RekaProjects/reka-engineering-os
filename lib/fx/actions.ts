@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 
 export async function createFxRate(formData: FormData) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin'])
+  requireRole(sp.system_role, ['finance'])
 
   const supabase = await createServerClient()
 
@@ -27,14 +27,16 @@ export async function createFxRate(formData: FormData) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/settings')
+  revalidatePath('/finance/fx-rates')
 }
 
 export async function deleteFxRate(id: string) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin'])
+  requireRole(sp.system_role, ['finance'])
 
   const supabase = await createServerClient()
   const { error } = await supabase.from('fx_rates').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/settings')
+  revalidatePath('/finance/fx-rates')
 }

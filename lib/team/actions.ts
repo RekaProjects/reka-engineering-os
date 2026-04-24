@@ -4,8 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { loadMutationProfile, ensureAdmin } from '@/lib/auth/mutation-policy'
+import { loadMutationProfile, ensureTD } from '@/lib/auth/mutation-policy'
+import { isDirektur, isFinance, isTD } from '@/lib/auth/permissions'
 import { buildProfilePayload } from '@/lib/team/helpers'
+import type { SystemRole } from '@/types/database'
 
 // ── Create member ──────────────────────────────────────────────
 // Creates auth user (admin API) then updates the auto-created profile.
@@ -16,7 +18,7 @@ export async function createMember(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const perm = ensureAdmin(sessionProfile)
+  const perm = ensureTD(sessionProfile)
   if (perm) return { error: perm }
 
   const email     = (formData.get('email') as string)?.trim().toLowerCase()
@@ -88,19 +90,31 @@ export async function updateMember(id: string, formData: FormData) {
     .eq('id', user.id)
     .single()
   const callerRole = callerProfile?.system_role ?? 'member'
-  const callerIsAdmin = callerRole === 'admin'
+  const callerCanManageOthers = isTD(callerRole) || isFinance(callerRole)
 
-  if (isSelf && !callerIsAdmin) {
+  if (isSelf && !callerCanManageOthers) {
     for (const field of ADMIN_ONLY_FIELDS) {
       delete (profile as Record<string, unknown>)[field]
     }
   }
 
-  if (!isSelf && !callerIsAdmin) {
-    return { error: 'Only admin can edit other members.' }
+  if (!isSelf && !callerCanManageOthers) {
+    return { error: 'Only Technical Director or Finance can edit other members.' }
   }
 
   const admin = createAdminClient()
+
+  if (!isSelf) {
+    const { data: targetRow } = await admin.from('profiles').select('system_role').eq('id', id).maybeSingle()
+    const targetRole = targetRow?.system_role as SystemRole | null | undefined
+    // TD must not change org-tier / pay fields on the Direktur account; Finance may still do so.
+    if (isDirektur(targetRole) && isTD(callerRole) && !isFinance(callerRole)) {
+      for (const field of ADMIN_ONLY_FIELDS) {
+        delete (profile as Record<string, unknown>)[field]
+      }
+    }
+  }
+
   const { error } = await admin
     .from('profiles')
     .update(profile)

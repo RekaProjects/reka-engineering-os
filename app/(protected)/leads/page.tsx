@@ -9,6 +9,9 @@ import type { Column } from '@/components/shared/DataTable'
 import { IntakeStatusBadge } from '@/components/modules/intakes/IntakeStatusBadge'
 import { getIntakes } from '@/lib/intakes/queries'
 import type { IntakeWithClient } from '@/lib/intakes/queries'
+import { getClientsForSelect } from '@/lib/clients/queries'
+import { getUsersForSelect } from '@/lib/users/queries'
+import type { ConvertLeadClientOption, ConvertLeadUserOption } from '@/components/modules/leads/ConvertLeadButton'
 import { formatDate, formatMoney } from '@/lib/utils/formatters'
 import { getUsdToIdrRate } from '@/lib/fx/queries'
 import { Target, Plus, AlertCircle } from 'lucide-react'
@@ -35,7 +38,11 @@ function complexityLabel(score: number | null | undefined): { label: string; col
   return              { label: `${score} · Very High`,    color: COMPLEXITY_COLORS.very_high }
 }
 
-function leadsColumns(fxRate: number): Column<IntakeWithClient>[] {
+function leadsColumns(
+  fxRate: number,
+  clients: ConvertLeadClientOption[],
+  users: ConvertLeadUserOption[],
+): Column<IntakeWithClient>[] {
   return [
     {
       key: 'code',
@@ -160,7 +167,16 @@ function leadsColumns(fxRate: number): Column<IntakeWithClient>[] {
           )
         }
         if (lead.status === 'qualified' || lead.status === 'closed') {
-          return <ConvertLeadButton leadId={lead.id} leadTitle={lead.title} leadClientName={lead.clients?.client_name ?? lead.temp_client_name ?? ''} />
+          return (
+            <ConvertLeadButton
+              leadId={lead.id}
+              leadTitle={lead.title}
+              leadClientName={lead.clients?.client_name ?? lead.temp_client_name ?? ''}
+              clients={clients}
+              users={users}
+              linkedClientId={lead.clients?.id ?? null}
+            />
+          )
         }
         return null
       },
@@ -170,10 +186,10 @@ function leadsColumns(fxRate: number): Column<IntakeWithClient>[] {
 
 export default async function LeadsPage({ searchParams }: PageProps) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'technical_director', 'manajer', 'bd'])
 
   const params = await searchParams
-  const [leads, fxRate] = await Promise.all([
+  const [leads, fxRate, clients, users] = await Promise.all([
     getIntakes({
       search: params.search,
       status: params.status,
@@ -181,6 +197,8 @@ export default async function LeadsPage({ searchParams }: PageProps) {
       discipline: params.discipline,
     }).catch(() => [] as IntakeWithClient[]),
     getUsdToIdrRate(),
+    getClientsForSelect(),
+    getUsersForSelect(),
   ])
 
   const hasActiveFilters = Boolean(params.search || params.status || params.source || params.discipline)
@@ -257,7 +275,7 @@ export default async function LeadsPage({ searchParams }: PageProps) {
             }
           />
         ) : (
-          <DataTable columns={leadsColumns(fxRate)} data={leads} />
+          <DataTable columns={leadsColumns(fxRate, clients, users)} data={leads} />
         )}
       </SectionCard>
     </div>

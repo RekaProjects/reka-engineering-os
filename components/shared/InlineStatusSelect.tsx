@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useOptimistic, useState, useTransition } from 'react'
 import { ChevronDown, Loader2 } from 'lucide-react'
 
 interface StatusOption {
@@ -23,18 +23,21 @@ export function InlineStatusSelect({
   renderBadge,
 }: InlineStatusSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [optimistic, setOptimistic] = useState(currentStatus)
+  const [optimisticStatus, setOptimisticStatus] = useOptimistic(currentStatus, (_prev, next: string) => next)
   const [isPending, startTransition] = useTransition()
 
   function handleSelect(newStatus: string) {
-    if (newStatus === optimistic) { setIsOpen(false); return }
-    setOptimistic(newStatus)
+    if (newStatus === optimisticStatus) {
+      setIsOpen(false)
+      return
+    }
     setIsOpen(false)
     startTransition(async () => {
+      setOptimisticStatus(newStatus)
       try {
         await onUpdate(newStatus)
       } catch {
-        setOptimistic(currentStatus) // rollback on error
+        // Server error: refresh from parent when action uses revalidate; optimistic layer clears on new props.
       }
     })
   }
@@ -52,7 +55,7 @@ export function InlineStatusSelect({
         }}
         title="Click to change status"
       >
-        {renderBadge(optimistic)}
+        {renderBadge(optimisticStatus)}
         {isPending ? (
           <Loader2 size={11} className="animate-spin" style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} aria-hidden />
         ) : (
@@ -80,15 +83,15 @@ export function InlineStatusSelect({
                 style={{
                   display: 'block', width: '100%', textAlign: 'left',
                   padding: '7px 12px',
-                  background: opt.value === optimistic ? 'var(--color-surface-muted)' : 'transparent',
+                  background: opt.value === optimisticStatus ? 'var(--color-surface-muted)' : 'transparent',
                   border: 'none', cursor: 'pointer',
                   fontSize: '0.8125rem',
-                  color: opt.value === optimistic ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                  fontWeight: opt.value === optimistic ? 600 : 400,
+              color: opt.value === optimisticStatus ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              fontWeight: opt.value === optimisticStatus ? 600 : 400,
                   transition: 'background 0.1s',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-surface-muted)')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = opt.value === optimistic ? 'var(--color-surface-muted)' : 'transparent')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = opt.value === optimisticStatus ? 'var(--color-surface-muted)' : 'transparent')}
               >
                 {opt.label}
               </button>

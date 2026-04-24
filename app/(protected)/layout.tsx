@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { AppSidebar }    from '@/components/layout/AppSidebar'
-import { AppTopbar }     from '@/components/layout/AppTopbar'
-import { TopbarSearch }  from '@/components/layout/TopbarSearch'
+import { AppSidebar } from '@/components/layout/AppSidebar'
+import { AppTopbar } from '@/components/layout/AppTopbar'
+import { MobileSidebar } from '@/components/layout/MobileSidebar'
+import { TopbarSearch } from '@/components/layout/TopbarSearch'
 import { BreadcrumbNav } from '@/components/layout/BreadcrumbNav'
 import { getSessionProfile } from '@/lib/auth/session'
 
@@ -14,17 +15,31 @@ export default async function ProtectedLayout({
 
   const profileIncomplete = profile.profile_completed_at === null
 
-  return (
-    <div className="flex h-screen overflow-hidden">
-      <AppSidebar
-        userFullName={profile.full_name}
-        userEmail={profile.email}
-        systemRole={profile.system_role}
-        photoUrl={profile.photo_url}
-      />
+  const sidebarProfile = {
+    userFullName: profile.full_name,
+    userEmail:    profile.email,
+    systemRole:   profile.system_role,
+    photoUrl:     profile.photo_url,
+  }
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <AppTopbar left={<BreadcrumbNav />} right={<TopbarSearch />} showSearch={true} />
+  return (
+    <div className="flex h-screen min-h-0 w-full max-w-[100vw] overflow-x-hidden overflow-y-hidden">
+      <AppSidebar {...sidebarProfile} />
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:pl-[var(--sidebar-width)]">
+        <AppTopbar
+          left={
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <MobileSidebar {...sidebarProfile} />
+              <div className="min-w-0 flex-1">
+                <BreadcrumbNav />
+              </div>
+            </div>
+          }
+          right={<TopbarSearch />}
+          showSearch={true}
+          notificationUserId={profile.id}
+        />
 
         {/* Profile completion banner */}
         {profileIncomplete && (
@@ -64,8 +79,8 @@ export default async function ProtectedLayout({
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto bg-[var(--color-background)]">
-          <div className="mx-auto max-w-[var(--content-max-width)] px-8 py-8 md:px-12 xl:px-14">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[var(--color-background)]">
+          <div className="mx-auto max-w-[var(--content-max-width)] px-4 py-6 sm:px-8 sm:py-8 md:px-12 xl:px-14">
             {children}
           </div>
         </main>

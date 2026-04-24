@@ -6,8 +6,9 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { getFileById } from '@/lib/files/queries'
-import { formatDate } from '@/lib/utils/formatters'
-import { Pencil, ExternalLink, HardDrive } from 'lucide-react'
+import { formatBytes, formatDate } from '@/lib/utils/formatters'
+import { Pencil, ExternalLink, HardDrive, Cloud } from 'lucide-react'
+import { DownloadFileButton } from '@/components/modules/files/DownloadFileButton'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -34,7 +35,7 @@ export default async function FileDetailPage({ params }: PageProps) {
   await requireFileView(profile, f)
   const showEditFile = await userCanEditFile(profile, f)
 
-  const link = f.manual_link || f.google_web_view_link
+  const link = f.provider === 'r2' ? null : (f.manual_link || f.google_web_view_link)
 
   return (
     <div>
@@ -66,12 +67,13 @@ export default async function FileDetailPage({ params }: PageProps) {
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: '4px',
               fontSize: '0.6875rem', fontWeight: 600,
-              color: f.provider === 'google_drive' ? 'var(--color-primary)' : 'var(--color-neutral)',
-              backgroundColor: f.provider === 'google_drive' ? 'var(--color-primary-subtle)' : 'var(--color-neutral-subtle)',
+              color: f.provider === 'google_drive' ? 'var(--color-primary)' : f.provider === 'r2' ? 'var(--color-info)' : 'var(--color-neutral)',
+              backgroundColor: f.provider === 'google_drive' ? 'var(--color-primary-subtle)' : f.provider === 'r2' ? 'var(--color-info-subtle)' : 'var(--color-neutral-subtle)',
               padding: '2px 10px', borderRadius: 'var(--radius-pill)',
             }}>
               {f.provider === 'google_drive' && <HardDrive size={11} aria-hidden="true" />}
-              {f.provider === 'google_drive' ? 'Google Drive' : 'Manual Link'}
+              {f.provider === 'r2' && <Cloud size={11} aria-hidden="true" />}
+              {f.provider === 'google_drive' ? 'Google Drive' : f.provider === 'r2' ? 'Cloudflare R2' : 'Manual Link'}
             </span>
             <span style={{
               fontSize: '0.6875rem', fontWeight: 600,
@@ -114,6 +116,19 @@ export default async function FileDetailPage({ params }: PageProps) {
                 ) : '—'}
               </DetailRow>
               <DetailRow label="Uploaded By">{f.uploader?.full_name ?? '—'}</DetailRow>
+              {f.file_code && (
+                <DetailRow label="File code">
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}>{f.file_code}</span>
+                </DetailRow>
+              )}
+              {(f.discipline_code || f.doc_type_code) && (
+                <DetailRow label="Naming">
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}>
+                    {[f.discipline_code, f.doc_type_code].filter(Boolean).join(' · ') || '—'}
+                    {f.revision_code ? ` · ${f.revision_code}` : ''}
+                  </span>
+                </DetailRow>
+              )}
               {f.tasks && (
                 <DetailRow label="Linked Task">
                   <Link href={`/tasks/${f.tasks.id}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 500, fontSize: '0.8125rem' }}>
@@ -129,6 +144,9 @@ export default async function FileDetailPage({ params }: PageProps) {
                 </DetailRow>
               )}
               <DetailRow label="MIME Type">{f.mime_type ?? '—'}</DetailRow>
+              {f.provider === 'r2' && (
+                <DetailRow label="Size">{formatBytes(f.file_size_bytes)}</DetailRow>
+              )}
             </div>
           </SectionCard>
 
@@ -143,6 +161,11 @@ export default async function FileDetailPage({ params }: PageProps) {
 
         {/* Right */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {f.provider === 'r2' && f.r2_key && (
+            <SectionCard title="Download">
+              <DownloadFileButton fileId={f.id} />
+            </SectionCard>
+          )}
           {link && (
             <SectionCard title="Open File">
               <a

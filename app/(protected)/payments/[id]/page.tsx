@@ -46,7 +46,7 @@ const GRID2: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', 
 
 export default async function PaymentDetailPage({ params }: PageProps) {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin'])
+  requireRole(_sp.system_role, ['direktur', 'finance'])
 
   const { id } = await params
   const [r, pmOpts] = await Promise.all([

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
@@ -12,12 +13,14 @@ import { getRevenueByClient } from '@/lib/invoices/queries'
 import { getUsdToIdrRate } from '@/lib/fx/queries'
 import { formatDate } from '@/lib/utils/formatters'
 import { Users, Plus } from 'lucide-react'
+import { parsePagination, totalPages } from '@/lib/utils/pagination'
+import { Pagination } from '@/components/shared/Pagination'
 import type { Client } from '@/types/database'
 
 export const metadata = { title: 'Clients — ReKa Engineering OS' }
 
 interface PageProps {
-  searchParams: Promise<{ search?: string; status?: string; source?: string }>
+  searchParams: Promise<{ search?: string; status?: string; source?: string; page?: string; pageSize?: string }>
 }
 
 type ClientWithRevenue = Client & { _revenue?: { total_net: number; invoice_count: number; currency: string } }
@@ -125,18 +128,24 @@ function clientColumns(revenueMap: Record<string, { total_gross: number; total_n
 
 export default async function ClientsPage({ searchParams }: PageProps) {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin', 'coordinator'])
+  requireRole(_sp.system_role, ['direktur', 'technical_director', 'finance', 'manajer', 'bd'])
 
   const params = await searchParams
-  const [clients, revenueMap, fxRate] = await Promise.all([
+  const { page, pageSize } = parsePagination(params)
+  const [clientList, revenueMap, fxRate] = await Promise.all([
     getClients({
       search: params.search,
       status: params.status,
       source: params.source,
-    }).catch(() => [] as Client[]),
+      page,
+      pageSize,
+    }).catch(() => ({ rows: [] as Client[], count: 0 })),
     getRevenueByClient().catch(() => ({} as Record<string, { total_gross: number; total_net: number; currency: string; invoice_count: number }>)),
     getUsdToIdrRate().catch(() => 16400),
   ])
+
+  const clients = clientList.rows
+  const clientTotalCount = clientList.count
 
   const hasActiveFilters = Boolean(params.search || params.status || params.source)
 
@@ -195,6 +204,14 @@ export default async function ClientsPage({ searchParams }: PageProps) {
       <SectionCard noPadding>
         <ClientsTable clients={clients} hasActiveFilters={hasActiveFilters} revenueMap={revenueMap} fxRate={fxRate} />
       </SectionCard>
+      <Suspense fallback={null}>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages(clientTotalCount, pageSize)}
+          pageSize={pageSize}
+          totalCount={clientTotalCount}
+        />
+      </Suspense>
     </div>
   )
 }

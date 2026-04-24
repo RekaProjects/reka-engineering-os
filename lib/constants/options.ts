@@ -1,3 +1,10 @@
+/**
+ * Dropdown options used across forms and filters.
+ *
+ * @deprecated For values that exist in `setting_options`, prefer `getSettingOptions(domain)`
+ * from `@/lib/settings/queries` in a Server Component and pass `{ value, label }[]` into client forms.
+ * This file remains as a safety net for enums not stored in Settings (statuses, roles, etc.).
+ */
 // Dropdown options used across forms and filters
 
 export const DISCIPLINES = [
@@ -24,7 +31,40 @@ export const TEAM_ROLES = [
   { value: 'support',   label: 'Support' },
 ] as const
 
+export const PROJECT_SOURCE_TYPES = [
+  { value: 'DOMESTIC', label: 'Domestic (Direct)' },
+  { value: 'PLATFORM', label: 'Platform (Fiverr/Upwork)' },
+] as const
+
+export const CONTRACT_CURRENCY_OPTIONS = [
+  { value: 'IDR', label: 'IDR' },
+  { value: 'USD', label: 'USD' },
+  { value: 'EUR', label: 'EUR' },
+  { value: 'SGD', label: 'SGD' },
+] as const
+
+export const TERMIN_STATUS_OPTIONS = [
+  { value: 'BELUM_DIMULAI',       label: 'Belum Dimulai' },
+  { value: 'SIAP_DIKLAIM',        label: 'Siap Diklaim' },
+  { value: 'MENUNGGU_VERIFIKASI', label: 'Menunggu Verifikasi' },
+  { value: 'INVOICE_DITERBITKAN', label: 'Invoice Diterbitkan' },
+  { value: 'MENUNGGU_TTD_CLIENT', label: 'Menunggu TTD Client' },
+  { value: 'MENUNGGU_PEMBAYARAN', label: 'Menunggu Pembayaran' },
+  { value: 'LUNAS',               label: 'Lunas' },
+] as const
+
+export const PROJECT_PHASES = [
+  { value: 'INISIASI',              label: 'Fase 1 — Inisiasi' },
+  { value: 'KONSEP',                label: 'Fase 2 — Konsep / Schematic' },
+  { value: 'DESIGN_DEVELOPMENT',    label: 'Fase 3 — Design Development' },
+  { value: 'CONSTRUCTION_DOCUMENT', label: 'Fase 4 — Construction Document' },
+  { value: 'RENDERING',             label: 'Fase 5 — Rendering & Presentasi' },
+  { value: 'CONSTRUCTION_ADMIN',    label: 'Fase 6 — Construction Admin' },
+] as const
+
 export const PROJECT_STATUS_OPTIONS = [
+  { value: 'pending_approval', label: 'Pending Approval' },
+  { value: 'rejected',         label: 'Rejected' },
   { value: 'new',              label: 'New' },
   { value: 'ready_to_start',   label: 'Ready to Start' },
   { value: 'ongoing',          label: 'Ongoing' },
@@ -67,11 +107,27 @@ export const USER_ROLES = [
 // ── V2 Team / Freelancer options ──────────────────────────────
 
 export const SYSTEM_ROLES = [
-  { value: 'admin',       label: 'Admin' },
-  { value: 'coordinator', label: 'Coordinator' },
-  { value: 'reviewer',    label: 'Reviewer' },
-  { value: 'member',      label: 'Member' },
+  { value: 'direktur', label: 'Direktur' },
+  { value: 'technical_director', label: 'Technical Director' },
+  { value: 'finance', label: 'Finance' },
+  { value: 'manajer', label: 'Manajer' },
+  { value: 'bd', label: 'Business Development' },
+  { value: 'senior', label: 'Senior' },
+  { value: 'member', label: 'Member' },
+  { value: 'freelancer', label: 'Freelancer' },
 ] as const
+
+/** Display labels for system_role badges */
+export const SYSTEM_ROLE_LABELS: Record<string, string> = {
+  direktur: 'Direktur',
+  technical_director: 'Technical Director',
+  finance: 'Finance',
+  manajer: 'Manajer',
+  bd: 'BD',
+  senior: 'Senior',
+  member: 'Member',
+  freelancer: 'Freelancer',
+}
 
 export const WORKER_TYPES = [
   { value: 'internal',      label: 'Internal' },
@@ -206,6 +262,7 @@ export const FILE_CATEGORY_OPTIONS = [
 export const FILE_PROVIDER_OPTIONS = [
   { value: 'manual',       label: 'Manual Link' },
   { value: 'google_drive', label: 'Google Drive' },
+  { value: 'r2',           label: 'Cloudflare R2' },
 ] as const
 
 // ── V2 Sprint 03 — Compensation / Payment options ───────────

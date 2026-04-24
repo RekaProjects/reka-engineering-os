@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 
 export async function createPaymentAccount(formData: FormData) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin'])
+  requireRole(sp.system_role, ['finance'])
 
   const supabase = await createServerClient()
   const { error } = await supabase.from('payment_accounts').insert({
@@ -21,11 +21,12 @@ export async function createPaymentAccount(formData: FormData) {
   if (error) throw new Error(error.message)
   revalidatePath('/settings')
   revalidatePath('/finance')
+  revalidatePath('/finance/payment-accounts')
 }
 
 export async function updatePaymentAccount(id: string, formData: FormData) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin'])
+  requireRole(sp.system_role, ['finance'])
 
   const supabase = await createServerClient()
   const { error } = await supabase.from('payment_accounts').update({
@@ -39,11 +40,12 @@ export async function updatePaymentAccount(id: string, formData: FormData) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/settings')
+  revalidatePath('/finance/payment-accounts')
 }
 
 export async function togglePaymentAccount(id: string, currentActive: boolean) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin'])
+  requireRole(sp.system_role, ['finance'])
 
   const supabase = await createServerClient()
   const { error } = await supabase
@@ -53,14 +55,16 @@ export async function togglePaymentAccount(id: string, currentActive: boolean) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/settings')
+  revalidatePath('/finance/payment-accounts')
 }
 
 export async function deletePaymentAccount(id: string) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin'])
+  requireRole(sp.system_role, ['finance'])
 
   const supabase = await createServerClient()
   const { error } = await supabase.from('payment_accounts').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/settings')
+  revalidatePath('/finance/payment-accounts')
 }

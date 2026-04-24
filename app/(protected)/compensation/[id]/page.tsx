@@ -1,19 +1,24 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
-import { PageHeader }  from '@/components/layout/PageHeader'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { CompensationStatusBadge } from '@/components/modules/compensation/CompensationStatusBadge'
+import { CompensationRecordActions } from '@/components/modules/compensation/CompensationRecordActions'
 import { getCompensationById } from '@/lib/compensation/queries'
-import { deleteCompensation as _deleteCompensation } from '@/lib/compensation/actions'
 import { formatDate, formatIDR } from '@/lib/utils/formatters'
-import { WORK_BASIS_OPTIONS } from '@/lib/constants/options'
+import { RATE_TYPE_OPTIONS, WORK_BASIS_OPTIONS } from '@/lib/constants/options'
 
 interface PageProps { params: Promise<{ id: string }> }
+
+const RATE_LABEL: Record<string, string> = {
+  ...Object.fromEntries(WORK_BASIS_OPTIONS.map((o) => [o.value, o.label])),
+  ...Object.fromEntries(RATE_TYPE_OPTIONS.map((o) => [o.value, o.label])),
+}
 
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params
@@ -24,13 +29,6 @@ export async function generateMetadata({ params }: PageProps) {
       : `Not found — ReKa Engineering OS`,
   }
 }
-
-async function handleDelete(id: string) {
-  'use server'
-  await _deleteCompensation(id)
-}
-
-const RATE_LABEL = Object.fromEntries(WORK_BASIS_OPTIONS.map((o) => [o.value, o.label]))
 
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -45,11 +43,24 @@ const GRID2: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', 
 
 export default async function CompensationDetailPage({ params }: PageProps) {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin'])
+  requireRole(_sp.system_role, ['direktur', 'technical_director', 'finance', 'manajer'])
 
   const { id } = await params
   const r = await getCompensationById(id)
   if (!r) notFound()
+
+  const isDirektur = _sp.system_role === 'direktur'
+  const isFinance = _sp.system_role === 'finance'
+  const isProposerRole = _sp.system_role === 'technical_director' || _sp.system_role === 'manajer'
+  const ownDraft = r.status === 'draft' && r.proposed_by === _sp.id
+
+  const canEdit =
+    !isDirektur &&
+    (isFinance || (isProposerRole && ownDraft))
+
+  const canDelete =
+    !isDirektur &&
+    ((isFinance && r.status === 'draft') || (isProposerRole && ownDraft && r.status === 'draft'))
 
   return (
     <div>
@@ -57,7 +68,7 @@ export default async function CompensationDetailPage({ params }: PageProps) {
         title={`Compensation — ${r.member?.full_name ?? 'Unknown'}`}
         subtitle={r.project?.name ?? ''}
         actions={
-          <div style={{ display: 'flex', gap: '8px' }}>
+          canEdit ? (
             <Link
               href={`/compensation/${r.id}/edit`}
               style={{
@@ -70,21 +81,7 @@ export default async function CompensationDetailPage({ params }: PageProps) {
             >
               <Pencil size={13} aria-hidden="true" /> Edit
             </Link>
-            <form action={handleDelete.bind(null, r.id)}>
-              <button
-                type="submit"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  padding: '8px 14px', backgroundColor: 'var(--color-danger-subtle)',
-                  border: '1px solid var(--color-border-strong)', borderRadius: 'var(--radius-control)',
-                  fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-danger)',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                <Trash2 size={13} aria-hidden="true" /> Delete
-              </button>
-            </form>
-          </div>
+          ) : null
         }
       />
 
@@ -98,6 +95,40 @@ export default async function CompensationDetailPage({ params }: PageProps) {
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <SectionCard title="Workflow">
+          <div style={GRID2}>
+            <DetailRow label="Proposed by">{r.proposer?.full_name ?? '—'}</DetailRow>
+            <DetailRow label="Proposed at">{r.proposed_at ? formatDate(r.proposed_at) : '—'}</DetailRow>
+            <DetailRow label="Confirmed by">{r.confirmer?.full_name ?? '—'}</DetailRow>
+            <DetailRow label="Confirmed at">{r.confirmed_at ? formatDate(r.confirmed_at) : '—'}</DetailRow>
+            <DetailRow label="Monthly fixed (direct)">{r.is_monthly_fixed_direct ? 'Yes' : 'No'}</DetailRow>
+          </div>
+          {r.return_note && (
+            <div style={{ marginTop: '14px', padding: '12px', borderRadius: 'var(--radius-control)', backgroundColor: 'var(--color-warning-subtle)', border: '1px solid var(--color-border)' }}>
+              <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-primary)' }}>Catatan pengembalian dari Finance</p>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{r.return_note}</p>
+            </div>
+          )}
+          {r.finance_note && (
+            <div style={{ marginTop: '12px' }}>
+              <DetailRow label="Finance note">{r.finance_note}</DetailRow>
+            </div>
+          )}
+
+          {!isDirektur && (
+            <div style={{ marginTop: '18px' }}>
+              <CompensationRecordActions
+                compensationId={r.id}
+                status={r.status}
+                proposedBy={r.proposed_by}
+                currentUserId={_sp.id}
+                isFinance={isFinance}
+                canDelete={Boolean(canDelete)}
+              />
+            </div>
+          )}
+        </SectionCard>
+
         <SectionCard title="Work Context">
           <div style={GRID2}>
             <DetailRow label="Member">{r.member?.full_name ?? '—'}</DetailRow>
@@ -107,7 +138,7 @@ export default async function CompensationDetailPage({ params }: PageProps) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Rate &amp; Amount">
+        <SectionCard title="Rate & Amount">
           <div style={GRID2}>
             <DetailRow label="Rate Type">{RATE_LABEL[r.rate_type] ?? r.rate_type}</DetailRow>
             <DetailRow label="Quantity"><span style={{ fontFamily: 'monospace' }}>{Number(r.qty)}</span></DetailRow>
@@ -121,7 +152,7 @@ export default async function CompensationDetailPage({ params }: PageProps) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Period &amp; Status">
+        <SectionCard title="Period & Record">
           <div style={GRID2}>
             <DetailRow label="Period Label">{r.period_label ?? '—'}</DetailRow>
             <DetailRow label="Work Date">{formatDate(r.work_date)}</DetailRow>

@@ -13,7 +13,8 @@ import { CopyLinkButton } from '@/components/modules/onboarding/CopyLinkButton'
 import { getTeamMembers, getAllTalentMetrics, type TeamMember, type TalentMetrics } from '@/lib/team/queries'
 import { getPendingInvites, type InviteWithInviter } from '@/lib/invites/queries'
 import { revokeInvite as _revokeInvite } from '@/lib/invites/actions'
-import { formatDate, formatIDR } from '@/lib/utils/formatters'
+import { formatDate, formatIDR, getInitials } from '@/lib/utils/formatters'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { SYSTEM_ROLES, RATE_TYPE_OPTIONS } from '@/lib/constants/options'
 import { getSettingOptions } from '@/lib/settings/queries'
 
@@ -57,14 +58,10 @@ function memberColumns(
       header: 'Name',
       render: (m) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '220px' }}>
-          {/* Avatar */}
-          <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--color-surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>
-            {m.photo_url ? (
-              <img src={m.photo_url} alt={m.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              m.full_name.charAt(0).toUpperCase()
-            )}
-          </div>
+          <Avatar className="h-8 w-8 shrink-0">
+            {m.photo_url ? <AvatarImage src={m.photo_url} alt={m.full_name} /> : null}
+            <AvatarFallback className="text-[0.6875rem] font-semibold">{getInitials(m.full_name)}</AvatarFallback>
+          </Avatar>
           <div>
             <Link
               href={`/team/${m.id}`}
@@ -285,7 +282,7 @@ export default async function TeamPage({
   searchParams: Promise<{ invited?: string }>
 }) {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin'])
+  requireRole(_sp.system_role, ['direktur', 'technical_director', 'finance'])
 
   const { invited } = await searchParams
   const [members, pendingInvites, funcOpts, wtOpts, metricsMap] = await Promise.all([

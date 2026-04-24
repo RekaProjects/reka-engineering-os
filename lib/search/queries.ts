@@ -2,7 +2,14 @@
 // Called from the /search server component.
 
 import { createServerClient } from '@/lib/supabase/server'
-import { effectiveRole } from '@/lib/auth/permissions'
+import {
+  canAccessClients,
+  canAccessIntakes,
+  effectiveRole,
+  isFreelancer,
+  isMember,
+  isSenior,
+} from '@/lib/auth/permissions'
 import type { SessionProfile } from '@/lib/auth/session'
 import { getViewableProjectIdsForUser } from '@/lib/projects/queries'
 
@@ -81,10 +88,11 @@ export async function globalSearch(profile: SessionProfile, rawQuery: string): P
 
   const supabase = await createServerClient()
   const r = effectiveRole(profile.system_role)
-  const includeClientsAndIntakes = r === 'admin' || r === 'coordinator'
+  const includeClients = canAccessClients(profile.system_role)
+  const includeIntakes = canAccessIntakes(profile.system_role)
   const viewableProjectIds = await getViewableProjectIdsForUser(profile.id, profile.system_role)
 
-  const clientsPromise = includeClientsAndIntakes
+  const clientsPromise = includeClients
     ? supabase
         .from('clients')
         .select('id, client_code, client_name, client_type, status')
@@ -93,7 +101,7 @@ export async function globalSearch(profile: SessionProfile, rawQuery: string): P
         .limit(RESULTS_PER_ENTITY)
     : Promise.resolve({ data: [] as ClientResult[] })
 
-  const intakesPromise = includeClientsAndIntakes
+  const intakesPromise = includeIntakes
     ? supabase
         .from('intakes')
         .select('id, intake_code, title, status, source, temp_client_name, clients(client_name)')
@@ -105,11 +113,16 @@ export async function globalSearch(profile: SessionProfile, rawQuery: string): P
   let projectsQuery = supabase
     .from('projects')
     .select('id, project_code, name, status, priority, target_due_date, clients(client_name)')
-    .or(`name.ilike.%${q}%,project_code.ilike.%${q}%`)
     .order('created_at', { ascending: false })
     .limit(RESULTS_PER_ENTITY)
 
-  if (r === 'reviewer') {
+  if (q.length >= 3) {
+    projectsQuery = projectsQuery.textSearch('search_tsv', q, { type: 'websearch', config: 'simple' })
+  } else {
+    projectsQuery = projectsQuery.or(`name.ilike.${q}%,project_code.ilike.${q}%`)
+  }
+
+  if (isSenior(r)) {
     projectsQuery = projectsQuery.eq('reviewer_user_id', profile.id)
   } else if (viewableProjectIds !== null) {
     if (viewableProjectIds.length === 0) {
@@ -125,13 +138,18 @@ export async function globalSearch(profile: SessionProfile, rawQuery: string): P
   let tasksQuery = supabase
     .from('tasks')
     .select('id, title, status, priority, due_date, projects(id, project_code, name)')
-    .ilike('title', `%${q}%`)
     .order('created_at', { ascending: false })
     .limit(RESULTS_PER_ENTITY)
 
-  if (r === 'member') {
+  if (q.length >= 3) {
+    tasksQuery = tasksQuery.textSearch('title_tsv', q, { type: 'websearch', config: 'simple' })
+  } else {
+    tasksQuery = tasksQuery.ilike('title', `${q}%`)
+  }
+
+  if (isMember(r) || isFreelancer(r)) {
     tasksQuery = tasksQuery.eq('assigned_to_user_id', profile.id)
-  } else if (r === 'reviewer') {
+  } else if (isSenior(r)) {
     tasksQuery = tasksQuery.eq('reviewer_user_id', profile.id)
   } else if (viewableProjectIds !== null) {
     if (viewableProjectIds.length === 0) {
@@ -151,9 +169,9 @@ export async function globalSearch(profile: SessionProfile, rawQuery: string): P
     .order('created_at', { ascending: false })
     .limit(RESULTS_PER_ENTITY)
 
-  if (r === 'member') {
+  if (isMember(r) || isFreelancer(r)) {
     deliverablesQuery = deliverablesQuery.eq('prepared_by_user_id', profile.id)
-  } else if (r === 'reviewer') {
+  } else if (isSenior(r)) {
     deliverablesQuery = deliverablesQuery.eq('reviewed_by_user_id', profile.id)
   } else if (viewableProjectIds !== null) {
     if (viewableProjectIds.length === 0) {

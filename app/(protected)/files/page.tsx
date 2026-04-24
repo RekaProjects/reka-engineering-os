@@ -1,6 +1,7 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { getSessionProfile } from '@/lib/auth/session'
-import { canShowFilesAddButton, effectiveRole } from '@/lib/auth/permissions'
+import { canShowFilesAddButton, effectiveRole, isManagement } from '@/lib/auth/permissions'
 import { getViewableProjectIdsForUser } from '@/lib/projects/queries'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
@@ -10,12 +11,21 @@ import { DataTable } from '@/components/shared/DataTable'
 import type { Column } from '@/components/shared/DataTable'
 import { getFiles, type FileWithRelations } from '@/lib/files/queries'
 import { formatDate } from '@/lib/utils/formatters'
-import { FolderOpen, Plus, ExternalLink, HardDrive } from 'lucide-react'
+import { FolderOpen, Plus, ExternalLink, HardDrive, Cloud } from 'lucide-react'
+import { parsePagination, totalPages } from '@/lib/utils/pagination'
+import { Pagination } from '@/components/shared/Pagination'
 
 export const metadata = { title: 'Files — ReKa Engineering OS' }
 
 interface PageProps {
-  searchParams: Promise<{ search?: string; file_category?: string; provider?: string; project_id?: string }>
+  searchParams: Promise<{
+    search?: string
+    file_category?: string
+    provider?: string
+    project_id?: string
+    page?: string
+    pageSize?: string
+  }>
 }
 
 const categoryLabels: Record<string, string> = {
@@ -69,12 +79,13 @@ function fileColumns(): Column<FileWithRelations>[] {
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: '3px',
           fontSize: '0.6875rem', fontWeight: 500,
-          color: f.provider === 'google_drive' ? 'var(--color-primary)' : 'var(--color-neutral)',
-          backgroundColor: f.provider === 'google_drive' ? 'var(--color-primary-subtle)' : 'var(--color-neutral-subtle)',
+          color: f.provider === 'google_drive' ? 'var(--color-primary)' : f.provider === 'r2' ? 'var(--color-info)' : 'var(--color-neutral)',
+          backgroundColor: f.provider === 'google_drive' ? 'var(--color-primary-subtle)' : f.provider === 'r2' ? 'var(--color-info-subtle)' : 'var(--color-neutral-subtle)',
           padding: '2px 8px', borderRadius: 'var(--radius-pill)',
         }}>
           {f.provider === 'google_drive' ? <HardDrive size={10} aria-hidden="true" /> : null}
-          {f.provider === 'google_drive' ? 'Drive' : 'Manual'}
+          {f.provider === 'r2' ? <Cloud size={10} aria-hidden="true" /> : null}
+          {f.provider === 'google_drive' ? 'Drive' : f.provider === 'r2' ? 'R2' : 'Manual'}
         </span>
       ),
     },
@@ -111,6 +122,13 @@ function fileColumns(): Column<FileWithRelations>[] {
       key: 'link',
       header: 'Link',
       render: (f) => {
+        if (f.provider === 'r2' && f.r2_key) {
+          return (
+            <Link href={`/files/${f.id}`} style={{ color: 'var(--color-primary)', display: 'inline-flex' }} aria-label="R2 file detail">
+              <Cloud size={13} aria-hidden="true" />
+            </Link>
+          )
+        }
         const link = f.manual_link || f.google_web_view_link
         return link ? (
           <a href={link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)' }}>
@@ -125,20 +143,26 @@ function fileColumns(): Column<FileWithRelations>[] {
 export default async function FilesPage({ searchParams }: PageProps) {
   const profile = await getSessionProfile()
   const params = await searchParams
+  const { page, pageSize } = parsePagination(params)
   const role = effectiveRole(profile.system_role)
   const viewableIds = await getViewableProjectIdsForUser(profile.id, profile.system_role)
   const restrict =
-    role === 'admin' || viewableIds === null
+    isManagement(role) || viewableIds === null
       ? undefined
       : { userId: profile.id, projectIds: viewableIds }
 
-  const files = await getFiles({
+  const fileList = await getFiles({
     search: params.search,
     file_category: params.file_category,
     provider: params.provider,
     project_id: params.project_id,
     restrictToUserPortfolio: restrict,
-  }).catch(() => [] as FileWithRelations[])
+    page,
+    pageSize,
+  }).catch(() => ({ rows: [] as FileWithRelations[], count: 0 }))
+
+  const files = fileList.rows
+  const fileTotalCount = fileList.count
 
   const hasActiveFilters = Boolean(params.search || params.file_category || params.provider || params.project_id)
   const showAdd = canShowFilesAddButton(profile.system_role)
@@ -189,6 +213,7 @@ export default async function FilesPage({ searchParams }: PageProps) {
             <option value="">All Providers</option>
             <option value="manual">Manual</option>
             <option value="google_drive">Google Drive</option>
+            <option value="r2">Cloudflare R2</option>
           </select>
           <button type="submit" className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-muted)] transition-colors whitespace-nowrap cursor-pointer">Filter</button>
           {hasActiveFilters && (
@@ -200,6 +225,14 @@ export default async function FilesPage({ searchParams }: PageProps) {
       <SectionCard noPadding>
         <FilesTable files={files} hasActiveFilters={hasActiveFilters} showAdd={showAdd} />
       </SectionCard>
+      <Suspense fallback={null}>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages(fileTotalCount, pageSize)}
+          pageSize={pageSize}
+          totalCount={fileTotalCount}
+        />
+      </Suspense>
     </div>
   )
 }

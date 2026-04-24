@@ -5,8 +5,9 @@ import { getPayslipById } from '@/lib/payslips/queries'
 import { getUsdToIdrRate } from '@/lib/fx/queries'
 import { markPayslipPaid } from '@/lib/payslips/actions'
 import { MoneyDisplay } from '@/components/shared/MoneyDisplay'
+import { DownloadPayslipPdfButton } from '@/components/modules/payslips/DownloadPayslipPdfButton'
 import { PayslipDetailActions } from '@/components/modules/payslips/PayslipDetailActions'
-import { isAdminOrCoordinator } from '@/lib/auth/permissions'
+import { isDirektur, isFinance } from '@/lib/auth/permissions'
 
 export const metadata = { title: 'Payslip — ReKa Engineering OS' }
 
@@ -30,7 +31,7 @@ export default async function PayslipDetailPage({ params }: PageProps) {
   const row = await getPayslipById(id)
   if (!row) notFound()
 
-  const canFinance = isAdminOrCoordinator(sp.system_role)
+  const canFinance = isDirektur(sp.system_role) || isFinance(sp.system_role)
   const isOwn = row.profile_id === sp.id
   if (!canFinance && !isOwn) redirect('/access-denied')
 
@@ -61,6 +62,14 @@ export default async function PayslipDetailPage({ params }: PageProps) {
             <p style={{ margin: '6px 0 0', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
               {periodLabel(row.period_month, row.period_year)}
             </p>
+            <div className="no-print" style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+              <DownloadPayslipPdfButton
+                payslipId={row.id}
+                periodYear={row.period_year}
+                periodMonth={row.period_month}
+                memberName={row.profile?.full_name ?? 'member'}
+              />
+            </div>
           </div>
         </header>
 

@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function ClientDetailPage({ params }: PageProps) {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin', 'coordinator'])
+  requireRole(_sp.system_role, ['direktur', 'technical_director', 'finance', 'manajer', 'bd'])
 
   const { id } = await params
   const client = await getClientById(id)

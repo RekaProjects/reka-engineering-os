@@ -124,7 +124,7 @@ export async function updateIntakeStatus(
 ): Promise<{ error: string } | void> {
   const supabase = await createServerClient()
   const profile = await getSessionProfile()
-  requireRole(profile.system_role, ['admin', 'coordinator'])
+  requireRole(profile.system_role, ['direktur', 'technical_director', 'manajer', 'bd'])
 
   const perm = ensureIntakeMutation(profile)
   if (perm) return { error: perm }

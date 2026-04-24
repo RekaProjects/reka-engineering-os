@@ -1,7 +1,15 @@
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
+import { Suspense } from 'react'
 import { getSessionProfile } from '@/lib/auth/session'
-import { canAccessTasksDeliverablesFilesNewRoute, effectiveRole } from '@/lib/auth/permissions'
+import {
+  canAccessTasksDeliverablesFilesNewRoute,
+  effectiveRole,
+  isFreelancer,
+  isManajer,
+  isManagement,
+  isSenior,
+} from '@/lib/auth/permissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -19,6 +27,8 @@ import { updateTaskStatus } from '@/lib/tasks/actions'
 import { getAllUsers } from '@/lib/users/queries'
 import type { TaskWithRelations } from '@/lib/tasks/queries'
 import { formatDate } from '@/lib/utils/formatters'
+import { parsePagination, totalPages } from '@/lib/utils/pagination'
+import { Pagination } from '@/components/shared/Pagination'
 import { CheckSquare, Plus, AlertTriangle, List, LayoutGrid } from 'lucide-react'
 import { TasksViewWrapper } from '@/components/modules/tasks/TasksViewWrapper'
 
@@ -32,6 +42,8 @@ interface PageProps {
     project_id?: string
     assigned_to?: string
     view?: string
+    page?: string
+    pageSize?: string
   }>
 }
 
@@ -39,30 +51,39 @@ export default async function TasksPage({ searchParams }: PageProps) {
   const profile = await getSessionProfile()
   const role    = effectiveRole(profile.system_role)
   const params  = await searchParams
+  const { page, pageSize } = parsePagination(params)
 
   const scopeOpts =
-    role === 'member'      ? { scopeAssignedTo: profile.id } :
-    role === 'reviewer'    ? { scopeReviewerId: profile.id } :
-    role === 'coordinator' ? { scopeProjectIds: (await getViewableProjectIdsForUser(profile.id, profile.system_role)) ?? [] } :
-    {}
+    role === 'member' || isFreelancer(role)
+      ? { scopeAssignedTo: profile.id }
+      : isSenior(role)
+        ? { scopeReviewerId: profile.id }
+        : isManajer(role)
+          ? { scopeProjectIds: (await getViewableProjectIdsForUser(profile.id, profile.system_role)) ?? [] }
+          : {}
 
-  const [tasks, allUsers] = await Promise.all([
+  const [taskResult, allUsers] = await Promise.all([
     getTasks({
       search:      params.search,
       status:      params.status,
       priority:    params.priority,
       project_id:  params.project_id,
       assigned_to: params.assigned_to,
+      page,
+      pageSize,
       ...scopeOpts,
-    }).catch(() => [] as TaskWithRelations[]),
-    (role === 'admin' || role === 'coordinator') ? getAllUsers().catch(() => []) : Promise.resolve([]),
+    }).catch(() => ({ rows: [] as TaskWithRelations[], count: 0 })),
+    (isManagement(role) || isManajer(role)) ? getAllUsers().catch(() => []) : Promise.resolve([]),
   ])
+
+  const tasks = taskResult.rows
+  const taskTotalCount = taskResult.count
 
   const pageTitle    = role === 'member' ? 'My Tasks' : 'Tasks'
   const pageSubtitle =
-    role === 'member'      ? 'Tasks assigned to you.' :
-    role === 'reviewer'    ? 'Tasks where you are the reviewer.' :
-    role === 'coordinator' ? 'Tasks in your assigned projects.' :
+    role === 'member' || isFreelancer(role) ? 'Tasks assigned to you.' :
+    isSenior(role) ? 'Tasks where you are the reviewer.' :
+    isManajer(role) ? 'Tasks in your assigned projects.' :
     'All executable work items across projects.'
 
   const canCreate       = canAccessTasksDeliverablesFilesNewRoute(profile.system_role)
@@ -114,7 +135,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
             <option value="urgent">Urgent</option>
           </select>
           {/* Filter by person — only for admin/coordinator */}
-          {(role === 'admin' || role === 'coordinator') && allUsers.length > 0 && (
+          {(isManagement(role) || isManajer(role)) && allUsers.length > 0 && (
             <select name="assigned_to" defaultValue={params.assigned_to ?? ''}
               className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer">
               <option value="">All People</option>
@@ -153,6 +174,14 @@ export default async function TasksPage({ searchParams }: PageProps) {
           <TasksViewWrapper tasks={tasks} today={today} onStatusUpdate={handleStatusUpdate} />
         )}
       </SectionCard>
+      <Suspense fallback={null}>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages(taskTotalCount, pageSize)}
+          pageSize={pageSize}
+          totalCount={taskTotalCount}
+        />
+      </Suspense>
     </div>
   )
 }

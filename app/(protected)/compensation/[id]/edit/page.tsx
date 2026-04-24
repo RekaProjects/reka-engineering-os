@@ -1,12 +1,17 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
-import { PageHeader }  from '@/components/layout/PageHeader'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { CompensationForm } from '@/components/modules/compensation/CompensationForm'
 import { getCompensationById } from '@/lib/compensation/queries'
 import { updateCompensation } from '@/lib/compensation/actions'
-import { getMemberOptions, getProjectOptions } from '@/lib/compensation/helpers'
+import {
+  getMemberOptions,
+  getMemberOptionsForCompensation,
+  getProjectOptions,
+  getProjectOptionsForCompensation,
+} from '@/lib/compensation/helpers'
 
 interface PageProps { params: Promise<{ id: string }> }
 
@@ -22,16 +27,25 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function EditCompensationPage({ params }: PageProps) {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin'])
+  requireRole(_sp.system_role, ['technical_director', 'finance', 'manajer'])
 
   const { id } = await params
-  const [record, members, projects] = await Promise.all([
-    getCompensationById(id),
-    getMemberOptions(),
-    getProjectOptions(),
-  ])
-
+  const record = await getCompensationById(id)
   if (!record) notFound()
+
+  const isFinance = _sp.system_role === 'finance'
+  const isProposer =
+    _sp.system_role === 'technical_director' || _sp.system_role === 'manajer'
+  const ownDraft = record.status === 'draft' && record.proposed_by === _sp.id
+
+  if (!isFinance && !(isProposer && ownDraft)) {
+    redirect('/access-denied')
+  }
+
+  const [members, projects] = await Promise.all([
+    isFinance ? getMemberOptions() : getMemberOptionsForCompensation(_sp),
+    isFinance ? getProjectOptions() : getProjectOptionsForCompensation(_sp),
+  ])
 
   const dv: Record<string, string | number | null> = {
     member_id: record.member_id,
@@ -61,6 +75,8 @@ export default async function EditCompensationPage({ params }: PageProps) {
           defaultValues={dv}
           action={updateCompensation.bind(null, id)}
           submitLabel="Save Changes"
+          showStatusField={isFinance}
+          showMonthlyFixedGuidance={!isFinance}
         />
       </SectionCard>
     </div>

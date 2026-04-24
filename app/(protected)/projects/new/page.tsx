@@ -6,6 +6,7 @@ import { requireProjectsNewPageAccess } from '@/lib/auth/access-surface'
 import { getClientsForSelect } from '@/lib/clients/queries'
 import { getUsersForSelect } from '@/lib/users/queries'
 import { getSettingOptions } from '@/lib/settings/queries'
+import { getUsdToIdrRate } from '@/lib/fx/queries'
 
 export const metadata = { title: 'New Project — ReKa Engineering OS' }
 
@@ -13,11 +14,12 @@ export default async function NewProjectPage() {
   const profile = await getSessionProfile()
   requireProjectsNewPageAccess(profile.system_role)
 
-  const [clients, users, disciplineOptions, projectTypeOptions] = await Promise.all([
+  const [clients, users, disciplineOptions, projectTypeOptions, fxRateToIDR] = await Promise.all([
     getClientsForSelect(),
     getUsersForSelect(),
     getSettingOptions('discipline'),
     getSettingOptions('project_type'),
+    getUsdToIdrRate().catch(() => null as number | null),
   ])
 
   return (
@@ -27,7 +29,14 @@ export default async function NewProjectPage() {
         subtitle="Create a new engineering project."
       />
       <SectionCard className="overflow-visible">
-        <ProjectForm mode="create" clients={clients} users={users} disciplineOptions={disciplineOptions} projectTypeOptions={projectTypeOptions} />
+        <ProjectForm
+          mode="create"
+          clients={clients}
+          users={users}
+          disciplineOptions={disciplineOptions}
+          projectTypeOptions={projectTypeOptions}
+          fxRateToIDR={fxRateToIDR}
+        />
       </SectionCard>
     </div>
   )

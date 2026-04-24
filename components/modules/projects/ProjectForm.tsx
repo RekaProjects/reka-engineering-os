@@ -1,31 +1,35 @@
 'use client'
 
 import { useTransition, useState, type ReactNode } from 'react'
+import { MoneyInput } from '@/components/shared/MoneyInput'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { createProject, updateProject } from '@/lib/projects/actions'
+import { approveProject, createProject, resubmitProject, updateProject } from '@/lib/projects/actions'
 import { buildRekaDriveFolderName } from '@/lib/files/drive-service'
 import { CopyDriveFolderNameButton } from '@/components/modules/projects/CopyDriveFolderNameButton'
 import { cn } from '@/lib/utils/cn'
 import {
   SOURCE_PLATFORMS,
-  DISCIPLINES,
-  PROJECT_TYPES,
   PROJECT_STATUS_OPTIONS,
   WAITING_ON_OPTIONS,
   PRIORITY_OPTIONS,
+  PROJECT_SOURCE_TYPES,
+  CONTRACT_CURRENCY_OPTIONS,
 } from '@/lib/constants/options'
-import type { Project } from '@/types/database'
+import type { Project, ProjectSourceType } from '@/types/database'
 
 type OptionPair = { value: string; label: string }
 
 interface ProjectFormProps {
-  mode: 'create' | 'edit'
+  mode: 'create' | 'edit' | 'resubmit'
+  /** Direktur editing a pending project: submit runs approve with merged fields. */
+  direkturApproveFlow?: boolean
   project?: Project
   clients: { id: string; client_name: string; client_code: string }[]
   users: { id: string; full_name: string; email: string; discipline: string | null }[]
-  disciplineOptions?: OptionPair[]
-  projectTypeOptions?: OptionPair[]
+  disciplineOptions: OptionPair[]
+  projectTypeOptions: OptionPair[]
+  fxRateToIDR?: number | null
 }
 
 const controlClass =
@@ -74,24 +78,46 @@ function Field({ label, required, children }: { label: string; required?: boolea
 
 export function ProjectForm({
   mode,
+  direkturApproveFlow = false,
   project,
   clients,
   users,
   disciplineOptions,
   projectTypeOptions,
+  fxRateToIDR,
 }: ProjectFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [projectKind, setProjectKind] = useState<ProjectSourceType>(
+    (project?.source_type as ProjectSourceType | undefined) ?? 'DOMESTIC',
+  )
+  const [showRetention, setShowRetention] = useState(project?.has_retention ?? false)
 
   const todayString = new Date().toISOString().split('T')[0]
+  const hideStatusField = mode === 'create' || mode === 'resubmit' || direkturApproveFlow
 
   function handleSubmit(formData: FormData) {
     setError(null)
     startTransition(async () => {
-      const result =
-        mode === 'create' ? await createProject(formData) : await updateProject(project!.id, formData)
-
+      if (mode === 'create') {
+        await createProject(formData)
+        return
+      }
+      if (!project) return
+      if (mode === 'resubmit') {
+        const result = await resubmitProject(project.id, formData)
+        if (result?.error) setError(result.error)
+        else router.push(`/projects/${project.id}`)
+        return
+      }
+      if (direkturApproveFlow) {
+        const result = await approveProject(project.id, formData)
+        if (result?.error) setError(result.error)
+        else router.push(`/projects/${project.id}`)
+        return
+      }
+      const result = await updateProject(project.id, formData)
       if (result?.error) setError(result.error)
     })
   }
@@ -189,7 +215,7 @@ export function ProjectForm({
                   className={controlClass}
                   required
                 >
-                  {(disciplineOptions ?? DISCIPLINES).map((o) => (
+                  {disciplineOptions.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
@@ -203,7 +229,7 @@ export function ProjectForm({
                   className={controlClass}
                   required
                 >
-                  {(projectTypeOptions ?? PROJECT_TYPES).map((o) => (
+                  {projectTypeOptions.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
@@ -211,6 +237,84 @@ export function ProjectForm({
                 </select>
               </Field>
             </div>
+          </div>
+        </ProjectFormSection>
+
+        <ProjectFormSection
+          title="Informasi kontrak"
+          description="Tipe billing: domestic (termin & BAST) vs platform (Fiverr/Upwork)."
+        >
+          <div className="space-y-5">
+            <Field label="Jenis project">
+              <div className="flex flex-wrap gap-5">
+                {PROJECT_SOURCE_TYPES.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="inline-flex cursor-pointer items-center gap-2 text-[0.875rem] text-[var(--color-text-primary)]"
+                  >
+                    <input
+                      type="radio"
+                      name="project_source_type"
+                      value={opt.value}
+                      checked={projectKind === opt.value}
+                      onChange={() => setProjectKind(opt.value as ProjectSourceType)}
+                      className="h-4 w-4 border-[var(--color-border)]"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </Field>
+
+            {projectKind === 'DOMESTIC' ? (
+              <>
+                <p className="text-[0.8125rem] leading-relaxed text-[var(--color-text-muted)]">
+                  Setelah project disetujui Direktur dan status menjadi aktif, sistem membuat jadwal termin otomatis
+                  dari nilai kontrak (empat termin + retensi opsional).
+                </p>
+                <MoneyInput
+                  name="contract_value"
+                  currencyName="contract_currency"
+                  defaultAmount={project?.contract_value ?? null}
+                  defaultCurrency={project?.contract_currency ?? 'IDR'}
+                  currencies={[...CONTRACT_CURRENCY_OPTIONS]}
+                  fxRateToIDR={fxRateToIDR ?? undefined}
+                  label="Nilai kontrak"
+                  required
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="has_retention"
+                    id="has_retention"
+                    value="true"
+                    defaultChecked={project?.has_retention ?? false}
+                    onChange={(e) => setShowRetention(e.target.checked)}
+                    className="h-4 w-4 rounded border border-[var(--color-border)]"
+                  />
+                  <label htmlFor="has_retention" className="text-[0.875rem] text-[var(--color-text-secondary)]">
+                    Ada klausul retensi di kontrak?
+                  </label>
+                </div>
+                {showRetention ? (
+                  <Field label="Persentase retensi (5–20%)">
+                    <input
+                      type="number"
+                      name="retention_percentage"
+                      min={5}
+                      max={20}
+                      step={0.5}
+                      defaultValue={project?.retention_percentage ?? 5}
+                      className={controlClass}
+                    />
+                  </Field>
+                ) : null}
+              </>
+            ) : (
+              <p className="text-[0.8125rem] text-[var(--color-text-muted)]">
+                Billing dan pembayaran dikelola oleh platform; tidak ada termin atau BAST di ReKa OS untuk project ini.
+              </p>
+            )}
           </div>
         </ProjectFormSection>
 
@@ -288,26 +392,45 @@ export function ProjectForm({
           description="Track status, priority, waiting state, and progress."
         >
           <div className="space-y-5">
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <Field label="Status" required>
-                <select name="status" defaultValue={project?.status ?? 'new'} className={controlClass} required>
-                  {PROJECT_STATUS_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Priority" required>
-                <select name="priority" defaultValue={project?.priority ?? 'medium'} className={controlClass} required>
-                  {PRIORITY_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
+            {hideStatusField ? (
+              <>
+                {mode !== 'create' ? <input type="hidden" name="status" value={project?.status ?? 'new'} /> : null}
+                <div className="grid grid-cols-1 gap-5 sm:max-w-md">
+                  <Field label="Priority" required>
+                    <select name="priority" defaultValue={project?.priority ?? 'medium'} className={controlClass} required>
+                      {PRIORITY_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+              </>
+            ) : (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <Field label="Status" required>
+                  <select name="status" defaultValue={project?.status ?? 'new'} className={controlClass} required>
+                    {PROJECT_STATUS_OPTIONS.filter(
+                      (o) => o.value !== 'pending_approval' && o.value !== 'rejected',
+                    ).map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Priority" required>
+                  <select name="priority" defaultValue={project?.priority ?? 'medium'} className={controlClass} required>
+                    {PRIORITY_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Field label="Waiting On">
                 <select name="waiting_on" defaultValue={project?.waiting_on ?? 'none'} className={controlClass}>
@@ -407,6 +530,10 @@ export function ProjectForm({
               </>
             ) : mode === 'create' ? (
               'Create Project'
+            ) : mode === 'resubmit' ? (
+              'Ajukan ulang untuk persetujuan'
+            ) : direkturApproveFlow ? (
+              'Simpan & setujui'
             ) : (
               'Save Changes'
             )}

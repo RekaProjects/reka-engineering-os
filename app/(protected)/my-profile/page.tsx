@@ -4,6 +4,8 @@ import { getMemberById }  from '@/lib/team/queries'
 import { PageHeader }     from '@/components/layout/PageHeader'
 import { SectionCard }    from '@/components/shared/SectionCard'
 import { TeamMemberForm } from '@/components/modules/team/TeamMemberForm'
+import { AvatarUploadInput } from '@/components/modules/team/AvatarUploadInput'
+import { isFinance, isTD } from '@/lib/auth/permissions'
 import { getSettingOptions } from '@/lib/settings/queries'
 
 export const metadata = { title: 'My Profile — ReKa Engineering OS' }
@@ -20,7 +22,9 @@ export default async function MyProfilePage() {
     getSettingOptions('worker_type'),
   ])
 
-  const userIsAdmin = member?.system_role === 'admin'
+  // Only TD / Finance may edit privileged fields (rates, system role, …) even on their own profile.
+  // Direktur & others use the same form but without those sections — matches server stripping in updateMember.
+  const showPrivilegedTeamFields = isTD(member?.system_role) || isFinance(member?.system_role)
 
   if (!member) {
     return (
@@ -45,7 +49,16 @@ export default async function MyProfilePage() {
         subtitle={`${member.email} · Edit your profile and availability.`}
       />
       <SectionCard>
-        <TeamMemberForm mode="edit" member={member} functionalRoleOptions={functionalRoleOptions} disciplineOptions={disciplineOptions} workerTypeOptions={workerTypeOptions} isAdmin={userIsAdmin} />
+        <AvatarUploadInput photoUrl={member.photo_url} fullName={member.full_name} />
+        <div className="my-6 border-t border-[var(--color-border)]" />
+        <TeamMemberForm
+          mode="edit"
+          member={member}
+          functionalRoleOptions={functionalRoleOptions}
+          disciplineOptions={disciplineOptions}
+          workerTypeOptions={workerTypeOptions}
+          isAdmin={showPrivilegedTeamFields}
+        />
       </SectionCard>
     </div>
   )

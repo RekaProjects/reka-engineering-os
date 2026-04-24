@@ -7,7 +7,11 @@ import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { AlertTriangle } from 'lucide-react'
 import type { ProjectWithRelations } from '@/lib/projects/queries'
 
+const WORKFLOW_STATUSES = new Set(['pending_approval', 'rejected'])
+
 const PROJECT_KANBAN_COLUMNS: KanbanColumn[] = [
+  { id: 'pending_approval', label: 'Pending Approval', color: '#f59e0b' },
+  { id: 'rejected',         label: 'Rejected',         color: '#ef4444' },
   { id: 'new',             label: 'New',             color: '#94a3b8' },
   { id: 'ready_to_start',  label: 'Ready to Start',  color: '#60a5fa' },
   { id: 'ongoing',         label: 'Ongoing',         color: '#34d399' },
@@ -24,6 +28,15 @@ interface ProjectsKanbanProps {
 }
 
 export function ProjectsKanban({ projects, onStatusChange }: ProjectsKanbanProps) {
+  async function guardedStatusChange(cardId: string, newColumnId: string) {
+    const proj = projects.find((p) => p.id === cardId)
+    if (!proj) return
+    if (WORKFLOW_STATUSES.has(proj.status) || WORKFLOW_STATUSES.has(newColumnId)) {
+      throw new Error('Cannot change workflow status from the board.')
+    }
+    await onStatusChange(cardId, newColumnId)
+  }
+
   const cards: KanbanCard[] = projects.map(p => ({
     id: p.id,
     columnId: p.status,
@@ -94,7 +107,7 @@ export function ProjectsKanban({ projects, onStatusChange }: ProjectsKanbanProps
     <KanbanBoard
       columns={PROJECT_KANBAN_COLUMNS}
       cards={cards}
-      onCardMove={onStatusChange}
+      onCardMove={guardedStatusChange}
       renderCard={renderCard}
     />
   )

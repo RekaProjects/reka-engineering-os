@@ -1,5 +1,7 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
-import { getUsdToIdrRate } from '@/lib/fx/queries'
+import { getUsdToIdrWithClient } from '@/lib/fx/queries'
 
 export type PnlPeriod = 'this_month' | 'this_quarter' | 'this_year'
 
@@ -57,14 +59,16 @@ export function parsePnlPeriodParam(raw: string | undefined): PnlPeriod {
  * Revenue & fees from paid client invoices; expenses = paid compensation + paid member payment records.
  * Amounts are normalised to USD using per-row `fx_rate_snapshot` when present, else `usdToIdr`.
  */
-export async function getPnlSummary(period: PnlPeriod = 'this_month', usdToIdr?: number): Promise<PnlSummary> {
+async function _getPnlSummary(
+  supabase: SupabaseClient,
+  period: PnlPeriod,
+  usdToIdr: number,
+): Promise<PnlSummary> {
   const p = period
   const ref = new Date()
   const start = periodStartUtc(p, ref)
   const startIso = start.toISOString()
-  const fx = usdToIdr ?? (await getUsdToIdrRate())
-
-  const supabase = await createServerClient()
+  const fx = usdToIdr
 
   const [invRes, compRes, payRes] = await Promise.all([
     supabase
@@ -115,4 +119,18 @@ export async function getPnlSummary(period: PnlPeriod = 'this_month', usdToIdr?:
     profitMarginPct,
     periodLabel: buildPeriodLabel(p, ref),
   }
+}
+
+export async function getPnlSummary(
+  viewerId: string,
+  period: PnlPeriod = 'this_month',
+  usdToIdr?: number,
+): Promise<PnlSummary> {
+  const supabase = await createServerClient()
+  const fxResolved = usdToIdr ?? (await getUsdToIdrWithClient(supabase))
+  return unstable_cache(
+    async () => _getPnlSummary(supabase, period, fxResolved),
+    ['pnl-summary', viewerId, period, String(fxResolved)],
+    { revalidate: 300, tags: ['dashboard', 'dashboard:kpis', 'invoices'] },
+  )()
 }

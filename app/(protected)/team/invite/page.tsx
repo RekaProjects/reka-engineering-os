@@ -8,7 +8,7 @@ export const metadata = { title: 'Invite Member — ReKa Engineering OS' }
 
 export default async function InviteMemberPage() {
   const profile = await getSessionProfile()
-  requireRole(profile.system_role, ['admin'])
+  requireRole(profile.system_role, ['technical_director'])
 
   const workerTypeOptions = await getSettingOptions('worker_type')
 

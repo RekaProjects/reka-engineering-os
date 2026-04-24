@@ -1,10 +1,10 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { logActivity } from '@/lib/activity/actions'
-import { effectiveRole } from '@/lib/auth/permissions'
+import { effectiveRole, isFreelancer, isManajer, isManagement, isSenior } from '@/lib/auth/permissions'
 import {
   loadMutationProfile,
   ensureProjectOperationalMutation,
@@ -112,6 +112,7 @@ export async function createTask(formData: FormData) {
 
   revalidatePath('/tasks')
   revalidatePath(`/projects/${projectId}`)
+  revalidateTag('dashboard')
 
   if (returnTo === 'project') {
     redirect(`/projects/${projectId}?tab=tasks`)
@@ -132,7 +133,7 @@ export async function updateTask(id: string, formData: FormData) {
   const role = effectiveRole(profile.system_role)
 
   // ── Reviewer: review outcome / notes only (no core metadata edits) ──
-  if (role === 'reviewer') {
+  if (isSenior(role)) {
     if (task.reviewer_user_id !== user.id) return { error: MUTATION_FORBIDDEN }
 
     const status = (formData.get('status') as string)
@@ -163,11 +164,12 @@ export async function updateTask(id: string, formData: FormData) {
     revalidatePath('/tasks')
     revalidatePath(`/tasks/${id}`)
     revalidatePath(`/projects/${task.project_id}`)
+    revalidateTag('dashboard')
     redirect(`/tasks/${id}`)
   }
 
   // ── Member assignee: own execution fields only ──
-  if (role === 'member') {
+  if (role === 'member' || isFreelancer(role)) {
     if (task.assigned_to_user_id !== user.id) return { error: MUTATION_FORBIDDEN }
 
     const status = (formData.get('status') as string)
@@ -203,15 +205,16 @@ export async function updateTask(id: string, formData: FormData) {
     revalidatePath('/tasks')
     revalidatePath(`/tasks/${id}`)
     revalidatePath(`/projects/${task.project_id}`)
+    revalidateTag('dashboard')
     redirect(`/tasks/${id}`)
   }
 
   // ── Admin / coordinator: full task edit ──
-  if (role !== 'admin' && role !== 'coordinator') {
+  if (!isManagement(role) && !isManajer(role)) {
     return { error: MUTATION_FORBIDDEN }
   }
 
-  if (role === 'coordinator') {
+  if (isManajer(role)) {
     const project = await getProjectById(task.project_id)
     if (!project || !(await userCanEditProjectMetadata(profile, project))) {
       return { error: MUTATION_FORBIDDEN }
@@ -226,7 +229,7 @@ export async function updateTask(id: string, formData: FormData) {
   if (!projectId) return { error: 'Project is required.' }
   if (!assignedTo) return { error: 'Assignee is required.' }
 
-  if (role === 'coordinator') {
+  if (isManajer(role)) {
     const dest = await ensureProjectOperationalMutation(profile, projectId)
     if ('error' in dest) return { error: dest.error }
   }
@@ -282,6 +285,7 @@ export async function updateTask(id: string, formData: FormData) {
   revalidatePath('/tasks')
   revalidatePath(`/tasks/${id}`)
   revalidatePath(`/projects/${projectId}`)
+  revalidateTag('dashboard')
   redirect(`/tasks/${id}`)
 }
 
@@ -311,6 +315,7 @@ export async function updateTaskStatus(id: string, status: string) {
   revalidatePath('/tasks')
   revalidatePath(`/tasks/${id}`)
   if (task?.project_id) revalidatePath(`/projects/${task.project_id}`)
+  revalidateTag('dashboard')
 }
 
 // ─── Mark task problematic (admin / coordinator on project) ────
@@ -340,4 +345,5 @@ export async function markTaskProblematic(
   revalidatePath('/tasks')
   revalidatePath(`/tasks/${taskId}`)
   revalidatePath(`/projects/${task.project_id}`)
+  revalidateTag('dashboard')
 }

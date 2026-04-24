@@ -1,7 +1,12 @@
 // Server-side query helpers for the Dashboard.
 // All functions are called in parallel from the dashboard server component.
 
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
+import { getWorkloadThresholds, type WorkloadThresholds } from '@/lib/settings/queries'
+
+const DASHBOARD_CACHE_REVALIDATE_SEC = 300
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -27,8 +32,7 @@ export type DashboardKpis = {
   inRevision:     number
 }
 
-export async function getDashboardKpis(): Promise<DashboardKpis> {
-  const supabase = await createServerClient()
+async function _getDashboardKpis(supabase: SupabaseClient): Promise<DashboardKpis> {
   const today   = todayStr()
   const weekEnd = daysFromNow(7)
 
@@ -117,8 +121,7 @@ export type NeedsAttentionData = {
   revisionDeliverables: AttentionDeliverable[]
 }
 
-export async function getNeedsAttention(): Promise<NeedsAttentionData> {
-  const supabase  = await createServerClient()
+async function _getNeedsAttention(supabase: SupabaseClient): Promise<NeedsAttentionData> {
   const today     = todayStr()
   const taskCols  = 'id, title, due_date, status, priority, blocked_reason, projects(id, name, project_code), assignee:profiles!assigned_to_user_id(id, full_name)'
 
@@ -152,11 +155,10 @@ export async function getNeedsAttention(): Promise<NeedsAttentionData> {
 }
 
 /** Same shapes as getNeedsAttention, scoped to tasks/deliverables in the given projects. */
-export async function getNeedsAttentionForProjects(projectIds: string[]): Promise<NeedsAttentionData> {
+async function _getNeedsAttentionForProjects(supabase: SupabaseClient, projectIds: string[]): Promise<NeedsAttentionData> {
   if (projectIds.length === 0) {
     return { overdueTasks: [], blockedTasks: [], revisionDeliverables: [] }
   }
-  const supabase = await createServerClient()
   const today = todayStr()
   const taskCols =
     'id, title, due_date, status, priority, blocked_reason, projects(id, name, project_code), assignee:profiles!assigned_to_user_id(id, full_name)'
@@ -207,9 +209,7 @@ export type UrgentProject = {
   lead:             { id: string; full_name: string }   | null
 }
 
-export async function getUrgentProjects(): Promise<UrgentProject[]> {
-  const supabase = await createServerClient()
-
+async function _getUrgentProjects(supabase: SupabaseClient): Promise<UrgentProject[]> {
   const { data, error } = await supabase
     .from('projects')
     .select('id, project_code, name, status, priority, target_due_date, progress_percent, clients(id, client_name), lead:profiles!project_lead_user_id(id, full_name)')
@@ -249,8 +249,7 @@ export type UpcomingDeadlinesData = {
   projects: UpcomingProject[]
 }
 
-export async function getUpcomingDeadlines(): Promise<UpcomingDeadlinesData> {
-  const supabase   = await createServerClient()
+async function _getUpcomingDeadlines(supabase: SupabaseClient): Promise<UpcomingDeadlinesData> {
   const today      = todayStr()
   const twoWeeks   = daysFromNow(14)
   const fourWeeks  = daysFromNow(28)
@@ -294,84 +293,98 @@ export type WorkloadUser = {
   label:        'Low' | 'Normal' | 'High' | 'Overloaded'
 }
 
-export async function getTeamWorkload(): Promise<WorkloadUser[]> {
-  const supabase = await createServerClient()
-  const today    = todayStr()
+const WORKLOAD_PROFILE_ROLES = ['manajer', 'senior', 'member', 'freelancer', 'bd', 'finance'] as const
 
-  const [profilesRes, tasksRes] = await Promise.all([
+type TeamWorkloadRpcRow = {
+  user_id: string
+  open_count: number | string
+  overdue_count: number | string
+}
+
+export function classifyWorkload(openTasks: number, t: WorkloadThresholds): WorkloadUser['label'] {
+  if (openTasks < t.lowMax) return 'Low'
+  if (openTasks < t.normalMax) return 'Normal'
+  if (openTasks < t.highMax) return 'High'
+  return 'Overloaded'
+}
+
+async function _getTeamWorkload(supabase: SupabaseClient, thresholds: WorkloadThresholds): Promise<WorkloadUser[]> {
+  const [profilesRes, workloadRes] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, full_name')
       .eq('is_active', true)
+      .in('system_role', [...WORKLOAD_PROFILE_ROLES])
       .order('full_name', { ascending: true }),
 
-    // All open tasks — only columns needed for the computation
-    supabase
-      .from('tasks')
-      .select('assigned_to_user_id, due_date, status')
-      .neq('status', 'done'),
+    supabase.rpc('get_team_workload'),
   ])
 
+  if (workloadRes.error) throw new Error(workloadRes.error.message)
+
   const profiles = profilesRes.data ?? []
-  const tasks    = tasksRes.data    ?? []
+  const byUser = new Map<string, { open: number; overdue: number }>()
+  for (const row of (workloadRes.data ?? []) as TeamWorkloadRpcRow[]) {
+    byUser.set(row.user_id, {
+      open: Number(row.open_count),
+      overdue: Number(row.overdue_count),
+    })
+  }
 
   return profiles
     .map((profile) => {
-      const mine       = tasks.filter((t) => t.assigned_to_user_id === profile.id)
-      const openTasks  = mine.length
-      const overdueTasks = mine.filter((t) => t.due_date && t.due_date < today).length
-
-      let label: WorkloadUser['label'] = 'Low'
-      if (openTasks >= 3  && openTasks < 8)  label = 'Normal'
-      if (openTasks >= 8  && openTasks < 13) label = 'High'
-      if (openTasks >= 13)                   label = 'Overloaded'
+      const w = byUser.get(profile.id) ?? { open: 0, overdue: 0 }
+      const openTasks = w.open
+      const overdueTasks = w.overdue
+      const label = classifyWorkload(openTasks, thresholds)
 
       return { id: profile.id, full_name: profile.full_name, openTasks, overdueTasks, label }
     })
-    .filter((u) => u.openTasks > 0)              // only show users with active assignments
-    .sort((a, b) => b.openTasks - a.openTasks)   // highest load first
+    .filter((u) => u.openTasks > 0)
+    .sort((a, b) => b.openTasks - a.openTasks)
 }
 
 // ── Open task pipeline (non-done tasks by status) ─────────────────────────────
 
-const PIPELINE_STATUSES = ['to_do', 'in_progress', 'review', 'revision', 'blocked'] as const
+export const PIPELINE_STATUSES = ['to_do', 'in_progress', 'review', 'revision', 'blocked'] as const
 export type TaskPipelineStatus = (typeof PIPELINE_STATUSES)[number]
 
 export type OpenTaskStatusCounts = Record<TaskPipelineStatus, number>
 
-export async function getOpenTaskStatusCounts(): Promise<OpenTaskStatusCounts> {
-  const supabase = await createServerClient()
-  const { data } = await supabase
-    .from('tasks')
-    .select('status')
-    .in('status', PIPELINE_STATUSES as unknown as string[])
+async function _getOpenTaskStatusCounts(supabase: SupabaseClient): Promise<OpenTaskStatusCounts> {
+  const results = await Promise.all(
+    PIPELINE_STATUSES.map(async (status) => {
+      const { count, error } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', status)
+      if (error) throw new Error(error.message)
+      return [status, count ?? 0] as const
+    }),
+  )
 
-  const out = { to_do: 0, in_progress: 0, review: 0, revision: 0, blocked: 0 } as OpenTaskStatusCounts
-  for (const row of data ?? []) {
-    const s = row.status as TaskPipelineStatus
-    if (s in out) out[s]++
-  }
-  return out
+  return Object.fromEntries(results) as OpenTaskStatusCounts
 }
 
 /** Same as getOpenTaskStatusCounts but scoped to project IDs (empty → all zeros). */
-export async function getOpenTaskStatusCountsForProjects(projectIds: string[]): Promise<OpenTaskStatusCounts> {
+async function _getOpenTaskStatusCountsForProjects(supabase: SupabaseClient, projectIds: string[]): Promise<OpenTaskStatusCounts> {
   if (projectIds.length === 0) {
     return { to_do: 0, in_progress: 0, review: 0, revision: 0, blocked: 0 }
   }
-  const supabase = await createServerClient()
-  const { data } = await supabase
-    .from('tasks')
-    .select('status')
-    .in('status', PIPELINE_STATUSES as unknown as string[])
-    .in('project_id', projectIds)
 
-  const out = { to_do: 0, in_progress: 0, review: 0, revision: 0, blocked: 0 } as OpenTaskStatusCounts
-  for (const row of data ?? []) {
-    const s = row.status as TaskPipelineStatus
-    if (s in out) out[s]++
-  }
-  return out
+  const results = await Promise.all(
+    PIPELINE_STATUSES.map(async (status) => {
+      const { count, error } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', status)
+        .in('project_id', projectIds)
+      if (error) throw new Error(error.message)
+      return [status, count ?? 0] as const
+    }),
+  )
+
+  return Object.fromEntries(results) as OpenTaskStatusCounts
 }
 
 // ── Deadline buckets (next 7 days vs 8–14 days) ──────────────────────────────
@@ -381,8 +394,7 @@ export type DeadlineBuckets = {
   week2: { tasks: number; projects: number }
 }
 
-export async function getDeadlineBuckets(): Promise<DeadlineBuckets> {
-  const supabase = await createServerClient()
+async function _getDeadlineBuckets(supabase: SupabaseClient): Promise<DeadlineBuckets> {
   const today   = todayStr()
   const w2End   = daysFromNow(14)
   const w1End   = daysFromNow(7)
@@ -418,14 +430,13 @@ export async function getDeadlineBuckets(): Promise<DeadlineBuckets> {
   }
 }
 
-export async function getDeadlineBucketsForProjects(projectIds: string[]): Promise<DeadlineBuckets> {
+async function _getDeadlineBucketsForProjects(supabase: SupabaseClient, projectIds: string[]): Promise<DeadlineBuckets> {
   if (projectIds.length === 0) {
     return {
       week1: { tasks: 0, projects: 0 },
       week2: { tasks: 0, projects: 0 },
     }
   }
-  const supabase = await createServerClient()
   const today  = todayStr()
   const w2End  = daysFromNow(14)
   const w1End  = daysFromNow(7)
@@ -475,8 +486,7 @@ export type PaymentSnapshot = {
   outstandingPartialAmount: number
 }
 
-export async function getPaymentSnapshot(): Promise<PaymentSnapshot> {
-  const supabase = await createServerClient()
+async function _getPaymentSnapshot(supabase: SupabaseClient): Promise<PaymentSnapshot> {
   const [unpaid, partial, paid, openRows] = await Promise.all([
     supabase.from('payment_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'unpaid'),
     supabase.from('payment_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'partial'),
@@ -515,8 +525,7 @@ export type WaitingClientProjectRow = {
   clients: { client_name: string } | null
 }
 
-export async function getWaitingOnClientProjects(): Promise<WaitingClientProjectRow[]> {
-  const supabase = await createServerClient()
+async function _getWaitingOnClientProjects(supabase: SupabaseClient): Promise<WaitingClientProjectRow[]> {
   const { data, error } = await supabase
     .from('projects')
     .select('id, project_code, name, target_due_date, clients(client_name)')
@@ -528,9 +537,8 @@ export async function getWaitingOnClientProjects(): Promise<WaitingClientProject
   return (data ?? []) as unknown as WaitingClientProjectRow[]
 }
 
-export async function getWaitingOnClientProjectsForProjects(projectIds: string[]): Promise<WaitingClientProjectRow[]> {
+async function _getWaitingOnClientProjectsForProjects(supabase: SupabaseClient, projectIds: string[]): Promise<WaitingClientProjectRow[]> {
   if (projectIds.length === 0) return []
-  const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('projects')
     .select('id, project_code, name, target_due_date, clients(client_name)')
@@ -545,41 +553,219 @@ export async function getWaitingOnClientProjectsForProjects(projectIds: string[]
 
 // ── Team workload scoped to projects ────────────────────────────────────────
 
-export async function getTeamWorkloadForProjects(projectIds: string[]): Promise<WorkloadUser[]> {
+async function _getTeamWorkloadForProjects(
+  supabase: SupabaseClient,
+  thresholds: WorkloadThresholds,
+  projectIds: string[],
+): Promise<WorkloadUser[]> {
   if (projectIds.length === 0) return []
-  const supabase = await createServerClient()
-  const today = todayStr()
 
-  const [profilesRes, tasksRes] = await Promise.all([
+  const [profilesRes, workloadRes] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, full_name')
       .eq('is_active', true)
+      .in('system_role', [...WORKLOAD_PROFILE_ROLES])
       .order('full_name', { ascending: true }),
 
-    supabase
-      .from('tasks')
-      .select('assigned_to_user_id, due_date, status')
-      .in('project_id', projectIds)
-      .neq('status', 'done'),
+    supabase.rpc('get_team_workload', { p_project_ids: projectIds }),
   ])
 
+  if (workloadRes.error) throw new Error(workloadRes.error.message)
+
   const profiles = profilesRes.data ?? []
-  const tasks = tasksRes.data ?? []
+  const byUser = new Map<string, { open: number; overdue: number }>()
+  for (const row of (workloadRes.data ?? []) as TeamWorkloadRpcRow[]) {
+    byUser.set(row.user_id, {
+      open: Number(row.open_count),
+      overdue: Number(row.overdue_count),
+    })
+  }
 
   return profiles
     .map((profile) => {
-      const mine = tasks.filter((t) => t.assigned_to_user_id === profile.id)
-      const openTasks = mine.length
-      const overdueTasks = mine.filter((t) => t.due_date && t.due_date < today).length
-
-      let label: WorkloadUser['label'] = 'Low'
-      if (openTasks >= 3 && openTasks < 8) label = 'Normal'
-      if (openTasks >= 8 && openTasks < 13) label = 'High'
-      if (openTasks >= 13) label = 'Overloaded'
+      const w = byUser.get(profile.id) ?? { open: 0, overdue: 0 }
+      const openTasks = w.open
+      const overdueTasks = w.overdue
+      const label = classifyWorkload(openTasks, thresholds)
 
       return { id: profile.id, full_name: profile.full_name, openTasks, overdueTasks, label }
     })
     .filter((u) => u.openTasks > 0)
     .sort((a, b) => b.openTasks - a.openTasks)
+}
+
+// ── Cached public exports (unstable_cache + revalidateTag('dashboard')) ───────
+//
+// `createServerClient()` must run outside `unstable_cache` (it reads cookies).
+// Pass the resulting Supabase client into cached callbacks. Cache keys include
+// `viewerId` (session profile id) so RLS-scoped results are not shared across users.
+
+const dashTags = ['dashboard'] as string[]
+
+export async function getDashboardKpis(viewerId: string) {
+  const supabase = await createServerClient()
+  return unstable_cache(
+    async () => _getDashboardKpis(supabase),
+    ['dashboard-kpis', viewerId],
+    {
+      revalidate: DASHBOARD_CACHE_REVALIDATE_SEC,
+      tags: [...dashTags, 'dashboard:kpis'],
+    },
+  )()
+}
+
+export async function getNeedsAttention(viewerId: string) {
+  const supabase = await createServerClient()
+  return unstable_cache(
+    async () => _getNeedsAttention(supabase),
+    ['dashboard-needs-attention', viewerId],
+    {
+      revalidate: DASHBOARD_CACHE_REVALIDATE_SEC,
+      tags: [...dashTags, 'dashboard:attention'],
+    },
+  )()
+}
+
+export async function getNeedsAttentionForProjects(viewerId: string, projectIds: string[]) {
+  if (projectIds.length === 0) {
+    return { overdueTasks: [], blockedTasks: [], revisionDeliverables: [] }
+  }
+  const supabase = await createServerClient()
+  const key = [...projectIds].sort().join(',')
+  return unstable_cache(
+    async () => _getNeedsAttentionForProjects(supabase, projectIds),
+    ['dashboard-needs-attention', viewerId, key],
+    { revalidate: DASHBOARD_CACHE_REVALIDATE_SEC, tags: [...dashTags, 'dashboard:attention', 'tasks'] },
+  )()
+}
+
+export async function getUrgentProjects(viewerId: string) {
+  const supabase = await createServerClient()
+  return unstable_cache(
+    async () => _getUrgentProjects(supabase),
+    ['dashboard-urgent-projects', viewerId],
+    {
+      revalidate: DASHBOARD_CACHE_REVALIDATE_SEC,
+      tags: [...dashTags, 'projects'],
+    },
+  )()
+}
+
+export async function getUpcomingDeadlines() {
+  const supabase = await createServerClient()
+  return _getUpcomingDeadlines(supabase)
+}
+
+export async function getTeamWorkload(viewerId: string) {
+  const supabase = await createServerClient()
+  const thresholds = await getWorkloadThresholds(supabase)
+  return unstable_cache(
+    async () => _getTeamWorkload(supabase, thresholds),
+    ['dashboard-team-workload', viewerId],
+    {
+      revalidate: DASHBOARD_CACHE_REVALIDATE_SEC,
+      tags: [...dashTags, 'tasks'],
+    },
+  )()
+}
+
+export async function getOpenTaskStatusCounts(viewerId: string) {
+  const supabase = await createServerClient()
+  return unstable_cache(
+    async () => _getOpenTaskStatusCounts(supabase),
+    ['dashboard-open-pipeline', viewerId],
+    {
+      revalidate: DASHBOARD_CACHE_REVALIDATE_SEC,
+      tags: [...dashTags, 'tasks'],
+    },
+  )()
+}
+
+export async function getOpenTaskStatusCountsForProjects(viewerId: string, projectIds: string[]) {
+  if (projectIds.length === 0) {
+    return { to_do: 0, in_progress: 0, review: 0, revision: 0, blocked: 0 }
+  }
+  const supabase = await createServerClient()
+  const key = [...projectIds].sort().join(',')
+  return unstable_cache(
+    async () => _getOpenTaskStatusCountsForProjects(supabase, projectIds),
+    ['dashboard-open-pipeline', viewerId, key],
+    { revalidate: DASHBOARD_CACHE_REVALIDATE_SEC, tags: [...dashTags, 'tasks'] },
+  )()
+}
+
+export async function getDeadlineBuckets(viewerId: string) {
+  const supabase = await createServerClient()
+  return unstable_cache(
+    async () => _getDeadlineBuckets(supabase),
+    ['dashboard-deadline-buckets', viewerId],
+    {
+      revalidate: DASHBOARD_CACHE_REVALIDATE_SEC,
+      tags: dashTags,
+    },
+  )()
+}
+
+export async function getDeadlineBucketsForProjects(viewerId: string, projectIds: string[]) {
+  if (projectIds.length === 0) {
+    return {
+      week1: { tasks: 0, projects: 0 },
+      week2: { tasks: 0, projects: 0 },
+    }
+  }
+  const supabase = await createServerClient()
+  const key = [...projectIds].sort().join(',')
+  return unstable_cache(
+    async () => _getDeadlineBucketsForProjects(supabase, projectIds),
+    ['dashboard-deadline-buckets', viewerId, key],
+    { revalidate: DASHBOARD_CACHE_REVALIDATE_SEC, tags: dashTags },
+  )()
+}
+
+export async function getPaymentSnapshot(viewerId: string) {
+  const supabase = await createServerClient()
+  return unstable_cache(
+    async () => _getPaymentSnapshot(supabase),
+    ['dashboard-payment-snapshot', viewerId],
+    {
+      revalidate: DASHBOARD_CACHE_REVALIDATE_SEC,
+      tags: [...dashTags, 'dashboard:kpis', 'invoices'],
+    },
+  )()
+}
+
+export async function getWaitingOnClientProjects(viewerId: string) {
+  const supabase = await createServerClient()
+  return unstable_cache(
+    async () => _getWaitingOnClientProjects(supabase),
+    ['dashboard-waiting-client', viewerId],
+    {
+      revalidate: DASHBOARD_CACHE_REVALIDATE_SEC,
+      tags: [...dashTags, 'dashboard:attention', 'projects'],
+    },
+  )()
+}
+
+export async function getWaitingOnClientProjectsForProjects(viewerId: string, projectIds: string[]) {
+  if (projectIds.length === 0) return []
+  const supabase = await createServerClient()
+  const key = [...projectIds].sort().join(',')
+  return unstable_cache(
+    async () => _getWaitingOnClientProjectsForProjects(supabase, projectIds),
+    ['dashboard-waiting-client', viewerId, key],
+    { revalidate: DASHBOARD_CACHE_REVALIDATE_SEC, tags: [...dashTags, 'projects'] },
+  )()
+}
+
+export async function getTeamWorkloadForProjects(viewerId: string, projectIds: string[]) {
+  if (projectIds.length === 0) return []
+  const supabase = await createServerClient()
+  const thresholds = await getWorkloadThresholds(supabase)
+  const key = [...projectIds].sort().join(',')
+  return unstable_cache(
+    async () => _getTeamWorkloadForProjects(supabase, thresholds, projectIds),
+    ['dashboard-team-workload', viewerId, key],
+    { revalidate: DASHBOARD_CACHE_REVALIDATE_SEC, tags: [...dashTags, 'tasks'] },
+  )()
 }

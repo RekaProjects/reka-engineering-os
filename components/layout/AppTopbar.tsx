@@ -2,19 +2,22 @@
 
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { Search, Bell } from 'lucide-react'
+import { Search } from 'lucide-react'
+import { NotificationsBell } from '@/components/layout/NotificationsBell'
 
 interface AppTopbarProps {
   left?: ReactNode
   right?: ReactNode
   showSearch?: boolean
+  /** When set, enables realtime notification bell (Supabase `notifications` + Realtime). */
+  notificationUserId?: string
 }
 
 /**
  * AppTopbar — sticky top shell. h-[var(--topbar-height)], single hairline
  * border, search bar with keyboard shortcut hint, notification bell.
  */
-export function AppTopbar({ left, right, showSearch = false }: AppTopbarProps) {
+export function AppTopbar({ left, right, showSearch = false, notificationUserId }: AppTopbarProps) {
   return (
     <header
       className="sticky top-0 z-10 flex h-[var(--topbar-height)] shrink-0 items-center gap-4 px-5"
@@ -28,13 +31,13 @@ export function AppTopbar({ left, right, showSearch = false }: AppTopbarProps) {
         {left}
       </div>
 
-      {/* Right — search + actions */}
-      <div className="flex shrink-0 items-center gap-2">
-        {/* Search bar */}
+      {/* Right — search + actions (search hidden below md to avoid horizontal scroll) */}
+      <div className="flex min-w-0 shrink-0 items-center gap-2">
+        {/* Search shortcut link — desktop only; mobile uses hamburger nav */}
         {showSearch && (
           <Link
             href="/search"
-            className="group flex h-8 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-secondary)] transition-all duration-150 no-underline"
+            className="group hidden h-8 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-secondary)] transition-all duration-150 no-underline md:flex"
             style={{ minWidth: '220px' }}
           >
             <Search size={13} aria-hidden="true" className="shrink-0" />
@@ -52,16 +55,9 @@ export function AppTopbar({ left, right, showSearch = false }: AppTopbarProps) {
           </Link>
         )}
 
-        {right}
+        {right != null && <div className="hidden min-w-0 md:block">{right}</div>}
 
-        {/* Notification bell */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-text-secondary)] transition-colors duration-100"
-        >
-          <Bell size={15} aria-hidden="true" />
-        </button>
+        <NotificationsBell userId={notificationUserId} />
       </div>
     </header>
   )

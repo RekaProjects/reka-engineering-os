@@ -11,7 +11,7 @@ export async function extendDeadline(
   reason: string
 ) {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'technical_director', 'finance', 'manajer'])
 
   const supabase = await createServerClient()
 

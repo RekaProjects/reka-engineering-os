@@ -4,18 +4,20 @@ import { Pencil, ExternalLink } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
+import { isFinance, isTD } from '@/lib/auth/permissions'
 import { PageHeader }        from '@/components/layout/PageHeader'
 import { SectionCard }       from '@/components/shared/SectionCard'
 import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { AvailabilityBadge } from '@/components/modules/team/AvailabilityBadge'
 import { WorkerTypeBadge }   from '@/components/modules/team/WorkerTypeBadge'
+import { RoleBadge }         from '@/components/modules/team/RoleBadge'
 import { CompensationStatusBadge } from '@/components/modules/compensation/CompensationStatusBadge'
 import { PaymentStatusBadge }      from '@/components/modules/payments/PaymentStatusBadge'
 import { getMemberById }     from '@/lib/team/queries'
 import { getCompensationByMember } from '@/lib/compensation/queries'
 import { getPaymentsByMember }     from '@/lib/payments/queries'
 import { formatDate, formatIDR }   from '@/lib/utils/formatters'
-import { RATE_TYPE_OPTIONS, SYSTEM_ROLES, WORK_BASIS_OPTIONS } from '@/lib/constants/options'
+import { RATE_TYPE_OPTIONS, WORK_BASIS_OPTIONS } from '@/lib/constants/options'
 import { getSettingOptions } from '@/lib/settings/queries'
 
 interface PageProps {
@@ -31,7 +33,6 @@ export async function generateMetadata({ params }: PageProps) {
 // ── Lookup maps ───────────────────────────────────────────────
 
 const RATE_LABEL  = Object.fromEntries(RATE_TYPE_OPTIONS.map((r) => [r.value, r.label]))
-const ROLE_LABEL  = Object.fromEntries(SYSTEM_ROLES.map((r) => [r.value, r.label]))
 const WORK_LABEL  = Object.fromEntries(WORK_BASIS_OPTIONS.map((o) => [o.value, o.label]))
 
 // ── Shared detail row ─────────────────────────────────────────
@@ -77,7 +78,7 @@ const TD_SMALL: CSSProperties = {
 
 export default async function TeamMemberDetailPage({ params }: PageProps) {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin'])
+  requireRole(_sp.system_role, ['direktur', 'technical_director', 'finance'])
 
   const { id } = await params
   const member = await getMemberById(id)
@@ -89,6 +90,8 @@ export default async function TeamMemberDetailPage({ params }: PageProps) {
     getSettingOptions('functional_role'),
   ])
   const FUNC_LABEL = Object.fromEntries(funcOpts.map((r) => [r.value, r.label]))
+
+  const canEditTeamMember = isTD(_sp.system_role) || isFinance(_sp.system_role)
 
   const activeColor =
     member.active_status === 'active'   ? 'var(--color-success)' :
@@ -108,25 +111,27 @@ export default async function TeamMemberDetailPage({ params }: PageProps) {
           member.city ?? null,
         ].filter(Boolean).join(' · ') || 'Team member'}
         actions={
-          <Link
-            href={`/team/${member.id}/edit`}
-            style={{
-              display:         'inline-flex',
-              alignItems:      'center',
-              gap:             '6px',
-              padding:         '8px 14px',
-              backgroundColor: 'var(--color-surface)',
-              border:          '1px solid var(--color-border)',
-              borderRadius:    'var(--radius-control)',
-              fontSize:        '0.8125rem',
-              fontWeight:      500,
-              color:           'var(--color-text-primary)',
-              textDecoration:  'none',
-            }}
-          >
-            <Pencil size={13} aria-hidden="true" />
-            Edit
-          </Link>
+          canEditTeamMember ? (
+            <Link
+              href={`/team/${member.id}/edit`}
+              style={{
+                display:         'inline-flex',
+                alignItems:      'center',
+                gap:             '6px',
+                padding:         '8px 14px',
+                backgroundColor: 'var(--color-surface)',
+                border:          '1px solid var(--color-border)',
+                borderRadius:    'var(--radius-control)',
+                fontSize:        '0.8125rem',
+                fontWeight:      500,
+                color:           'var(--color-text-primary)',
+                textDecoration:  'none',
+              }}
+            >
+              <Pencil size={13} aria-hidden="true" />
+              Edit
+            </Link>
+          ) : null
         }
       />
 
@@ -179,7 +184,7 @@ export default async function TeamMemberDetailPage({ params }: PageProps) {
         <SectionCard title="Role &amp; Work">
           <div style={GRID2}>
             <DetailRow label="System Role">
-              {member.system_role ? ROLE_LABEL[member.system_role] ?? member.system_role : '—'}
+              <RoleBadge role={member.system_role} />
             </DetailRow>
             <DetailRow label="Worker Type">
               {member.worker_type

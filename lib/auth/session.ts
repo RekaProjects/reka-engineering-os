@@ -23,6 +23,19 @@ export {
   isMember,
   isAdminOrCoordinator,
   getNavPermissions,
+  isDirektur,
+  isTD,
+  isFinance,
+  isManajer,
+  isBD,
+  isSenior,
+  isFreelancer,
+  isManagement,
+  isOpsLead,
+  isPersonalOnly,
+  isIsolated,
+  canAccessProjectsNewRoute,
+  canAccessTasksDeliverablesFilesNewRoute,
 } from './permissions'
 export type { NavPermissions } from './permissions'
 
@@ -51,6 +64,31 @@ export async function getSessionProfile(): Promise<SessionProfile> {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/auth/login')
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, system_role, profile_completed_at, photo_url')
+    .eq('id', user.id)
+    .single()
+
+  return {
+    id:                   user.id,
+    full_name:            data?.full_name ?? user.email?.split('@')[0] ?? 'User',
+    email:                data?.email ?? user.email ?? '',
+    system_role:          (data?.system_role as SystemRole | null) ?? null,
+    profile_completed_at: data?.profile_completed_at ?? null,
+    photo_url:            data?.photo_url ?? null,
+  }
+}
+
+/**
+ * Same profile shape as getSessionProfile, but for Route Handlers:
+ * returns null when there is no session (no redirect).
+ */
+export async function getSessionProfileOptional(): Promise<SessionProfile | null> {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
 
   const { data } = await supabase
     .from('profiles')

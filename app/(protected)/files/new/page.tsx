@@ -6,7 +6,9 @@ import { requireTasksDeliverablesFilesNewPageAccess } from '@/lib/auth/access-su
 import { projectOptionsForMutationForms } from '@/lib/auth/query-scope'
 import { getTasksByProjectId } from '@/lib/tasks/queries'
 import { getDeliverablesByProjectId } from '@/lib/deliverables/queries'
-import { getSettingOptions } from '@/lib/settings/queries'
+import { parseCodeMap } from '@/lib/files/naming'
+import { getNextFileSequenceNumber, getSuggestedRevisionIndex } from '@/lib/files/queries'
+import { getSettingOptions, getFileNamingConfig } from '@/lib/settings/queries'
 
 export const metadata = { title: 'Add File — ReKa Engineering OS' }
 
@@ -19,11 +21,21 @@ export default async function NewFilePage({ searchParams }: PageProps) {
   requireTasksDeliverablesFilesNewPageAccess(profile.system_role)
 
   const params = await searchParams
-  const [projectsRaw, fileCategoryOptions] = await Promise.all([
+  const [projectsRaw, fileCategoryOptions, namingConfig] = await Promise.all([
     projectOptionsForMutationForms(profile, params.project_id ?? null),
     getSettingOptions('file_category'),
+    getFileNamingConfig(),
   ])
   const projects = projectsRaw.map(p => ({ id: p.id, name: p.name, project_code: p.project_code }))
+
+  const disc = parseCodeMap(namingConfig.discipline_codes)[0]?.value ?? 'MCH'
+  const doc = parseCodeMap(namingConfig.doc_type_codes)[0]?.value ?? 'DR'
+  let suggestedSequence = 1
+  let suggestedRevisionIndex = 0
+  if (params.project_id) {
+    suggestedSequence = await getNextFileSequenceNumber(params.project_id, disc, doc)
+    suggestedRevisionIndex = await getSuggestedRevisionIndex(params.project_id, disc, doc)
+  }
 
   const tasks = params.project_id
     ? (await getTasksByProjectId(params.project_id)).map(t => ({ id: t.id, title: t.title }))
@@ -44,6 +56,11 @@ export default async function NewFilePage({ searchParams }: PageProps) {
           deliverables={deliverables}
           defaultProjectId={params.project_id}
           fileCategoryOptions={fileCategoryOptions}
+          fileNaming={{
+            config: namingConfig,
+            suggestedSequence,
+            suggestedRevisionIndex,
+          }}
         />
       </SectionCard>
     </div>

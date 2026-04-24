@@ -9,7 +9,7 @@ export const metadata = { title: 'New Intake — ReKa Engineering OS' }
 
 export default async function NewIntakePage() {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin', 'coordinator'])
+  requireRole(_sp.system_role, ['direktur', 'technical_director', 'manajer', 'bd'])
 
   const [clients, disciplineOptions, projectTypeOptions] = await Promise.all([
     getClientsForSelect(),

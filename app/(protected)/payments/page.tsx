@@ -88,7 +88,7 @@ function paymentColumns(METHOD_LABEL: Record<string, string>): Column<PaymentRow
 
 export default async function PaymentsListPage() {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin'])
+  requireRole(_sp.system_role, ['direktur', 'finance'])
 
   const [records, pmOpts] = await Promise.all([
     getPaymentRecords(),

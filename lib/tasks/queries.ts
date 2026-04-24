@@ -7,6 +7,11 @@ export { buildTaskTree }
 
 // ─── List (all tasks, cross-project) ──────────────────────────
 
+export interface GetTasksResult {
+  rows: TaskWithRelations[]
+  count: number
+}
+
 export async function getTasks(opts?: {
   search?: string
   status?: string
@@ -22,15 +27,25 @@ export async function getTasks(opts?: {
    * Pass [] when the user has no viewable projects to get an empty list.
    */
   scopeProjectIds?: string[]
-}): Promise<TaskWithRelations[]> {
+  page?: number
+  pageSize?: number
+}): Promise<GetTasksResult> {
   const supabase = await createServerClient()
 
-  let query = supabase
-    .from('tasks')
-    .select(
-      '*, projects(id, name, project_code), assignee:profiles!assigned_to_user_id(id, full_name), reviewer:profiles!reviewer_user_id(id, full_name)'
-    )
-    .order('created_at', { ascending: false })
+  const selectCols =
+    '*, projects(id, name, project_code), assignee:profiles!assigned_to_user_id(id, full_name), reviewer:profiles!reviewer_user_id(id, full_name)'
+
+  if (opts?.scopeProjectIds !== undefined && opts.scopeProjectIds.length === 0) {
+    return { rows: [], count: 0 }
+  }
+
+  const paginate = opts?.page != null && opts?.pageSize != null
+  const page = opts?.page ?? 1
+  const pageSize = opts?.pageSize ?? 50
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  let query = supabase.from('tasks').select(selectCols, paginate ? { count: 'exact' } : undefined).order('created_at', { ascending: false })
 
   if (opts?.status && opts.status !== 'all') {
     query = query.eq('status', opts.status)
@@ -44,27 +59,31 @@ export async function getTasks(opts?: {
   if (opts?.assigned_to) {
     query = query.eq('assigned_to_user_id', opts.assigned_to)
   }
-  if (opts?.search) {
-    query = query.or(
-      `title.ilike.%${opts.search}%`
-    )
+  const q = opts?.search?.trim() ?? ''
+  if (q.length >= 3) {
+    query = query.textSearch('title_tsv', q, { type: 'websearch', config: 'simple' })
+  } else if (q.length > 0) {
+    query = query.ilike('title', `${q}%`)
   }
 
-  // Role-scoped filters
   if (opts?.scopeAssignedTo) {
     query = query.eq('assigned_to_user_id', opts.scopeAssignedTo)
   }
   if (opts?.scopeReviewerId) {
     query = query.eq('reviewer_user_id', opts.scopeReviewerId)
   }
-  if (opts?.scopeProjectIds !== undefined) {
-    if (opts.scopeProjectIds.length === 0) return []
+  if (opts?.scopeProjectIds !== undefined && opts.scopeProjectIds.length > 0) {
     query = query.in('project_id', opts.scopeProjectIds)
   }
 
-  const { data, error } = await query
+  if (paginate) {
+    query = query.range(from, to)
+  }
+
+  const { data, error, count } = await query
   if (error) throw new Error(error.message)
-  return (data ?? []) as unknown as TaskWithRelations[]
+  const rows = (data ?? []) as unknown as TaskWithRelations[]
+  return { rows, count: paginate ? count ?? 0 : rows.length }
 }
 
 // ─── Single ───────────────────────────────────────────────────

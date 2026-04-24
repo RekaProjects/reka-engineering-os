@@ -10,7 +10,7 @@ export const metadata = { title: 'New Payment — ReKa Engineering OS' }
 
 export default async function NewPaymentPage() {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin'])
+  requireRole(_sp.system_role, ['finance'])
 
   const [members, paymentMethodOptions] = await Promise.all([
     getMemberOptions(),

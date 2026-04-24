@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { WORK_BASIS_OPTIONS, COMPENSATION_STATUS_OPTIONS } from '@/lib/constants/options'
 import { FormSection } from '@/components/shared/FormSection'
@@ -14,6 +14,10 @@ interface Props {
   defaultValues?: Record<string, string | number | null>
   action: (formData: FormData) => Promise<{ error: string } | void>
   submitLabel: string
+  /** When false, status is managed by workflow (draft / Finance confirm). */
+  showStatusField?: boolean
+  /** Show guidance for TD / Manajer about MONTHLY_FIXED. */
+  showMonthlyFixedGuidance?: boolean
 }
 
 const LABEL: CSSProperties = {
@@ -40,7 +44,17 @@ const GRID2: CSSProperties = {
   gap: '14px',
 }
 
-export function CompensationForm({ members, projects, defaultValues: dv = {}, action, submitLabel }: Props) {
+export function CompensationForm({
+  members,
+  projects,
+  defaultValues: dv = {},
+  action,
+  submitLabel,
+  showStatusField = false,
+  showMonthlyFixedGuidance = false,
+}: Props) {
+  const [rateType, setRateType] = useState<string>((dv.rate_type as string) ?? '')
+
   async function clientAction(_prev: { error: string } | null, formData: FormData) {
     const result = await action(formData)
     if (result && 'error' in result) return result
@@ -93,12 +107,23 @@ export function CompensationForm({ members, projects, defaultValues: dv = {}, ac
           <div style={GRID2}>
             <div>
               <label style={LABEL}>Rate Type *</label>
-              <select name="rate_type" required defaultValue={(dv.rate_type as string) ?? ''} style={INPUT}>
+              <select
+                name="rate_type"
+                required
+                value={rateType || (dv.rate_type as string) || ''}
+                onChange={(e) => setRateType(e.target.value)}
+                style={INPUT}
+              >
                 <option value="">Select…</option>
                 {WORK_BASIS_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
+              {showMonthlyFixedGuidance && (
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '6px', lineHeight: 1.45 }}>
+                  MONTHLY_FIXED hanya bisa diatur langsung oleh Finance dari profil anggota tim (bukan lewat form ini).
+                </p>
+              )}
             </div>
             <div>
               <label style={LABEL}>Currency</label>
@@ -125,14 +150,16 @@ export function CompensationForm({ members, projects, defaultValues: dv = {}, ac
               <label style={LABEL}>Work Date</label>
               <input name="work_date" type="date" defaultValue={(dv.work_date as string) ?? ''} style={INPUT} />
             </div>
-            <div>
-              <label style={LABEL}>Status</label>
-              <select name="status" defaultValue={(dv.status as string) ?? 'draft'} style={INPUT}>
-                {COMPENSATION_STATUS_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
+            {showStatusField && (
+              <div>
+                <label style={LABEL}>Status</label>
+                <select name="status" defaultValue={(dv.status as string) ?? 'draft'} style={INPUT}>
+                  {COMPENSATION_STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </FormSection>
 

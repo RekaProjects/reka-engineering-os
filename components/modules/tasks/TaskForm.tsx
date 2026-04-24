@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { createTask, updateTask } from '@/lib/tasks/actions'
 import {
   TASK_STATUS_OPTIONS,
-  TASK_CATEGORY_OPTIONS,
   PRIORITY_OPTIONS,
 } from '@/lib/constants/options'
 import { FormSection } from '@/components/shared/FormSection'
@@ -20,7 +19,7 @@ interface TaskFormProps {
   projects: { id: string; name: string; project_code: string }[]
   users: { id: string; full_name: string; email: string; discipline: string | null }[]
   defaultProjectId?: string
-  taskCategoryOptions?: OptionPair[]
+  taskCategoryOptions: OptionPair[]
   /** When mode is edit, aligns visible fields with server partial-update rules. */
   taskEditScope?: TaskEditFormScope
 }
@@ -210,7 +209,7 @@ export function TaskForm({
   }
 
   if (mode === 'edit' && scope === 'assignee' && task) {
-    const cats = taskCategoryOptions ?? TASK_CATEGORY_OPTIONS
+    const cats = taskCategoryOptions
     const catLabel = cats.find(c => c.value === (task.category ?? ''))?.label ?? task.category ?? '—'
 
     return (
@@ -366,7 +365,7 @@ export function TaskForm({
                   style={inputStyle}
                 >
                   <option value="">No category</option>
-                  {(taskCategoryOptions ?? TASK_CATEGORY_OPTIONS).map(o => (
+                  {taskCategoryOptions.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>

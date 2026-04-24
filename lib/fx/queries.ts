@@ -1,12 +1,13 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServerClient } from '@/lib/supabase/server'
 import type { FxRate } from '@/types/database'
 
-/** Get the latest FX rate for a currency pair */
-export async function getLatestFxRate(
+/** Latest FX rate using an existing Supabase client (safe inside `unstable_cache`). */
+export async function getLatestFxRateWithClient(
+  supabase: SupabaseClient,
   fromCurrency: string,
-  toCurrency: string
+  toCurrency: string,
 ): Promise<number | null> {
-  const supabase = await createServerClient()
   const { data } = await supabase
     .from('fx_rates')
     .select('rate')
@@ -17,6 +18,15 @@ export async function getLatestFxRate(
     .single()
 
   return data?.rate ?? null
+}
+
+/** Get the latest FX rate for a currency pair */
+export async function getLatestFxRate(
+  fromCurrency: string,
+  toCurrency: string
+): Promise<number | null> {
+  const supabase = await createServerClient()
+  return getLatestFxRateWithClient(supabase, fromCurrency, toCurrency)
 }
 
 /** Get all FX rates (for settings management) */
@@ -32,7 +42,13 @@ export async function getFxRates(): Promise<FxRate[]> {
 }
 
 /** Get current USD→IDR rate, fallback to 16400 */
-export async function getUsdToIdrRate(): Promise<number> {
-  const rate = await getLatestFxRate('USD', 'IDR')
+export async function getUsdToIdrWithClient(supabase: SupabaseClient): Promise<number> {
+  const rate = await getLatestFxRateWithClient(supabase, 'USD', 'IDR')
   return rate ?? 16400
+}
+
+/** Get current USD→IDR rate, fallback to 16400 */
+export async function getUsdToIdrRate(): Promise<number> {
+  const supabase = await createServerClient()
+  return getUsdToIdrWithClient(supabase)
 }

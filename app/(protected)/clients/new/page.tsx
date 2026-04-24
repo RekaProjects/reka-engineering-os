@@ -7,7 +7,7 @@ export const metadata = { title: 'New Client — ReKa Engineering OS' }
 
 export default async function NewClientPage() {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin'])
+  requireRole(_sp.system_role, ['bd', 'direktur', 'technical_director', 'finance'])
 
   return (
     <div style={{ maxWidth: '720px' }}>

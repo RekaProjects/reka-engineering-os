@@ -5,16 +5,28 @@
  * Admin-guarded server actions for managing setting_options rows.
  */
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
+import { loadMutationProfile, MUTATION_FORBIDDEN } from '@/lib/auth/mutation-policy'
+import { isTD } from '@/lib/auth/permissions'
+import type { FileNamingConfig } from '@/lib/files/naming'
 import type { SettingDomain } from './domains'
+
+const FILE_NAMING_KEYS = [
+  'project_prefix',
+  'separator',
+  'revision_format',
+  'discipline_codes',
+  'doc_type_codes',
+] as const satisfies readonly (keyof FileNamingConfig)[]
 
 // ── Helpers ──────────────────────────────────────────────────
 
 async function adminGuard() {
   const profile = await getSessionProfile()
-  requireRole(profile.system_role, ['admin'])
+  requireRole(profile.system_role, ['technical_director'])
   return profile
 }
 
@@ -53,6 +65,7 @@ export async function upsertSettingOption(formData: FormData) {
   }
 
   revalidatePath('/settings', 'page')
+  revalidateTag('dashboard')
   return { error: null }
 }
 
@@ -68,6 +81,7 @@ export async function deleteSettingOption(id: string) {
   if (error) return { error: error.message }
 
   revalidatePath('/settings', 'page')
+  revalidateTag('dashboard')
   return { error: null }
 }
 
@@ -83,5 +97,55 @@ export async function toggleSettingOption(id: string, is_active: boolean) {
   if (error) return { error: error.message }
 
   revalidatePath('/settings', 'page')
+  revalidateTag('dashboard')
   return { error: null }
+}
+
+const FILE_NAMING_KEY_SET = new Set<string>(FILE_NAMING_KEYS)
+
+export async function updateFileNamingConfig(
+  updates: Partial<FileNamingConfig>,
+): Promise<{ error?: string }> {
+  const profile = await loadMutationProfile()
+  if (!isTD(profile.system_role)) return { error: MUTATION_FORBIDDEN }
+
+  const supabase = await createServerClient()
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === undefined) continue
+    if (!FILE_NAMING_KEY_SET.has(key)) continue
+
+    const { error } = await supabase
+      .from('file_naming_config')
+      .update({
+        config_value: value,
+        updated_by: profile.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('config_key', key)
+
+    if (error) return { error: error.message }
+  }
+
+  revalidatePath('/settings', 'page')
+  revalidatePath('/files', 'page')
+  revalidateTag('dashboard')
+  return {}
+}
+
+export async function saveProjectPrefixSettings(formData: FormData): Promise<void> {
+  await adminGuard()
+  const project_prefix = (formData.get('project_prefix') as string)?.trim()
+  const separator = (formData.get('separator') as string)?.trim()
+  if (!project_prefix) {
+    redirect(`/settings?tab=system&prefix_err=${encodeURIComponent('Project prefix is required.')}`)
+  }
+  const res = await updateFileNamingConfig({
+    project_prefix,
+    separator: separator && separator.length > 0 ? separator : '-',
+  })
+  if (res.error) {
+    redirect(`/settings?tab=system&prefix_err=${encodeURIComponent(res.error)}`)
+  }
+  redirect('/settings?tab=system&saved=1')
 }

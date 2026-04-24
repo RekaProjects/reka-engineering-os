@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function EditPaymentPage({ params }: PageProps) {
   const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['admin'])
+  requireRole(_sp.system_role, ['finance'])
 
   const { id } = await params
   const [record, members, paymentMethodOptions] = await Promise.all([

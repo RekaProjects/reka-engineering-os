@@ -1,13 +1,22 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
+import Link from 'next/link'
 import { ArrowRightCircle, X, Loader2 } from 'lucide-react'
 import { convertIntakeToProject } from '@/lib/intakes/convert-action'
+
+export type ConvertLeadClientOption = { id: string; client_name: string; client_code: string }
+export type ConvertLeadUserOption = { id: string; full_name: string; email: string; discipline: string | null }
 
 interface ConvertLeadButtonProps {
   leadId: string
   leadTitle: string
   leadClientName: string
+  /** Dropdown data (from server); required for convert modal. */
+  clients: ConvertLeadClientOption[]
+  users: ConvertLeadUserOption[]
+  /** When intake already links a client, skip client picker. */
+  linkedClientId?: string | null
   /** When false, only the form modal is used (e.g. opened from a parent flow). */
   showTrigger?: boolean
   /** Open the convert form on mount. */
@@ -20,6 +29,9 @@ export function ConvertLeadButton({
   leadId,
   leadTitle,
   leadClientName,
+  clients,
+  users,
+  linkedClientId = null,
   showTrigger = true,
   startOpen = false,
   onFormClose,
@@ -36,6 +48,9 @@ export function ConvertLeadButton({
   }, [startOpen])
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  const canSubmit =
+    users.length > 0 && (Boolean(linkedClientId) || clients.length > 0)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -139,15 +154,73 @@ export function ConvertLeadButton({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={labelStyle}>Client ID *</label>
-                  <input name="client_id" required placeholder="Paste client UUID" style={inputStyle} />
-                  <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                    Find from Clients page
-                  </p>
+                  <label style={labelStyle}>Client *</label>
+                  {linkedClientId ? (
+                    <>
+                      <input type="hidden" name="client_id" value={linkedClientId} />
+                      <div
+                        style={{
+                          ...inputStyle,
+                          display: 'flex',
+                          alignItems: 'center',
+                          height: 'auto',
+                          minHeight: 36,
+                          backgroundColor: 'var(--color-surface-subtle)',
+                        }}
+                      >
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>{leadClientName}</span>
+                      </div>
+                      <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                        Linked from this lead
+                      </p>
+                    </>
+                  ) : clients.length > 0 ? (
+                    <>
+                      <select name="client_id" required defaultValue="" style={selectStyle}>
+                        <option value="" disabled>
+                          Select client…
+                        </option>
+                        {clients.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.client_name} ({c.client_code})
+                          </option>
+                        ))}
+                      </select>
+                      <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                        Or{' '}
+                        <Link href="/clients/new" style={{ color: 'var(--color-primary)' }}>
+                          add a new client
+                        </Link>
+                      </p>
+                    </>
+                  ) : (
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
+                      No clients available.{' '}
+                      <Link href="/clients/new" style={{ color: 'var(--color-primary)' }}>
+                        Create a client first
+                      </Link>
+                      , then refresh this page.
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <label style={labelStyle}>Project Lead (User ID) *</label>
-                  <input name="project_lead_user_id" required placeholder="Paste user UUID" style={inputStyle} />
+                  <label style={labelStyle}>Project lead *</label>
+                  {users.length > 0 ? (
+                    <select name="project_lead_user_id" required defaultValue="" style={selectStyle}>
+                      <option value="" disabled>
+                        Select lead…
+                      </option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.full_name} ({u.email})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
+                      No active users found for assignment.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -200,8 +273,8 @@ export function ConvertLeadButton({
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 18px', backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-fg)', border: 'none', borderRadius: 'var(--radius-control)', fontSize: '0.8125rem', fontWeight: 600, cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}
+                  disabled={isPending || !canSubmit}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 18px', backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-fg)', border: 'none', borderRadius: 'var(--radius-control)', fontSize: '0.8125rem', fontWeight: 600, cursor: isPending || !canSubmit ? 'not-allowed' : 'pointer', opacity: isPending || !canSubmit ? 0.7 : 1 }}
                 >
                   {isPending ? <><Loader2 size={14} className="animate-spin" /> Creating…</> : <><ArrowRightCircle size={14} /> Create Project</>}
                 </button>

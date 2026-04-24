@@ -9,7 +9,7 @@ export type PayslipActionResult = { error?: string }
 
 export async function createPayslip(formData: FormData): Promise<PayslipActionResult> {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const supabase = await createServerClient()
 
@@ -52,7 +52,7 @@ export async function createPayslip(formData: FormData): Promise<PayslipActionRe
 
 export async function markPayslipPaid(payslipId: string): Promise<PayslipActionResult> {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const supabase = await createServerClient()
 
@@ -79,7 +79,7 @@ export async function markPayslipPaid(payslipId: string): Promise<PayslipActionR
 
 export async function deletePayslip(payslipId: string): Promise<PayslipActionResult> {
   const sp = await getSessionProfile()
-  requireRole(sp.system_role, ['admin', 'coordinator'])
+  requireRole(sp.system_role, ['direktur', 'finance'])
 
   const supabase = await createServerClient()
 

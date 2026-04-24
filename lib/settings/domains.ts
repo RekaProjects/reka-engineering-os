@@ -31,6 +31,7 @@ export const SETTING_DOMAINS = [
   'lead_status',
   'invoice_status',
   'outreach_status',
+  'workload_thresholds',
 ] as const
 
 export type SettingDomain = (typeof SETTING_DOMAINS)[number]
@@ -52,6 +53,7 @@ export const DOMAIN_LABELS: Record<SettingDomain, string> = {
   lead_status:      'Lead Statuses',
   invoice_status:   'Invoice Statuses',
   outreach_status:  'Outreach Statuses',
+  workload_thresholds: 'Team workload bands',
 }
 
 type OptionPair = { value: string; label: string }
@@ -115,5 +117,10 @@ export const DOMAIN_FALLBACKS: Record<SettingDomain, OptionPair[]> = {
     { value: 'in_discussion', label: 'In Discussion' },
     { value: 'converted', label: 'Converted' },
     { value: 'declined', label: 'Declined' },
+  ],
+  workload_thresholds: [
+    { value: '3', label: 'Low band upper bound (open tasks)' },
+    { value: '8', label: 'Normal band upper bound' },
+    { value: '13', label: 'High band upper bound' },
   ],
 }
