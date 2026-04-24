@@ -34,6 +34,9 @@ export type Currency = 'IDR' | 'USD' | 'EUR' | 'SGD'
 /** Billing model: domestic milestones vs platform-handled. */
 export type ProjectSourceType = 'DOMESTIC' | 'PLATFORM'
 
+/** How Google Drive is set up for a project. */
+export type ProjectDriveMode = 'auto' | 'manual' | 'none'
+
 /** Milestone payment lifecycle (DOMESTIC projects). */
 export type TerminStatus =
   | 'BELUM_DIMULAI'
@@ -144,7 +147,12 @@ export interface Project {
   source: string
   source_platform: string | null
   external_reference_url: string | null
+  /** @deprecated Use disciplines; kept for DB backward compatibility */
   discipline: string
+  /** Primary engineering disciplines for this project */
+  disciplines: string[]
+  drive_mode: ProjectDriveMode | null
+  drive_construction_admin_created: boolean
   project_type: string
   scope_summary: string | null
   start_date: string

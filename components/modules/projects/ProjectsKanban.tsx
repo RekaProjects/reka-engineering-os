@@ -6,6 +6,7 @@ import { ProgressBar } from '@/components/shared/ProgressBar'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { AlertTriangle } from 'lucide-react'
 import type { ProjectWithRelations } from '@/lib/projects/queries'
+import { normalizeProjectDisciplines } from '@/lib/projects/helpers'
 
 const WORKFLOW_STATUSES = new Set(['pending_approval', 'rejected'])
 
@@ -82,6 +83,14 @@ export function ProjectsKanban({ projects, onStatusChange }: ProjectsKanbanProps
         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
           {project.clients?.client_name ?? '—'}
         </p>
+
+        {normalizeProjectDisciplines(project).length > 0 && (
+          <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-secondary)', marginBottom: '8px', lineHeight: 1.35 }}>
+            {normalizeProjectDisciplines(project)
+              .map((d) => d.replace(/_/g, ' '))
+              .join(' · ')}
+          </p>
+        )}
 
         {/* Progress */}
         <div style={{ marginBottom: '8px' }}>

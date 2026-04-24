@@ -115,3 +115,12 @@ export function buildRekaDriveFolderName(params: {
   }
   return `REKA-${sanitize(params.clientCode)}-${sanitize(params.projectCode)}-${y}`
 }
+
+/** Extract folder id from a Google Drive folder URL, if possible. */
+export function extractGoogleDriveFolderIdFromUrl(url: string): string | null {
+  const t = url.trim()
+  const m1 = t.match(/\/folders\/([a-zA-Z0-9_-]+)/)
+  if (m1?.[1]) return m1[1]
+  const m2 = t.match(/[?&]id=([a-zA-Z0-9_-]+)/)
+  return m2?.[1] ?? null
+}

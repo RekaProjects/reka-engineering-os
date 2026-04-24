@@ -7,12 +7,13 @@ import { getSessionProfile } from '@/lib/auth/session'
 import { isDirektur, isFinance, isManagement, isTD } from '@/lib/auth/permissions'
 import { PageHeader, SectionHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
-import { getDomainSummary, getSettingOptionsFull, getFileNamingConfig } from '@/lib/settings/queries'
+import { getDomainSummary, getSettingOptionsFull, getFileNamingConfig, getDriveRootFolderName } from '@/lib/settings/queries'
 import {
   upsertSettingOption,
   deleteSettingOption,
   toggleSettingOption,
   saveProjectPrefixSettings,
+  saveDriveRootFolderName,
 } from '@/lib/settings/actions'
 import { SETTING_DOMAINS, DOMAIN_LABELS, type SettingDomain } from '@/lib/settings/domains'
 import { SettingsFileNamingClient } from '@/components/modules/settings/SettingsFileNamingClient'
@@ -36,6 +37,7 @@ interface PageProps {
     saved?: string
     drive?: string
     drive_error?: string
+    drive_root_saved?: string
   }>
 }
 
@@ -45,7 +47,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
 
   const canEditSystem = isTD(sp.system_role)
   const canEditFileNaming = isTD(sp.system_role)
-  const canViewFinance = isFinance(sp.system_role) || isDirektur(sp.system_role) || isTD(sp.system_role)
+  const canViewFinance = isDirektur(sp.system_role) || isTD(sp.system_role)
 
   if (!canEditSystem && !canViewFinance) {
     redirect('/access-denied')
@@ -83,10 +85,11 @@ export default async function SettingsPage({ searchParams }: PageProps) {
     ? (params.domain as SettingDomain)
     : 'functional_role'
 
-  const [summary, options, fileNamingConfig] = await Promise.all([
+  const [summary, options, fileNamingConfig, driveRootFolderName] = await Promise.all([
     tab === 'system' ? getDomainSummary() : Promise.resolve([]),
     tab === 'system' ? getSettingOptionsFull(activeDomain) : Promise.resolve([]),
     tab === 'system' || tab === 'file_naming' ? getFileNamingConfig() : Promise.resolve(null),
+    tab === 'finance' ? getDriveRootFolderName() : Promise.resolve(null as string | null),
   ])
 
   const nextOrder = options.length > 0 ? Math.max(...options.map((o) => o.sort_order)) + 1 : 1
@@ -319,6 +322,11 @@ export default async function SettingsPage({ searchParams }: PageProps) {
       {tab === 'finance' && (
         <SectionCard>
           <SectionHeader title="Finance tools" className="mb-1" />
+          {params.drive_root_saved && (
+            <div className="mb-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-success-subtle)] px-4 py-3 text-[0.8125rem] text-[var(--color-success)]">
+              Nama folder root Drive disimpan.
+            </div>
+          )}
           {params.drive === 'connected' && (
             <div className="mb-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-success-subtle)] px-4 py-3 text-[0.8125rem] text-[var(--color-success)]">
               Google Drive terhubung. Folder proyek baru akan dibuat otomatis bila token valid.
@@ -336,6 +344,39 @@ export default async function SettingsPage({ searchParams }: PageProps) {
             Kurs valuta dan rekening pembayaran dikelola di halaman khusus (tanpa hash URL).
             {!financeCanMutate && ' Pengeditan nilai kurs dan rekening hanya untuk user Finance.'}
           </p>
+
+          {(isTD(sp.system_role) || isDirektur(sp.system_role)) && driveRootFolderName != null && (
+            <div className="mb-6 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-5">
+              <h3 className="m-0 text-[0.875rem] font-semibold text-[var(--color-text-primary)]">
+                Google Drive — Root Folder
+              </h3>
+              <p className="mt-2 mb-4 text-[0.8125rem] leading-relaxed text-[var(--color-text-muted)]">
+                Nama folder induk di My Drive tempat semua folder project disimpan. Dibuat otomatis jika belum ada.
+              </p>
+              <form action={saveDriveRootFolderName} className="flex flex-wrap items-end gap-3">
+                <div className="flex min-w-[200px] flex-1 flex-col gap-1">
+                  <label htmlFor="drive_root_folder_name" className="text-[0.75rem] font-medium text-[var(--color-text-muted)]">
+                    Root folder name
+                  </label>
+                  <input
+                    id="drive_root_folder_name"
+                    name="drive_root_folder_name"
+                    defaultValue={driveRootFolderName}
+                    required
+                    placeholder="Projects"
+                    className={controlClass}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[var(--color-primary)] px-4 text-[0.8125rem] font-medium text-[var(--color-primary-fg)]"
+                >
+                  Save
+                </button>
+              </form>
+            </div>
+          )}
+
           {isManagement(sp.system_role) && (
             <p className="mb-4 text-[0.8125rem]">
               <a

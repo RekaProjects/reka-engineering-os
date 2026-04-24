@@ -2,10 +2,10 @@
  * Direktur dashboard — org finance + operations + governance queues.
  */
 
+import { unstable_cache } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUsdToIdrRate } from '@/lib/fx/queries'
 import { getInvoiceSummary } from '@/lib/invoices/queries'
-import { getPendingApprovalProjects } from '@/lib/projects/queries'
 import { countDraftCompensationRecords } from '@/lib/compensation/queries'
 import {
   getDashboardKpis,
@@ -30,6 +30,16 @@ import { getPnlSummary, parsePnlPeriodParam, type PnlPeriod, type PnlSummary } f
 import { getAccountReceiveSummary, type AccountSummary } from '@/lib/payment-accounts/queries'
 import type { ActivityLogEntry } from '@/lib/activity/queries'
 
+export type PendingApprovalProjectRow = {
+  id: string
+  name: string
+  project_code: string
+  discipline: string
+  client_name: string | null
+  project_lead_name: string | null
+  approval_requested_at: string | null
+}
+
 export type OverdueInvoiceBrief = {
   id: string
   invoice_code: string
@@ -53,7 +63,7 @@ export type DirekturDashboardData = {
   pnl: PnlSummary
   accountReceive: AccountSummary[]
   fxRate: number
-  pendingApprovalProjects: Awaited<ReturnType<typeof getPendingApprovalProjects>>
+  pendingApprovalProjects: PendingApprovalProjectRow[]
   overdueInvoices: OverdueInvoiceBrief[]
   compensationDraftCount: number
   revenueMtdIdr: number
@@ -61,6 +71,84 @@ export type DirekturDashboardData = {
   projectsCompletedThisMonth: number
   teamUtilizationPct: number
   projectOverview: UrgentProject[]
+}
+
+async function _getPendingApprovalProjectsImpl(): Promise<PendingApprovalProjectRow[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('projects')
+    .select(
+      `
+        id,
+        name,
+        project_code,
+        discipline,
+        disciplines,
+        approval_requested_at,
+        clients ( client_name ),
+        lead:profiles!project_lead_user_id ( full_name )
+      `,
+    )
+    .eq('status', 'pending_approval')
+    .order('approval_requested_at', { ascending: true, nullsFirst: false })
+    .range(0, 9)
+
+  if (error) throw new Error(error.message)
+
+  type NameRow = { client_name?: string } | null
+  type LeadRow = { full_name?: string } | null
+
+  function oneClientName(c: NameRow | NameRow[] | null | undefined): string | null {
+    if (c == null) return null
+    const o = Array.isArray(c) ? c[0] : c
+    return o?.client_name ?? null
+  }
+
+  function oneLeadName(l: LeadRow | LeadRow[] | null | undefined): string | null {
+    if (l == null) return null
+    const o = Array.isArray(l) ? l[0] : l
+    return o?.full_name ?? null
+  }
+
+  const raw = (data ?? []) as {
+    id: string
+    name: string
+    project_code: string
+    discipline: string
+    disciplines: string[] | null
+    approval_requested_at: string | null
+    clients: NameRow | NameRow[] | null
+    lead: LeadRow | LeadRow[] | null
+  }[]
+
+  function disciplineLine(r: (typeof raw)[number]): string {
+    const parts =
+      Array.isArray(r.disciplines) && r.disciplines.length > 0
+        ? r.disciplines
+        : r.discipline
+          ? [r.discipline]
+          : []
+    return parts.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(' · ')
+  }
+
+  return raw.map((r) => ({
+    id: r.id,
+    name: r.name,
+    project_code: r.project_code,
+    discipline: disciplineLine(r),
+    client_name: oneClientName(r.clients),
+    project_lead_name: oneLeadName(r.lead),
+    approval_requested_at: r.approval_requested_at,
+  }))
+}
+
+/** Proyek menunggu persetujuan Direktur (ringkas, di-cache 60s). */
+export function getPendingApprovalProjects(): Promise<PendingApprovalProjectRow[]> {
+  return unstable_cache(
+    _getPendingApprovalProjectsImpl,
+    ['direktur-pending-approval-projects'],
+    { revalidate: 60, tags: ['dashboard', 'projects'] },
+  )()
 }
 
 function monthStartIso(utcMonthOffset = 0): string {

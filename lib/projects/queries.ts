@@ -1,5 +1,4 @@
 // Server-side query helpers for the Projects module
-import { unstable_cache } from 'next/cache'
 import { cache } from 'react'
 import { createServerClient } from '@/lib/supabase/server'
 import { effectiveRole, isManagement } from '@/lib/auth/permissions'
@@ -108,7 +107,7 @@ export async function getProjects(opts?: {
     query = query.eq('status', opts.status)
   }
   if (opts?.discipline && opts.discipline !== 'all') {
-    query = query.eq('discipline', opts.discipline)
+    query = query.contains('disciplines', [opts.discipline])
   }
   if (opts?.priority && opts.priority !== 'all') {
     query = query.eq('priority', opts.priority)
@@ -154,26 +153,17 @@ export async function getProjectById(id: string): Promise<ProjectWithRelations |
   return data as unknown as ProjectWithRelations
 }
 
-/** Projects waiting on Direktur approval (dashboard / needs attention). */
-async function _getPendingApprovalProjects(): Promise<ProjectWithRelations[]> {
+/** Full list of pending-approval projects (e.g. Direktur banner on /projects) — not dashboard-cached. */
+export async function getPendingApprovalProjectsForList(): Promise<Pick<Project, 'id' | 'name' | 'project_code'>[]> {
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('projects')
-    .select(
-      '*, clients(id, client_name, client_code), lead:profiles!project_lead_user_id(id, full_name), reviewer:profiles!reviewer_user_id(id, full_name), intakes:intakes!intake_id(id, intake_code, title)'
-    )
+    .select('id, name, project_code')
     .eq('status', 'pending_approval')
     .order('approval_requested_at', { ascending: true, nullsFirst: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as unknown as ProjectWithRelations[]
-}
-
-export async function getPendingApprovalProjects(): Promise<ProjectWithRelations[]> {
-  return unstable_cache(_getPendingApprovalProjects, ['pending-approval-projects'], {
-    revalidate: 300,
-    tags: ['dashboard', 'dashboard:attention', 'projects'],
-  })()
+  return (data ?? []) as Pick<Project, 'id' | 'name' | 'project_code'>[]
 }
 
 // ─── By Client ────────────────────────────────────────────────

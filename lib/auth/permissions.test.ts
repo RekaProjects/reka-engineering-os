@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   canAccessCompensation,
   canProposeCompensation,
+  canAccessTeam,
+  canViewTeamAvailability,
   effectiveRole,
+  getNavPermissions,
   isBD,
   isFinance,
   isFreelancer,
@@ -66,5 +69,17 @@ describe('permissions predicates', () => {
   it('canAccessCompensation', () => {
     expect(canAccessCompensation('finance')).toBe(true)
     expect(canAccessCompensation('member')).toBe(false)
+  })
+
+  it('canAccessTeam and canViewTeamAvailability', () => {
+    expect(canAccessTeam('technical_director')).toBe(true)
+    expect(canAccessTeam('manajer')).toBe(false)
+    expect(canViewTeamAvailability('manajer')).toBe(true)
+    expect(canViewTeamAvailability('technical_director')).toBe(false)
+  })
+
+  it('getNavPermissions showTeam for manajer', () => {
+    expect(getNavPermissions('manajer').showTeam).toBe(true)
+    expect(getNavPermissions('bd').showTeam).toBe(false)
   })
 })

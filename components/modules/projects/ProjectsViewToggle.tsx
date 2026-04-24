@@ -10,6 +10,7 @@ import { ProgressBar } from '@/components/shared/ProgressBar'
 import { InlineStatusSelect } from '@/components/shared/InlineStatusSelect'
 import type { Column } from '@/components/shared/DataTable'
 import type { ProjectWithRelations } from '@/lib/projects/queries'
+import { normalizeProjectDisciplines } from '@/lib/projects/helpers'
 import { formatDate } from '@/lib/utils/formatters'
 import Link from 'next/link'
 
@@ -65,6 +66,17 @@ export function ProjectsViewToggle({ projects, onStatusUpdate }: ProjectsViewTog
       key: 'client',
       header: 'Client',
       render: (p) => <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>{p.clients?.client_name ?? '—'}</span>,
+    },
+    {
+      key: 'disciplines',
+      header: 'Disciplines',
+      render: (p) => (
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', lineHeight: 1.35 }}>
+          {normalizeProjectDisciplines(p)
+            .map((d) => d.replace(/_/g, ' '))
+            .join(' · ') || '—'}
+        </span>
+      ),
     },
     {
       key: 'lead',

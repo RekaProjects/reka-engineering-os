@@ -10,12 +10,26 @@ import {
   ensureProjectOperationalMutation,
   MUTATION_FORBIDDEN,
 } from '@/lib/auth/mutation-policy'
-import { isDirektur, isManajer, isOpsLead } from '@/lib/auth/permissions'
-import { userCanEditProjectMetadata } from '@/lib/auth/access-surface'
+import { isDirektur, isManajer, isOpsLead, isTD } from '@/lib/auth/permissions'
+import { userCanEditProjectMetadata, userCanViewProject } from '@/lib/auth/access-surface'
 import { getProjectById, isUserAssignedToProject } from '@/lib/projects/queries'
 import { ensureDefaultTerminsForProject } from '@/lib/termins/ensure-default-termins'
 import { parseContractFromForm } from '@/lib/projects/contract-from-form'
-import { tryCreateProjectDriveFolderAfterInsert } from '@/lib/files/drive-project-folder'
+import { tryCreateProjectDriveFolderAfterInsert, addConstructionAdminFoldersUnderProject } from '@/lib/files/drive-project-folder'
+import { extractGoogleDriveFolderIdFromUrl } from '@/lib/files/drive-service'
+import type { ProjectDriveMode } from '@/types/database'
+import { normalizeProjectDisciplines } from '@/lib/projects/helpers'
+
+function parseDisciplinesFromForm(formData: FormData): string[] {
+  const raw = formData.getAll('disciplines')
+  return [...new Set(raw.map((v) => String(v).trim()).filter(Boolean))]
+}
+
+function parseDriveModeFromForm(formData: FormData): ProjectDriveMode {
+  const v = (formData.get('drive_mode') as string)?.trim()
+  if (v === 'manual' || v === 'none' || v === 'auto') return v
+  return 'auto'
+}
 
 function buildProjectInsertPayload(
   formData: FormData,
@@ -29,6 +43,19 @@ function buildProjectInsertPayload(
   const intakeId = (formData.get('intake_id') as string)?.trim() || null
   const reviewerUserId = (formData.get('reviewer_user_id') as string)?.trim() || null
   const contract = parseContractFromForm(formData)
+  const disciplines = parseDisciplinesFromForm(formData)
+  const primaryDiscipline = disciplines[0] ?? 'mechanical'
+  const driveMode = parseDriveModeFromForm(formData)
+  const linkRaw = (formData.get('google_drive_folder_link') as string)?.trim() || null
+  let google_drive_folder_link: string | null = linkRaw
+  let google_drive_folder_id: string | null = null
+  if (driveMode === 'manual' && linkRaw) {
+    google_drive_folder_id = extractGoogleDriveFolderIdFromUrl(linkRaw)
+  }
+  if (driveMode === 'auto' || driveMode === 'none') {
+    google_drive_folder_link = driveMode === 'none' ? null : null
+    google_drive_folder_id = null
+  }
 
   return {
     name,
@@ -36,7 +63,9 @@ function buildProjectInsertPayload(
     intake_id: intakeId,
     source: (formData.get('source') as string) || 'direct',
     external_reference_url: (formData.get('external_reference_url') as string)?.trim() || null,
-    discipline: (formData.get('discipline') as string) || 'mechanical',
+    discipline: primaryDiscipline,
+    disciplines,
+    drive_mode: driveMode,
     project_type: (formData.get('project_type') as string) || 'design',
     scope_summary: (formData.get('scope_summary') as string)?.trim() || null,
     start_date: (formData.get('start_date') as string) || new Date().toISOString().split('T')[0],
@@ -48,7 +77,8 @@ function buildProjectInsertPayload(
     approval_requested_at: opts.approval_requested_at,
     progress_percent: 0,
     waiting_on: (formData.get('waiting_on') as string) || 'none',
-    google_drive_folder_link: (formData.get('google_drive_folder_link') as string)?.trim() || null,
+    google_drive_folder_link,
+    google_drive_folder_id,
     notes_internal: (formData.get('notes_internal') as string)?.trim() || null,
     created_by: userId,
     project_code: '',
@@ -58,12 +88,28 @@ function buildProjectInsertPayload(
 
 function buildProjectUpdatePayload(formData: FormData) {
   const contract = parseContractFromForm(formData)
+  const disciplines = parseDisciplinesFromForm(formData)
+  const primaryDiscipline = disciplines[0] ?? 'mechanical'
+  const driveMode = parseDriveModeFromForm(formData)
+  const linkRaw = (formData.get('google_drive_folder_link') as string)?.trim() || null
+  const drivePatch =
+    driveMode === 'manual'
+      ? {
+          google_drive_folder_link: linkRaw,
+          google_drive_folder_id: linkRaw ? extractGoogleDriveFolderIdFromUrl(linkRaw) : null,
+        }
+      : driveMode === 'none'
+        ? { google_drive_folder_link: null, google_drive_folder_id: null }
+        : {}
+
   return {
     name: (formData.get('name') as string)?.trim(),
     client_id: (formData.get('client_id') as string)?.trim(),
     source: (formData.get('source') as string),
     external_reference_url: (formData.get('external_reference_url') as string)?.trim() || null,
-    discipline: (formData.get('discipline') as string),
+    discipline: primaryDiscipline,
+    disciplines,
+    drive_mode: driveMode,
     project_type: (formData.get('project_type') as string),
     scope_summary: (formData.get('scope_summary') as string)?.trim() || null,
     start_date: (formData.get('start_date') as string),
@@ -74,8 +120,8 @@ function buildProjectUpdatePayload(formData: FormData) {
     priority: (formData.get('priority') as string),
     status: (formData.get('status') as string),
     waiting_on: (formData.get('waiting_on') as string),
-    google_drive_folder_link: (formData.get('google_drive_folder_link') as string)?.trim() || null,
     notes_internal: (formData.get('notes_internal') as string)?.trim() || null,
+    ...drivePatch,
     ...contract,
   }
 }
@@ -99,6 +145,15 @@ export async function createProject(formData: FormData) {
   if (!clientId) return { error: 'Client is required.' }
   if (!leadUserId) return { error: 'Project lead is required.' }
   if (!targetDueDate) return { error: 'Target due date is required.' }
+
+  const disciplines = parseDisciplinesFromForm(formData)
+  const driveMode = parseDriveModeFromForm(formData)
+  if (disciplines.length === 0) return { error: 'Pilih minimal satu disiplin.' }
+  const driveLink = (formData.get('google_drive_folder_link') as string)?.trim() || ''
+  if (driveMode === 'manual') {
+    if (!driveLink) return { error: 'Masukkan link folder Google Drive.' }
+    if (!extractGoogleDriveFolderIdFromUrl(driveLink)) return { error: 'Link Google Drive tidak valid.' }
+  }
 
   const contract = parseContractFromForm(formData)
   if (contract.source_type === 'DOMESTIC' && (contract.contract_value == null || contract.contract_value <= 0)) {
@@ -125,9 +180,13 @@ export async function createProject(formData: FormData) {
   const inserted = data as { id: string; project_code: string }
   try {
     await tryCreateProjectDriveFolderAfterInsert(supabase, {
-      projectId:    inserted.id,
-      projectCode:  inserted.project_code ?? '',
+      projectId: inserted.id,
+      projectCode: inserted.project_code ?? '',
       clientId,
+      sourceType: contract.source_type,
+      source: (formData.get('source') as string) || 'direct',
+      disciplines,
+      driveMode,
     })
   } catch (e) {
     console.error('Google Drive folder (non-fatal):', e)
@@ -158,6 +217,7 @@ export async function createProject(formData: FormData) {
   revalidatePath('/projects')
   revalidatePath(`/clients/${clientId}`)
   revalidateTag('dashboard')
+  revalidateTag('projects')
   redirect(`/projects/${inserted.id}`)
 }
 
@@ -181,6 +241,15 @@ export async function updateProject(id: string, formData: FormData) {
   if (!clientId) return { error: 'Client is required.' }
   if (!leadUserId) return { error: 'Project lead is required.' }
   if (!targetDueDate) return { error: 'Target due date is required.' }
+
+  const disciplines = parseDisciplinesFromForm(formData)
+  if (disciplines.length === 0) return { error: 'Pilih minimal satu disiplin.' }
+  const driveMode = parseDriveModeFromForm(formData)
+  const driveLink = (formData.get('google_drive_folder_link') as string)?.trim() || ''
+  if (driveMode === 'manual') {
+    if (!driveLink) return { error: 'Masukkan link folder Google Drive.' }
+    if (!extractGoogleDriveFolderIdFromUrl(driveLink)) return { error: 'Link Google Drive tidak valid.' }
+  }
 
   const contract = parseContractFromForm(formData)
   if (contract.source_type === 'DOMESTIC' && (contract.contract_value == null || contract.contract_value <= 0)) {
@@ -217,6 +286,7 @@ export async function updateProject(id: string, formData: FormData) {
   revalidatePath(`/projects/${id}`)
   revalidatePath(`/clients/${clientId}`)
   revalidateTag('dashboard')
+  revalidateTag('projects')
   redirect(`/projects/${id}`)
 }
 
@@ -235,6 +305,14 @@ export async function approveProject(projectId: string, formData?: FormData): Pr
     const c = parseContractFromForm(formData)
     if (c.source_type === 'DOMESTIC' && (c.contract_value == null || c.contract_value <= 0)) {
       return { error: 'Nilai kontrak wajib diisi untuk project Domestic.' }
+    }
+    const disciplines = parseDisciplinesFromForm(formData)
+    if (disciplines.length === 0) return { error: 'Pilih minimal satu disiplin.' }
+    const driveMode = parseDriveModeFromForm(formData)
+    const driveLink = (formData.get('google_drive_folder_link') as string)?.trim() || ''
+    if (driveMode === 'manual') {
+      if (!driveLink) return { error: 'Masukkan link folder Google Drive.' }
+      if (!extractGoogleDriveFolderIdFromUrl(driveLink)) return { error: 'Link Google Drive tidak valid.' }
     }
   }
 
@@ -288,6 +366,7 @@ export async function approveProject(projectId: string, formData?: FormData): Pr
   revalidatePath(`/projects/${projectId}`)
   revalidatePath('/dashboard')
   revalidateTag('dashboard')
+  revalidateTag('projects')
   return {}
 }
 
@@ -325,6 +404,7 @@ export async function rejectProject(projectId: string, rejectionNote: string): P
   revalidatePath(`/projects/${projectId}`)
   revalidatePath('/dashboard')
   revalidateTag('dashboard')
+  revalidateTag('projects')
   return {}
 }
 
@@ -358,6 +438,15 @@ export async function resubmitProject(id: string, formData: FormData): Promise<{
   if (!clientId) return { error: 'Client is required.' }
   if (!leadUserId) return { error: 'Project lead is required.' }
   if (!targetDueDate) return { error: 'Target due date is required.' }
+
+  const disciplines = parseDisciplinesFromForm(formData)
+  if (disciplines.length === 0) return { error: 'Pilih minimal satu disiplin.' }
+  const driveMode = parseDriveModeFromForm(formData)
+  const driveLink = (formData.get('google_drive_folder_link') as string)?.trim() || ''
+  if (driveMode === 'manual') {
+    if (!driveLink) return { error: 'Masukkan link folder Google Drive.' }
+    if (!extractGoogleDriveFolderIdFromUrl(driveLink)) return { error: 'Link Google Drive tidak valid.' }
+  }
 
   const c = parseContractFromForm(formData)
   if (c.source_type === 'DOMESTIC' && (c.contract_value == null || c.contract_value <= 0)) {
@@ -394,6 +483,7 @@ export async function resubmitProject(id: string, formData: FormData): Promise<{
   revalidatePath(`/clients/${clientId}`)
   revalidatePath('/dashboard')
   revalidateTag('dashboard')
+  revalidateTag('projects')
   return {}
 }
 
@@ -420,9 +510,66 @@ export async function updateProjectStatus(id: string, status: string) {
   revalidatePath('/projects')
   revalidatePath(`/projects/${id}`)
   revalidateTag('dashboard')
+  revalidateTag('projects')
 }
 
 // ─── Mark project problematic (admin / coordinator on project) ─
+/** TD or Manajer project lead: add `06-Construction-Admin` under each discipline folder in Drive. */
+export async function addConstructionAdminFolders(projectId: string): Promise<void> {
+  const supabase = await createServerClient()
+  const profile = await loadMutationProfile()
+  const project = await getProjectById(projectId)
+  if (!project) redirect(`/projects/${projectId}?construction_admin_error=${encodeURIComponent('Project not found.')}`)
+  if (project.status === 'pending_approval' || project.status === 'rejected') {
+    redirect(
+      `/projects/${projectId}?construction_admin_error=${encodeURIComponent('Project is not active for this action.')}`,
+    )
+  }
+  if (!(await userCanViewProject(profile, project))) {
+    redirect(`/projects/${projectId}?construction_admin_error=${encodeURIComponent(MUTATION_FORBIDDEN)}`)
+  }
+  const allowed =
+    isTD(profile.system_role) ||
+    (isManajer(profile.system_role) && project.project_lead_user_id === profile.id)
+  if (!allowed) {
+    redirect(`/projects/${projectId}?construction_admin_error=${encodeURIComponent(MUTATION_FORBIDDEN)}`)
+  }
+  if (project.drive_mode !== 'auto' || !project.google_drive_folder_id || project.drive_construction_admin_created) {
+    redirect(
+      `/projects/${projectId}?construction_admin_error=${encodeURIComponent('Construction Admin folders cannot be added for this project.')}`,
+    )
+  }
+
+  const disciplines = normalizeProjectDisciplines(project)
+  if (disciplines.length === 0) {
+    redirect(`/projects/${projectId}?construction_admin_error=${encodeURIComponent('Project has no disciplines.')}`)
+  }
+
+  try {
+    await addConstructionAdminFoldersUnderProject(supabase, {
+      projectFolderId: project.google_drive_folder_id,
+      disciplineValues: disciplines,
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Drive API error.'
+    redirect(`/projects/${projectId}?construction_admin_error=${encodeURIComponent(msg)}`)
+  }
+
+  const { error } = await supabase
+    .from('projects')
+    .update({ drive_construction_admin_created: true })
+    .eq('id', projectId)
+
+  if (error) {
+    redirect(`/projects/${projectId}?construction_admin_error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath(`/projects/${projectId}`)
+  revalidatePath('/projects')
+  revalidateTag('projects')
+  redirect(`/projects/${projectId}`)
+}
+
 export async function markProjectProblematic(
   projectId: string,
   isProblematic: boolean,
@@ -452,4 +599,5 @@ export async function markProjectProblematic(
   revalidatePath('/projects')
   revalidatePath(`/projects/${projectId}`)
   revalidateTag('dashboard')
+  revalidateTag('projects')
 }

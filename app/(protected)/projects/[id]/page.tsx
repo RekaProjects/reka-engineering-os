@@ -26,7 +26,8 @@ import { ExtendDeadlineButton } from '@/components/modules/projects/ExtendDeadli
 import { ProjectApprovalBanner } from '@/components/modules/projects/ProjectApprovalBanner'
 import { ProjectProblematicBanner } from '@/components/modules/projects/ProjectProblematicBanner'
 import { ProblemToggle } from '@/components/shared/ProblemToggle'
-import { markProjectProblematic } from '@/lib/projects/actions'
+import { addConstructionAdminFolders, markProjectProblematic } from '@/lib/projects/actions'
+import { normalizeProjectDisciplines } from '@/lib/projects/helpers'
 import { markTaskProblematic } from '@/lib/tasks/actions'
 import { ApproveFileButton } from '@/components/modules/files/ApproveFileButton'
 import { CopyDriveFolderNameButton } from '@/components/modules/projects/CopyDriveFolderNameButton'
@@ -49,7 +50,7 @@ import {
 
 interface PageProps {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; construction_admin_error?: string }>
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -60,7 +61,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function ProjectDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params
-  const { tab } = await searchParams
+  const { tab, construction_admin_error: constructionAdminError } = await searchParams
   if (tab === 'files') {
     redirect(`/projects/${id}?tab=deliverables`)
   }
@@ -111,6 +112,12 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
   const isManajerLead = isManajer(profile.system_role) && project.project_lead_user_id === profile.id
   const isTDOrDirektur = isTD(profile.system_role) || isDirektur(profile.system_role)
   const isFinanceUser = isFinance(profile.system_role)
+  const canAddConstructionAdmin =
+    allowOps &&
+    project.drive_mode === 'auto' &&
+    Boolean(project.google_drive_folder_id) &&
+    !project.drive_construction_admin_created &&
+    (isTD(profile.system_role) || isManajerLead)
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: <ClipboardList size={13} /> },
@@ -123,7 +130,16 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
     { key: 'activity', label: 'Activity', icon: <Activity size={13} /> },
   ]
 
-  const subtitle = `${project.project_code} · ${project.discipline.charAt(0).toUpperCase() + project.discipline.slice(1)} · ${project.project_type.charAt(0).toUpperCase() + project.project_type.slice(1)}`
+  const discParts = normalizeProjectDisciplines(project).map(
+    (d) => d.charAt(0).toUpperCase() + d.slice(1).replace(/_/g, ' '),
+  )
+  const discSubtitle =
+    discParts.length > 0
+      ? discParts.join(' · ')
+      : project.discipline
+        ? project.discipline.charAt(0).toUpperCase() + project.discipline.slice(1).replace(/_/g, ' ')
+        : '—'
+  const subtitle = `${project.project_code} · ${discSubtitle} · ${project.project_type.charAt(0).toUpperCase() + project.project_type.slice(1)}`
   const today = new Date().toISOString().split('T')[0]
   const isDueOverdue = project.target_due_date && project.target_due_date < today
   const progressPct = project.progress_percent ?? 0
@@ -215,6 +231,15 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
         showResubmitCta={showResubmitCta}
       />
 
+      {constructionAdminError ? (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-danger-subtle)] px-4 py-3 text-[0.8125rem] text-[var(--color-danger)]"
+        >
+          {decodeURIComponent(constructionAdminError)}
+        </div>
+      ) : null}
+
       <div className="mb-6 flex flex-wrap gap-1 border-b-2 border-[var(--color-border)]">
         {tabs.map((t) => (
           <Link
@@ -245,6 +270,7 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
           deadlineHistory={deadlineHistory}
           taskProgressTopLevel={taskProgressTopLevel}
           sourceType={sourceType}
+          canAddConstructionAdmin={canAddConstructionAdmin}
         />
       )}
       {activeTab === 'termin' && sourceType === 'DOMESTIC' && (
@@ -313,6 +339,7 @@ function OverviewTab({
   deadlineHistory,
   taskProgressTopLevel,
   sourceType,
+  canAddConstructionAdmin,
 }: {
   project: Awaited<ReturnType<typeof getProjectById>> & {}
   clientName: string
@@ -324,6 +351,7 @@ function OverviewTab({
   deadlineHistory: Awaited<ReturnType<typeof getDeadlineHistory>>
   taskProgressTopLevel: { total: number; done: number }
   sourceType: string
+  canAddConstructionAdmin: boolean
 }) {
   if (!project) return null
 
@@ -397,8 +425,21 @@ function OverviewTab({
                 ) : null}
               </DetailField>
             ) : null}
-            <DetailField label="Discipline">
-              <span className="capitalize">{project.discipline}</span>
+            <DetailField label="Disciplines">
+              {normalizeProjectDisciplines(project).length === 0 ? (
+                <span className="text-[var(--color-text-muted)]">—</span>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {normalizeProjectDisciplines(project).map((d) => (
+                    <span
+                      key={d}
+                      className="rounded-md bg-[var(--color-surface-muted)] px-2 py-0.5 text-[0.75rem] capitalize text-[var(--color-text-secondary)]"
+                    >
+                      {d.replace(/_/g, ' ')}
+                    </span>
+                  ))}
+                </div>
+              )}
             </DetailField>
             <DetailField label="Project type">
               <span className="capitalize">{project.project_type}</span>
@@ -528,6 +569,21 @@ function OverviewTab({
                   ) : null}
                 </div>
               )}
+              {canAddConstructionAdmin ? (
+                <form action={addConstructionAdminFolders.bind(null, project.id)} className="mt-3">
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[0.8125rem] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface-muted)]"
+                  >
+                    + Tambah Fase Construction Admin di Drive
+                  </button>
+                </form>
+              ) : null}
+              {project.drive_construction_admin_created ? (
+                <p className="mt-2 text-[0.75rem] text-[var(--color-text-muted)]">
+                  Fase Construction Admin sudah ditambahkan di Drive.
+                </p>
+              ) : null}
             </div>
           </Card>
         )}

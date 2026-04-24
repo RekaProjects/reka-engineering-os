@@ -121,6 +121,31 @@ export async function getDomainSummary(): Promise<
 }
 
 /** Row-backed file naming parameters (used by Settings + file upload). */
+const DEFAULT_DRIVE_ROOT = 'Projects'
+
+/** Parent folder name under My Drive for auto-created project hierarchies. */
+export async function getDriveRootFolderName(existingClient?: SupabaseClient): Promise<string> {
+  const supabase = existingClient ?? (await createServerClient())
+  const { data, error } = await supabase
+    .from('file_naming_config')
+    .select('config_value')
+    .eq('config_key', 'drive_root_folder_name')
+    .maybeSingle()
+
+  if (error || !data?.config_value?.trim()) return DEFAULT_DRIVE_ROOT
+  return data.config_value.trim()
+}
+
+export async function isGoogleWorkspaceDriveConnected(existingClient?: SupabaseClient): Promise<boolean> {
+  const supabase = existingClient ?? (await createServerClient())
+  const { data } = await supabase
+    .from('google_workspace_tokens')
+    .select('refresh_token')
+    .eq('id', 'default')
+    .maybeSingle()
+  return Boolean(data?.refresh_token)
+}
+
 export async function getFileNamingConfig(): Promise<FileNamingConfig> {
   const supabase = await createServerClient()
   const { data, error } = await supabase.from('file_naming_config').select('config_key, config_value')

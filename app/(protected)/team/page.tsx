@@ -1,7 +1,9 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { UserSquare2, Plus, Mail, Clock } from 'lucide-react'
 
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
+import { canAccessTeam, canViewTeamAvailability } from '@/lib/auth/permissions'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -10,7 +12,14 @@ import type { Column } from '@/components/shared/DataTable'
 import { AvailabilityBadge } from '@/components/modules/team/AvailabilityBadge'
 import { WorkerTypeBadge } from '@/components/modules/team/WorkerTypeBadge'
 import { CopyLinkButton } from '@/components/modules/onboarding/CopyLinkButton'
-import { getTeamMembers, getAllTalentMetrics, type TeamMember, type TalentMetrics } from '@/lib/team/queries'
+import {
+  getTeamMembers,
+  getTeamAvailabilityForManajer,
+  getAllTalentMetrics,
+  type TeamMember,
+  type TalentMetrics,
+} from '@/lib/team/queries'
+import { TeamAvailabilityView } from '@/components/modules/team/TeamAvailabilityView'
 import { getPendingInvites, type InviteWithInviter } from '@/lib/invites/queries'
 import { revokeInvite as _revokeInvite } from '@/lib/invites/actions'
 import { formatDate, formatIDR, getInitials } from '@/lib/utils/formatters'
@@ -281,8 +290,40 @@ export default async function TeamPage({
 }: {
   searchParams: Promise<{ invited?: string }>
 }) {
-  const _sp = await getSessionProfile()
-  requireRole(_sp.system_role, ['direktur', 'technical_director', 'finance'])
+  const profile = await getSessionProfile()
+  if (!canAccessTeam(profile.system_role) && !canViewTeamAvailability(profile.system_role)) {
+    redirect('/access-denied')
+  }
+
+  if (canViewTeamAvailability(profile.system_role)) {
+    const [members, funcOpts, discOpts] = await Promise.all([
+      getTeamAvailabilityForManajer(),
+      getSettingOptions('functional_role'),
+      getSettingOptions('discipline'),
+    ])
+    const functionalRoleLabels = Object.fromEntries(funcOpts.map((r) => [r.value, r.label]))
+    const disciplineLabels = Object.fromEntries(discOpts.map((r) => [r.value, r.label]))
+
+    return (
+      <div>
+        <PageHeader
+          title="Tim"
+          subtitle="Ketersediaan anggota tim untuk perencanaan proyek."
+        />
+        <SectionCard noPadding>
+          <div className="p-4">
+            <TeamAvailabilityView
+              members={members}
+              functionalRoleLabels={functionalRoleLabels}
+              disciplineLabels={disciplineLabels}
+            />
+          </div>
+        </SectionCard>
+      </div>
+    )
+  }
+
+  requireRole(profile.system_role, ['direktur', 'technical_director', 'finance'])
 
   const { invited } = await searchParams
   const [members, pendingInvites, funcOpts, wtOpts, metricsMap] = await Promise.all([

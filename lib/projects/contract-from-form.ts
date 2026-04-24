@@ -1,5 +1,11 @@
 import type { ProjectSourceType } from '@/types/database'
 
+/** Derive billing model from project source (must match Drive hierarchy). */
+export function deriveSourceTypeFromSource(source: string): ProjectSourceType {
+  const s = source.trim().toLowerCase()
+  return s === 'fiverr' || s === 'upwork' ? 'PLATFORM' : 'DOMESTIC'
+}
+
 export function parseContractFromForm(formData: FormData): {
   source_type: ProjectSourceType
   contract_value: number | null
@@ -7,8 +13,8 @@ export function parseContractFromForm(formData: FormData): {
   has_retention: boolean
   retention_percentage: number
 } {
-  const rawSt = ((formData.get('project_source_type') as string) || 'DOMESTIC').toUpperCase()
-  const source_type: ProjectSourceType = rawSt === 'PLATFORM' ? 'PLATFORM' : 'DOMESTIC'
+  const sourceRaw = ((formData.get('source') as string) || 'direct').trim()
+  const source_type = deriveSourceTypeFromSource(sourceRaw)
   const rawAmount = (formData.get('contract_value') as string)?.trim()
   const amt = rawAmount ? parseFloat(rawAmount) : NaN
   const contract_currency = (formData.get('contract_currency') as string) || 'IDR'

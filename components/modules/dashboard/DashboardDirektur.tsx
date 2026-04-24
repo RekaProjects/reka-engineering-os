@@ -34,7 +34,17 @@ import { AttentionQueue } from '@/components/modules/dashboard/AttentionQueue'
 import { PaymentSnapshotCard } from '@/components/modules/dashboard/PaymentSnapshotCard'
 import { WorkloadBars } from '@/components/modules/dashboard/WorkloadBars'
 import { ProjectStatusBadge } from '@/components/modules/projects/ProjectStatusBadge'
-import { formatDate, formatIDR, formatMoney } from '@/lib/utils/formatters'
+import { Badge } from '@/components/ui/badge'
+import { formatIDR, formatMoney } from '@/lib/utils/formatters'
+
+function formatDiajukanHariLalu(iso: string | null): string {
+  if (!iso) return 'Waktu pengajuan belum tercatat'
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
+  if (days < 0) return 'Baru diajukan'
+  if (days === 0) return 'Diajukan hari ini'
+  if (days === 1) return 'Diajukan 1 hari lalu'
+  return `Diajukan ${days} hari lalu`
+}
 
 export function DashboardDirektur({ data, profile }: { data: DirekturDashboardData; profile: SessionProfile }) {
   const attentionCount =
@@ -44,15 +54,6 @@ export function DashboardDirektur({ data, profile }: { data: DirekturDashboardDa
     data.waitingClient.length
 
   const needsLinks: AttentionLinkItem[] = []
-  for (const p of data.pendingApprovalProjects.slice(0, 5)) {
-    needsLinks.push({
-      id: `pa-${p.id}`,
-      label: p.name,
-      sub: 'Pending approval',
-      href: `/projects/${p.id}`,
-      icon: 'project',
-    })
-  }
   for (const inv of data.overdueInvoices.slice(0, 5)) {
     needsLinks.push({
       id: `inv-${inv.id}`,
@@ -110,6 +111,59 @@ export function DashboardDirektur({ data, profile }: { data: DirekturDashboardDa
           subtitle={`${data.paymentSnapshot.unpaidCount + data.paymentSnapshot.partialCount} records`}
         />
       </KpiStrip>
+
+      {data.pendingApprovalProjects.length > 0 && (
+        <div
+          className="overflow-hidden rounded-[var(--radius-card)] border-2 p-4"
+          style={{
+            borderColor: 'var(--color-warning, #d97706)',
+            backgroundColor: 'var(--color-warning-subtle)',
+          }}
+        >
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="m-0 text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Menunggu Persetujuan
+            </h2>
+            <Badge variant="destructive" className="h-6 min-w-7 justify-center tabular-nums">
+              {data.pendingApprovalProjects.length}
+            </Badge>
+          </div>
+          <ul className="m-0 list-none space-y-3 p-0">
+            {data.pendingApprovalProjects.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/projects/${p.id}`}
+                  className="block rounded-md border p-3 no-underline transition-colors hover:opacity-95"
+                  style={{
+                    borderColor: 'var(--color-border-strong)',
+                    backgroundColor: 'var(--color-surface, #fff)',
+                  }}
+                >
+                  <div className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    {p.project_code ? `${p.project_code} · ` : ''}
+                    {p.name}
+                  </div>
+                  <div
+                    className="mt-1 text-[0.8125rem] leading-relaxed"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    {p.discipline}
+                    {p.client_name != null && p.client_name.length > 0
+                      ? ` · ${p.client_name}`
+                      : null}
+                    {p.project_lead_name != null && p.project_lead_name.length > 0
+                      ? ` · Lead: ${p.project_lead_name}`
+                      : null}
+                  </div>
+                  <div className="mt-1.5 text-[0.75rem] font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                    {formatDiajukanHariLalu(p.approval_requested_at)}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {needsLinks.length > 0 && (
         <NeedsAttentionWidget title="Needs attention — quick links" items={needsLinks} />
@@ -238,26 +292,6 @@ export function DashboardDirektur({ data, profile }: { data: DirekturDashboardDa
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_300px]">
         <div className="space-y-6">
-          {data.pendingApprovalProjects.length > 0 ? (
-            <DashboardSection title="Projects awaiting approval" description="Submitted by operations and waiting for your decision.">
-              <ul className="m-0 list-none space-y-2 p-0">
-                {data.pendingApprovalProjects.slice(0, 8).map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2"
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface-muted)' }}
-                  >
-                    <Link href={`/projects/${p.id}`} className={ROW_LINK_CLASS}>
-                      {p.project_code ? `${p.project_code} · ` : ''}
-                      {p.name}
-                    </Link>
-                    <ProjectStatusBadge status={p.status} />
-                  </li>
-                ))}
-              </ul>
-            </DashboardSection>
-          ) : null}
-
           <DashboardSection
             title="Operations — needs attention"
             description="Overdue tasks, blocked work, revision requests, and client holds."

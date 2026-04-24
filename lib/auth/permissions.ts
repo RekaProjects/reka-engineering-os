@@ -63,8 +63,12 @@ export const canAccessCompensation = (r?: SystemRole | null) =>
   ['direktur', 'technical_director', 'finance', 'manajer'].includes(effectiveRole(r))
 export const canAccessTeam = (r?: SystemRole | null) =>
   ['direktur', 'technical_director', 'finance'].includes(effectiveRole(r))
+
+/** Manajer — can see team member availability only (no rates, no banking) */
+export const canViewTeamAvailability = (r?: SystemRole | null) =>
+  effectiveRole(r) === 'manajer'
 export const canAccessSettings = (r?: SystemRole | null) =>
-  isTD(r) || isFinance(r) || isDirektur(r)
+  isTD(r) || isDirektur(r)
 export const canAccessClients = (r?: SystemRole | null) =>
   !['senior', 'member', 'freelancer'].includes(effectiveRole(r))
 export const canAccessIntakes = (r?: SystemRole | null) =>
@@ -72,8 +76,8 @@ export const canAccessIntakes = (r?: SystemRole | null) =>
 export const canAccessOutreach = (r?: SystemRole | null) => isBD(r)
 export const canAccessOutreachReadOnly = (r?: SystemRole | null) =>
   ['direktur', 'technical_director'].includes(effectiveRole(r))
-export const canAccessFxRates = (r?: SystemRole | null) => isDirektur(r) || isFinance(r) || isTD(r)
-export const canAccessPaymentAccounts = (r?: SystemRole | null) => isDirektur(r) || isFinance(r) || isTD(r)
+export const canAccessFxRates = (r?: SystemRole | null) => isDirektur(r) || isFinance(r)
+export const canAccessPaymentAccounts = (r?: SystemRole | null) => isDirektur(r) || isFinance(r)
 export const canAccessLeads = (r?: SystemRole | null) =>
   ['direktur', 'technical_director', 'manajer', 'bd'].includes(effectiveRole(r))
 
@@ -136,7 +140,7 @@ export function getNavPermissions(role: SystemRole | null | undefined): NavPermi
     showClients: canAccessClients(role),
     showLeads: canAccessLeads(role),
     showOutreach: isBD(role) || isDirektur(role) || isTD(role),
-    showTeam: canAccessTeam(role),
+    showTeam: canAccessTeam(role) || canViewTeamAvailability(role),
     showCompensation: canAccessCompensation(role),
     showPayments: isDirektur(role) || isFinance(role),
     showSettings: canAccessSettings(role),

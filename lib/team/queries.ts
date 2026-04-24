@@ -3,6 +3,16 @@
 import { createServerClient } from '@/lib/supabase/server'
 import type { ActiveStatus, AvailabilityStatus, RateType, SystemRole, WorkerType } from '@/types/database'
 
+export type TeamAvailabilityRow = {
+  id: string
+  full_name: string
+  photo_url: string | null
+  availability_status: AvailabilityStatus | null
+  skill_tags: string[]
+  functional_role: string | null
+  discipline: string | null
+}
+
 export type TeamMember = {
   id:                   string
   full_name:            string
@@ -46,6 +56,31 @@ const TEAM_SELECT = `
   skill_tags, profile_completed_at,
   photo_url, is_active, created_at, updated_at
 `.trim()
+
+/** Active members — availability / identity fields only (manajer); uses RPC so RLS does not need full-row SELECT. */
+export async function getTeamAvailabilityForManajer(): Promise<TeamAvailabilityRow[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.rpc('list_team_availability_for_manajer')
+  if (error) throw new Error(error.message)
+  const rows = (data ?? []) as {
+    id: string
+    full_name: string
+    photo_url: string | null
+    availability_status: string | null
+    skill_tags: string[] | null
+    functional_role: string | null
+    discipline: string | null
+  }[]
+  return rows.map((r) => ({
+    id: r.id,
+    full_name: r.full_name,
+    photo_url: r.photo_url,
+    availability_status: (r.availability_status as AvailabilityStatus | null) ?? null,
+    skill_tags: r.skill_tags ?? [],
+    functional_role: r.functional_role,
+    discipline: r.discipline,
+  }))
+}
 
 export async function getTeamMembers(): Promise<TeamMember[]> {
   const supabase = await createServerClient()

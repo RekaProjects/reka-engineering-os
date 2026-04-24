@@ -13,12 +13,21 @@ import {
   PROJECT_STATUS_OPTIONS,
   WAITING_ON_OPTIONS,
   PRIORITY_OPTIONS,
-  PROJECT_SOURCE_TYPES,
   CONTRACT_CURRENCY_OPTIONS,
 } from '@/lib/constants/options'
-import type { Project, ProjectSourceType } from '@/types/database'
+import type { Project, ProjectDriveMode } from '@/types/database'
+import { deriveSourceTypeFromSource } from '@/lib/projects/contract-from-form'
+import { MultiSelectDropdown } from '@/components/ui/MultiSelectDropdown'
 
 type OptionPair = { value: string; label: string }
+
+const FALLBACK_DISCIPLINE_OPTIONS: OptionPair[] = [
+  { value: 'mechanical', label: 'Mechanical' },
+  { value: 'civil', label: 'Civil' },
+  { value: 'structural', label: 'Structural' },
+  { value: 'electrical', label: 'Electrical' },
+  { value: 'other', label: 'Other' },
+]
 
 interface ProjectFormProps {
   mode: 'create' | 'edit' | 'resubmit'
@@ -30,6 +39,8 @@ interface ProjectFormProps {
   disciplineOptions: OptionPair[]
   projectTypeOptions: OptionPair[]
   fxRateToIDR?: number | null
+  /** When omitted, Drive radios default to disconnected behaviour for new projects. */
+  driveConnected?: boolean
 }
 
 const controlClass =
@@ -76,6 +87,37 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
+function DriveModeRadio({
+  value,
+  current,
+  onChange,
+  title,
+  hint,
+}: {
+  value: ProjectDriveMode
+  current: ProjectDriveMode
+  onChange: (v: ProjectDriveMode) => void
+  title: string
+  hint?: string
+}) {
+  return (
+    <label className="flex cursor-pointer gap-2 text-[0.875rem] text-[var(--color-text-primary)]">
+      <input
+        type="radio"
+        name="drive_mode_radio"
+        value={value}
+        checked={current === value}
+        onChange={() => onChange(value)}
+        className="mt-0.5 h-4 w-4 shrink-0 border-[var(--color-border)]"
+      />
+      <span>
+        <span className="font-medium">{title}</span>
+        {hint ? <span className="mt-0.5 block text-[0.75rem] font-normal text-[var(--color-text-muted)]">{hint}</span> : null}
+      </span>
+    </label>
+  )
+}
+
 export function ProjectForm({
   mode,
   direkturApproveFlow = false,
@@ -85,20 +127,39 @@ export function ProjectForm({
   disciplineOptions,
   projectTypeOptions,
   fxRateToIDR,
+  driveConnected = false,
 }: ProjectFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [projectKind, setProjectKind] = useState<ProjectSourceType>(
-    (project?.source_type as ProjectSourceType | undefined) ?? 'DOMESTIC',
-  )
+  const [selectedSource, setSelectedSource] = useState(() => (project?.source ?? 'direct').trim() || 'direct')
   const [showRetention, setShowRetention] = useState(project?.has_retention ?? false)
+  const contractSourceType = deriveSourceTypeFromSource(selectedSource)
+
+  const discOpts = disciplineOptions.length > 0 ? disciplineOptions : FALLBACK_DISCIPLINE_OPTIONS
+  const initialDisciplines =
+    project?.disciplines && project.disciplines.length > 0
+      ? project.disciplines
+      : project?.discipline
+        ? [project.discipline]
+        : []
+  const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>(initialDisciplines)
+  const [driveMode, setDriveMode] = useState<ProjectDriveMode>(() => {
+    const dm = project?.drive_mode as ProjectDriveMode | null | undefined
+    if (dm === 'auto' || dm === 'manual' || dm === 'none') return dm
+    if (mode === 'create') return driveConnected ? 'auto' : 'manual'
+    return 'auto'
+  })
 
   const todayString = new Date().toISOString().split('T')[0]
   const hideStatusField = mode === 'create' || mode === 'resubmit' || direkturApproveFlow
 
   function handleSubmit(formData: FormData) {
     setError(null)
+    if (selectedDisciplines.length === 0) {
+      setError('Pilih minimal satu disiplin.')
+      return
+    }
     startTransition(async () => {
       if (mode === 'create') {
         await createProject(formData)
@@ -189,13 +250,24 @@ export function ProjectForm({
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Field label="Source" required>
-                <select name="source" defaultValue={project?.source ?? 'direct'} className={controlClass} required>
+                <select
+                  name="source"
+                  value={selectedSource}
+                  onChange={(e) => setSelectedSource(e.target.value)}
+                  className={controlClass}
+                  required
+                >
                   {SOURCE_PLATFORMS.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
                   ))}
                 </select>
+                <p className="mt-1.5 text-[0.8125rem] text-[var(--color-text-muted)]">
+                  {contractSourceType === 'PLATFORM'
+                    ? 'Billing dan pembayaran dikelola oleh platform — tidak ada termin atau BAST di ReKa OS untuk project ini.'
+                    : 'Billing domestik — sistem membuat jadwal termin otomatis setelah project disetujui Direktur.'}
+                </p>
               </Field>
               <Field label="External Reference URL">
                 <input
@@ -208,19 +280,13 @@ export function ProjectForm({
               </Field>
             </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <Field label="Discipline" required>
-                <select
-                  name="discipline"
-                  defaultValue={project?.discipline ?? 'mechanical'}
-                  className={controlClass}
-                  required
-                >
-                  {disciplineOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+              <Field label="Disciplines" required>
+                <MultiSelectDropdown
+                  options={discOpts}
+                  selected={selectedDisciplines}
+                  onChange={setSelectedDisciplines}
+                  placeholder="Pilih satu atau lebih…"
+                />
               </Field>
               <Field label="Project Type" required>
                 <select
@@ -242,31 +308,10 @@ export function ProjectForm({
 
         <ProjectFormSection
           title="Informasi kontrak"
-          description="Tipe billing: domestic (termin & BAST) vs platform (Fiverr/Upwork)."
+          description="Jenis billing mengikuti Source (Domestic untuk Direct/Referral/Other; Platform untuk Fiverr/Upwork)."
         >
           <div className="space-y-5">
-            <Field label="Jenis project">
-              <div className="flex flex-wrap gap-5">
-                {PROJECT_SOURCE_TYPES.map((opt) => (
-                  <label
-                    key={opt.value}
-                    className="inline-flex cursor-pointer items-center gap-2 text-[0.875rem] text-[var(--color-text-primary)]"
-                  >
-                    <input
-                      type="radio"
-                      name="project_source_type"
-                      value={opt.value}
-                      checked={projectKind === opt.value}
-                      onChange={() => setProjectKind(opt.value as ProjectSourceType)}
-                      className="h-4 w-4 border-[var(--color-border)]"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </Field>
-
-            {projectKind === 'DOMESTIC' ? (
+            {contractSourceType === 'DOMESTIC' ? (
               <>
                 <p className="text-[0.8125rem] leading-relaxed text-[var(--color-text-muted)]">
                   Setelah project disetujui Direktur dan status menjadi aktif, sistem membuat jadwal termin otomatis
@@ -464,28 +509,153 @@ export function ProjectForm({
           </div>
         </ProjectFormSection>
 
-        <ProjectFormSection title="Links & notes" description="Drive folder and internal-only context.">
+        <ProjectFormSection title="Links & notes" description="Google Drive setup and internal-only context.">
           <div className="space-y-5">
-            <Field label="Google Drive Folder Link">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-2">
-                <input
-                  name="google_drive_folder_link"
-                  type="url"
-                  defaultValue={project?.google_drive_folder_link ?? ''}
-                  placeholder="https://drive.google.com/drive/folders/…"
-                  className={cn(controlClass, 'sm:min-w-0 sm:flex-1')}
-                />
-                {mode === 'edit' && project?.project_code ? (
-                  <CopyDriveFolderNameButton
-                    className="inline-flex h-10 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 text-[0.75rem] font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-border)] disabled:cursor-not-allowed disabled:opacity-50"
-                    folderName={buildRekaDriveFolderName({
-                      clientCode: clients.find((c) => c.id === project.client_id)?.client_code ?? '',
-                      projectCode: project.project_code,
-                    })}
-                  />
-                ) : null}
-              </div>
-            </Field>
+            <fieldset className="space-y-3 rounded-md border border-[var(--color-border)] p-4">
+              <legend className="px-1 text-[0.8125rem] font-semibold text-[var(--color-text-primary)]">
+                Penyimpanan Google Drive
+              </legend>
+              {mode === 'create' ? (
+                <>
+                  {driveConnected ? (
+                    <div className="space-y-3">
+                      <DriveModeRadio
+                        value="auto"
+                        current={driveMode}
+                        onChange={setDriveMode}
+                        title="Buat folder otomatis"
+                        hint="Folder dibuat di Drive sesuai struktur project (root → Domestic/Platform → sumber → project → disiplin)."
+                      />
+                      <DriveModeRadio
+                        value="manual"
+                        current={driveMode}
+                        onChange={setDriveMode}
+                        title="Pakai link sendiri"
+                      />
+                      <DriveModeRadio
+                        value="none"
+                        current={driveMode}
+                        onChange={setDriveMode}
+                        title="Tidak pakai Drive"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-[0.8125rem] text-[var(--color-text-muted)]">
+                        Google Drive belum terhubung.{' '}
+                        <a href="/settings?tab=finance" className="font-medium text-[var(--color-primary)] underline-offset-2 hover:underline">
+                          Hubungkan di Settings
+                        </a>
+                        , atau pilih &quot;Pakai link sendiri&quot;.
+                      </p>
+                      <DriveModeRadio
+                        value="manual"
+                        current={driveMode}
+                        onChange={setDriveMode}
+                        title="Pakai link sendiri"
+                      />
+                      <DriveModeRadio
+                        value="none"
+                        current={driveMode}
+                        onChange={setDriveMode}
+                        title="Tidak pakai Drive"
+                      />
+                    </div>
+                  )}
+                  {driveMode === 'manual' && (
+                    <Field label="Google Drive folder link">
+                      <input
+                        key="drive-link-create"
+                        name="google_drive_folder_link"
+                        type="url"
+                        required
+                        placeholder="https://drive.google.com/drive/folders/…"
+                        className={controlClass}
+                      />
+                    </Field>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-3">
+                  {project?.google_drive_folder_link ? (
+                    <div className="space-y-2">
+                      <p className="text-[0.8125rem] text-[var(--color-text-muted)]">Folder Drive saat ini</p>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                        <a
+                          href={project.google_drive_folder_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 break-all text-[0.875rem] font-medium text-[var(--color-primary)] underline-offset-2 hover:underline"
+                        >
+                          Buka di Drive
+                        </a>
+                        {project.project_code ? (
+                          <CopyDriveFolderNameButton
+                            className="inline-flex h-10 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 text-[0.75rem] font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-border)] disabled:cursor-not-allowed disabled:opacity-50"
+                            folderName={buildRekaDriveFolderName({
+                              clientCode: clients.find((c) => c.id === project.client_id)?.client_code ?? '',
+                              projectCode: project.project_code,
+                            })}
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="space-y-3">
+                    {driveConnected ? (
+                      <>
+                        <DriveModeRadio
+                          value="auto"
+                          current={driveMode}
+                          onChange={setDriveMode}
+                          title="Buat / kelola via otomatis (mode auto)"
+                          hint="Untuk project baru dengan hierarki otomatis. Mengosongkan link manual jika Anda beralih ke auto + simpan (hati-hati)."
+                        />
+                        <DriveModeRadio
+                          value="manual"
+                          current={driveMode}
+                          onChange={setDriveMode}
+                          title="Pakai link sendiri"
+                        />
+                        <DriveModeRadio
+                          value="none"
+                          current={driveMode}
+                          onChange={setDriveMode}
+                          title="Tidak pakai Drive"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <DriveModeRadio
+                          value="manual"
+                          current={driveMode}
+                          onChange={setDriveMode}
+                          title="Pakai link sendiri"
+                        />
+                        <DriveModeRadio
+                          value="none"
+                          current={driveMode}
+                          onChange={setDriveMode}
+                          title="Tidak pakai Drive"
+                        />
+                      </>
+                    )}
+                  </div>
+                  {driveMode === 'manual' && (
+                    <Field label="Google Drive folder link">
+                      <input
+                        name="google_drive_folder_link"
+                        type="url"
+                        defaultValue={project?.google_drive_folder_link ?? ''}
+                        placeholder="https://drive.google.com/drive/folders/…"
+                        className={controlClass}
+                      />
+                    </Field>
+                  )}
+                </div>
+              )}
+              <input type="hidden" name="drive_mode" value={driveMode} />
+            </fieldset>
             <Field label="Internal Notes">
               <textarea
                 name="notes_internal"

@@ -10,7 +10,7 @@ import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionProfile, requireRole } from '@/lib/auth/session'
 import { loadMutationProfile, MUTATION_FORBIDDEN } from '@/lib/auth/mutation-policy'
-import { isTD } from '@/lib/auth/permissions'
+import { isDirektur, isTD } from '@/lib/auth/permissions'
 import type { FileNamingConfig } from '@/lib/files/naming'
 import type { SettingDomain } from './domains'
 
@@ -131,6 +131,33 @@ export async function updateFileNamingConfig(
   revalidatePath('/files', 'page')
   revalidateTag('dashboard')
   return {}
+}
+
+export async function saveDriveRootFolderName(formData: FormData): Promise<void> {
+  const profile = await loadMutationProfile()
+  if (!isTD(profile.system_role) && !isDirektur(profile.system_role)) {
+    redirect(`/settings?tab=finance&drive_error=${encodeURIComponent('Only Technical Director or Direktur can update this setting.')}`)
+  }
+  const name = (formData.get('drive_root_folder_name') as string)?.trim()
+  if (!name) {
+    redirect(`/settings?tab=finance&drive_error=${encodeURIComponent('Root folder name is required.')}`)
+  }
+
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from('file_naming_config')
+    .update({
+      config_value: name,
+      updated_by: profile.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('config_key', 'drive_root_folder_name')
+
+  if (error) {
+    redirect(`/settings?tab=finance&drive_error=${encodeURIComponent(error.message)}`)
+  }
+  revalidatePath('/settings', 'page')
+  redirect('/settings?tab=finance&drive_root_saved=1')
 }
 
 export async function saveProjectPrefixSettings(formData: FormData): Promise<void> {

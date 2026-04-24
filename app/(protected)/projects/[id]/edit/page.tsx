@@ -8,7 +8,7 @@ import { getProjectById } from '@/lib/projects/queries'
 import { effectiveRole, isDirektur, isManajer, isOpsLead } from '@/lib/auth/permissions'
 import { getClientsForCoordinatorScopedSelect, getClientsForSelect } from '@/lib/clients/queries'
 import { getUsersForProjectAssignment, getUsersForSelect } from '@/lib/users/queries'
-import { getSettingOptions } from '@/lib/settings/queries'
+import { getSettingOptions, isGoogleWorkspaceDriveConnected } from '@/lib/settings/queries'
 import { getUsdToIdrRate } from '@/lib/fx/queries'
 
 interface PageProps {
@@ -27,14 +27,16 @@ export default async function EditProjectPage({ params, searchParams }: PageProp
   const { mode } = await searchParams
   const profile = await getSessionProfile()
   const r = effectiveRole(profile.system_role)
-  const [project, clients, users, disciplineOptions, projectTypeOptions, fxRateToIDR] = await Promise.all([
-    getProjectById(id),
-    isManajer(r) ? getClientsForCoordinatorScopedSelect(profile.id) : getClientsForSelect(),
-    isManajer(r) ? getUsersForProjectAssignment(id) : getUsersForSelect(),
-    getSettingOptions('discipline'),
-    getSettingOptions('project_type'),
-    getUsdToIdrRate().catch(() => null as number | null),
-  ])
+  const [project, clients, users, disciplineOptions, projectTypeOptions, fxRateToIDR, driveConnected] =
+    await Promise.all([
+      getProjectById(id),
+      isManajer(r) ? getClientsForCoordinatorScopedSelect(profile.id) : getClientsForSelect(),
+      isManajer(r) ? getUsersForProjectAssignment(id) : getUsersForSelect(),
+      getSettingOptions('discipline'),
+      getSettingOptions('project_type'),
+      getUsdToIdrRate().catch(() => null as number | null),
+      isGoogleWorkspaceDriveConnected(),
+    ])
 
   if (!project) notFound()
   await requireProjectView(profile, project)
@@ -73,6 +75,7 @@ export default async function EditProjectPage({ params, searchParams }: PageProp
           disciplineOptions={disciplineOptions}
           projectTypeOptions={projectTypeOptions}
           fxRateToIDR={fxRateToIDR}
+          driveConnected={driveConnected}
         />
       </SectionCard>
     </div>

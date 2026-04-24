@@ -14,7 +14,8 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { FilterBar } from '@/components/shared/FilterBar'
 import { ProjectsViewToggle } from '@/components/modules/projects/ProjectsViewToggle'
-import { getPendingApprovalProjects, getProjects } from '@/lib/projects/queries'
+import { getProjects, getPendingApprovalProjectsForList } from '@/lib/projects/queries'
+import { getSettingOptions } from '@/lib/settings/queries'
 import { updateProjectStatus } from '@/lib/projects/actions'
 import type { ProjectWithRelations } from '@/lib/projects/queries'
 import { FolderKanban, Plus } from 'lucide-react'
@@ -46,21 +47,24 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
     isSenior(role) ? { reviewerUserId: profile.id } :
     {}
 
-  const projectList = await getProjects({
-    search:     params.search,
-    status:     params.status,
-    discipline: params.discipline,
-    priority:   params.priority,
-    page,
-    pageSize,
-    ...scopeOpts,
-  }).catch(() => ({ rows: [] as ProjectWithRelations[], count: 0 }))
+  const [projectList, disciplineFilterOptions] = await Promise.all([
+    getProjects({
+      search: params.search,
+      status: params.status,
+      discipline: params.discipline,
+      priority: params.priority,
+      page,
+      pageSize,
+      ...scopeOpts,
+    }).catch(() => ({ rows: [] as ProjectWithRelations[], count: 0 })),
+    getSettingOptions('discipline'),
+  ])
 
   const projects = projectList.rows
   const projectTotalCount = projectList.count
 
   const pendingApproval = isDirektur(profile.system_role)
-    ? await getPendingApprovalProjects().catch(() => [] as ProjectWithRelations[])
+    ? await getPendingApprovalProjectsForList().catch(() => [])
     : []
 
   const pageTitle = role === 'member' ? 'My Projects' : 'Projects'
@@ -149,11 +153,11 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
           <select name="discipline" defaultValue={params.discipline ?? ''}
             className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer">
             <option value="">All Disciplines</option>
-            <option value="mechanical">Mechanical</option>
-            <option value="civil">Civil</option>
-            <option value="structural">Structural</option>
-            <option value="electrical">Electrical</option>
-            <option value="other">Other</option>
+            {disciplineFilterOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
           <select name="priority" defaultValue={params.priority ?? ''}
             className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer">
