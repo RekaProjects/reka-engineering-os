@@ -35,9 +35,10 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute       = pathname.startsWith('/auth')
   const isApiRoute        = pathname.startsWith('/api')
   const isOnboardingRoute = pathname.startsWith('/onboarding')
+  const isClientPortalRoute = pathname.startsWith('/portal')
 
   // Unauthenticated user trying to access protected routes
-  if (!user && !isAuthRoute && !isApiRoute && !isOnboardingRoute) {
+  if (!user && !isAuthRoute && !isApiRoute && !isOnboardingRoute && !isClientPortalRoute) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/auth/login'
     return NextResponse.redirect(loginUrl)

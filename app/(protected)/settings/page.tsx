@@ -129,6 +129,26 @@ export default async function SettingsPage({ searchParams }: PageProps) {
     <div>
       <PageHeader title="Settings" subtitle="Master data, file naming, FX rates, and payment accounts." />
 
+      {isDirektur(sp.system_role) && (
+        <div
+          className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-border)] px-4 py-3 text-[0.8125rem]"
+          style={{ backgroundColor: 'var(--color-surface-subtle)' }}
+        >
+          <span className="font-medium text-[var(--color-text-secondary)]">Integrations</span>
+          <Link href="/settings/api-keys" className="text-[var(--color-primary)] no-underline hover:underline">
+            API keys
+          </Link>
+          <span className="text-[var(--color-text-muted)]">·</span>
+          <Link href="/settings/webhooks" className="text-[var(--color-primary)] no-underline hover:underline">
+            Webhooks
+          </Link>
+          <span className="text-[var(--color-text-muted)]">·</span>
+          <Link href="/settings/api-docs" className="text-[var(--color-primary)] no-underline hover:underline">
+            API documentation
+          </Link>
+        </div>
+      )}
+
       <div className="mb-5 flex flex-wrap gap-2 border-b border-[var(--color-border)] pb-0">
         {topTabs.map((t) => {
           const active = tab === t.id

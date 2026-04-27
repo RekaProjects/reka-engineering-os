@@ -12,7 +12,9 @@ import {
 } from '@/lib/auth/mutation-policy'
 import { userCanEditProjectMetadata } from '@/lib/auth/access-surface'
 import { getProjectById } from '@/lib/projects/queries'
+import { userIsOnProjectRoster } from '@/lib/projects/team-queries'
 import { getTaskById } from '@/lib/tasks/queries'
+import { fireTaskCompletedWebhook } from '@/lib/webhooks/task-events'
 
 // ─── Create ───────────────────────────────────────────────────
 export async function createTask(formData: FormData) {
@@ -33,6 +35,10 @@ export async function createTask(formData: FormData) {
 
   const gate = await ensureProjectOperationalMutation(profile, projectId)
   if ('error' in gate) return { error: gate.error }
+
+  if (!(await userIsOnProjectRoster(supabase, projectId, assignedTo))) {
+    return { error: 'Assignee must be a member of this project (team, lead, or reviewer).' }
+  }
 
   let depth = 0
   let sortOrder = 0
@@ -78,6 +84,10 @@ export async function createTask(formData: FormData) {
   }
 
   const reviewerUserId = (formData.get('reviewer_user_id') as string)?.trim() || null
+
+  if (reviewerUserId && !(await userIsOnProjectRoster(supabase, projectId, reviewerUserId))) {
+    return { error: 'Reviewer must be a member of this project (team, lead, or reviewer).' }
+  }
 
   const payload = {
     title,
@@ -153,6 +163,8 @@ export async function updateTask(id: string, formData: FormData) {
     const { error } = await supabase.from('tasks').update(payload).eq('id', id)
     if (error) return { error: error.message }
 
+    fireTaskCompletedWebhook(task.status, status, id, task.project_id)
+
     await logActivity({
       entity_type: 'task',
       entity_id:   id,
@@ -194,6 +206,8 @@ export async function updateTask(id: string, formData: FormData) {
     const { error } = await supabase.from('tasks').update(payload).eq('id', id)
     if (error) return { error: error.message }
 
+    fireTaskCompletedWebhook(task.status, status, id, task.project_id)
+
     await logActivity({
       entity_type: 'task',
       entity_id:   id,
@@ -234,8 +248,16 @@ export async function updateTask(id: string, formData: FormData) {
     if ('error' in dest) return { error: dest.error }
   }
 
+  if (!(await userIsOnProjectRoster(supabase, projectId, assignedTo))) {
+    return { error: 'Assignee must be a member of this project (team, lead, or reviewer).' }
+  }
+
   const status = (formData.get('status') as string)
   const reviewerUserId = (formData.get('reviewer_user_id') as string)?.trim() || null
+
+  if (reviewerUserId && !(await userIsOnProjectRoster(supabase, projectId, reviewerUserId))) {
+    return { error: 'Reviewer must be a member of this project (team, lead, or reviewer).' }
+  }
 
   let completedDate = (formData.get('completed_date') as string) || null
   if (status === 'done' && !completedDate) {
@@ -274,6 +296,8 @@ export async function updateTask(id: string, formData: FormData) {
 
   if (error) return { error: error.message }
 
+  fireTaskCompletedWebhook(task.status, status, id, projectId)
+
   await logActivity({
     entity_type: 'task',
     entity_id:   id,
@@ -299,11 +323,13 @@ export async function updateTaskStatus(id: string, status: string) {
 
   const { data: task, error: fetchError } = await supabase
     .from('tasks')
-    .select('project_id')
+    .select('project_id, status')
     .eq('id', id)
     .single()
 
   if (fetchError) throw new Error(fetchError.message)
+
+  const previousStatus = task?.status ?? ''
 
   const { error } = await supabase
     .from('tasks')
@@ -311,6 +337,10 @@ export async function updateTaskStatus(id: string, status: string) {
     .eq('id', id)
 
   if (error) throw new Error(error.message)
+
+  if (task?.project_id) {
+    fireTaskCompletedWebhook(previousStatus, status, id, task.project_id)
+  }
 
   revalidatePath('/tasks')
   revalidatePath(`/tasks/${id}`)

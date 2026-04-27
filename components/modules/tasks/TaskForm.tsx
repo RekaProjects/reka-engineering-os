@@ -13,11 +13,18 @@ import type { TaskWithRelations } from '@/lib/tasks/queries'
 
 type OptionPair = { value: string; label: string }
 
+function formatPickerTeamRole(teamRole: string | undefined): string {
+  if (!teamRole) return ''
+  if (teamRole === 'project_lead') return 'project lead'
+  if (teamRole === 'reviewer') return 'reviewer'
+  return teamRole
+}
+
 interface TaskFormProps {
   mode: 'create' | 'edit'
   task?: TaskWithRelations
   projects: { id: string; name: string; project_code: string }[]
-  users: { id: string; full_name: string; email: string; discipline: string | null }[]
+  users: { id: string; full_name: string; email: string; discipline: string | null; team_role?: string }[]
   defaultProjectId?: string
   taskCategoryOptions: OptionPair[]
   /** When mode is edit, aligns visible fields with server partial-update rules. */
@@ -397,7 +404,8 @@ export function TaskForm({
                 <option value="">Select assignee…</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.full_name} ({u.email})
+                    {u.full_name}
+                    {u.team_role ? ` — ${formatPickerTeamRole(u.team_role)}` : ''} ({u.email})
                   </option>
                 ))}
               </select>
@@ -411,7 +419,8 @@ export function TaskForm({
                 <option value="">No reviewer</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.full_name} ({u.email})
+                    {u.full_name}
+                    {u.team_role ? ` — ${formatPickerTeamRole(u.team_role)}` : ''} ({u.email})
                   </option>
                 ))}
               </select>

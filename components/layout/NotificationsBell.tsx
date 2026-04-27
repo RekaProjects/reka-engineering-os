@@ -65,14 +65,26 @@ export function NotificationsBell({ userId }: { userId?: string }) {
         )}
         {items.map((n) => (
           <DropdownMenuItem
-            key={n.id}
-            className={cn('cursor-pointer flex-col items-start gap-0.5 p-3', !n.read_at && 'bg-[var(--color-surface-muted)]/80')}
+            key={`${n.source}-${n.id}`}
+            className={cn('cursor-pointer flex-col items-start gap-0.5 p-3', !n.read && 'bg-[var(--color-surface-muted)]/80')}
             onSelect={(e) => {
               e.preventDefault()
               void onItemClick(n)
             }}
           >
-            <span className="text-[0.8125rem] font-medium text-[var(--color-text-primary)]">{n.title}</span>
+            <div className="flex w-full flex-wrap items-center gap-2">
+              <span className="text-[0.8125rem] font-medium text-[var(--color-text-primary)]">{n.title}</span>
+              {n.source === 'docs' && (
+                <span className="rounded bg-[var(--color-chart-3)] px-1.5 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-wide text-[var(--color-surface)]">
+                  Docs
+                </span>
+              )}
+              {n.source === 'os' && (
+                <span className="rounded bg-[var(--color-primary)] px-1.5 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-wide text-[var(--color-primary-fg)]">
+                  OS
+                </span>
+              )}
+            </div>
             {n.body && <span className="line-clamp-2 text-[0.75rem] text-[var(--color-text-muted)]">{n.body}</span>}
             {n.link && (
               <span className="text-[0.6875rem] text-[var(--color-primary)]">

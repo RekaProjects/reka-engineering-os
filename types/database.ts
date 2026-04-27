@@ -79,6 +79,8 @@ export interface UserProfile {
   profile_completed_at: string | null
   skill_tags: string[]
   photo_url: string | null
+  /** Google account for Drive sharing when different from login email. */
+  google_email: string | null
 }
 
 export interface Invite {
@@ -213,6 +215,8 @@ export interface Task {
   id: string
   project_id: string
   parent_task_id: string | null
+  /** Optional project phase (sprint) grouping; see project_phases. */
+  phase_id: string | null
   /** Nesting: 0 = top-level, parent.depth + 1 for subtasks. */
   depth: number
   /** Order within the same project + parent. */
@@ -237,6 +241,45 @@ export interface Task {
   drive_link: string | null
   notes: string | null
   created_by: string
+  created_at: string
+  updated_at: string
+}
+
+/** Per-project wiki note (BlockNote JSON + plain text index). */
+export interface ProjectNote {
+  id: string
+  project_id: string
+  title: string
+  content: unknown
+  content_text: string | null
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Shareable client portal token (opaque URL segment). */
+export interface ClientPortalToken {
+  id: string
+  project_id: string
+  token: string
+  label: string | null
+  expires_at: string | null
+  is_active: boolean
+  created_by: string | null
+  created_at: string
+  last_accessed_at: string | null
+}
+
+/** Plain-text comment on a task or deliverable (see Phase 01). */
+export interface Comment {
+  id: string
+  task_id: string | null
+  deliverable_id: string | null
+  parent_id: string | null
+  author_id: string
+  body: string
+  edited_at: string | null
   created_at: string
   updated_at: string
 }
@@ -300,6 +343,8 @@ export interface ProjectTeamAssignment {
   project_id: string
   user_id: string
   team_role: string
+  /** Project-scoped discipline; null = all disciplines on the project. */
+  discipline: string | null
   assigned_at: string
 }
 
@@ -546,4 +591,51 @@ export interface SettingOption {
   sort_order: number
   is_active: boolean
   created_at: string
+}
+
+/** Public API key (hash stored server-side only). */
+export interface ApiKey {
+  id: string
+  name: string
+  key_hash: string
+  key_prefix: string
+  created_by: string | null
+  last_used_at: string | null
+  expires_at: string | null
+  is_active: boolean
+  scopes: string[]
+  created_at: string
+}
+
+export interface ApiRequestLog {
+  id: string
+  api_key_id: string | null
+  method: string | null
+  path: string | null
+  status_code: number | null
+  ip_address: string | null
+  created_at: string
+}
+
+export interface WebhookEndpoint {
+  id: string
+  name: string
+  url: string
+  secret: string
+  events: string[]
+  is_active: boolean
+  created_by: string | null
+  created_at: string
+}
+
+export interface WebhookDeliveryLog {
+  id: string
+  webhook_id: string
+  event_type: string
+  payload: Record<string, unknown>
+  response_status: number | null
+  response_body: string | null
+  error: string | null
+  delivered_at: string
+  duration_ms: number | null
 }

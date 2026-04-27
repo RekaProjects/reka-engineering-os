@@ -114,16 +114,27 @@ export function TeamMemberList({ members, projectId, allowRemove = true }: TeamM
                   {roleLabels[member.team_role] ?? member.team_role}
                 </span>
               </td>
-              {/* Discipline */}
-              <td
-                style={{
-                  padding: '8px 14px',
-                  fontSize: '0.8125rem',
-                  color: 'var(--color-text-secondary)',
-                  textTransform: 'capitalize',
-                }}
-              >
-                {member.profiles.discipline ?? '—'}
+              {/* Discipline (assignment scope + profile fallback) */}
+              <td style={{ padding: '8px 14px', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                {member.discipline ? (
+                  <span
+                    style={{
+                      fontSize: '0.6875rem',
+                      padding: '1px 7px',
+                      borderRadius: '10px',
+                      background: 'var(--color-surface-muted)',
+                      color: 'var(--color-text-muted)',
+                      border: '1px solid var(--color-border)',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {member.discipline.replace(/_/g, ' ')}
+                  </span>
+                ) : member.profiles.discipline ? (
+                  <span style={{ textTransform: 'capitalize' }}>{member.profiles.discipline.replace(/_/g, ' ')}</span>
+                ) : (
+                  '—'
+                )}
               </td>
               {/* Assigned */}
               <td

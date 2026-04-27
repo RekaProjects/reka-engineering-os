@@ -98,3 +98,41 @@ export async function findOrCreateFolder(
   if (!id) throw new Error('Drive folder create returned no id')
   return id
 }
+
+/**
+ * Share a Drive folder with a user by email (reader or writer). Fails silently (logs only).
+ */
+export async function shareDriveFolderWithEmail(
+  drive: drive_v3.Drive,
+  folderId: string,
+  email: string,
+  role: 'reader' | 'writer' = 'writer',
+): Promise<void> {
+  const trimmed = email.trim().toLowerCase()
+  if (!trimmed) return
+  try {
+    await drive.permissions.create({
+      fileId: folderId,
+      requestBody: {
+        type: 'user',
+        role,
+        emailAddress: trimmed,
+      },
+      sendNotificationEmail: false,
+    })
+  } catch (err) {
+    console.error(`[Drive] Failed to share folder ${folderId} with ${trimmed}:`, err)
+  }
+}
+
+/** Share a folder with many emails in parallel. */
+export async function shareDriveFolderWithEmails(
+  drive: drive_v3.Drive,
+  folderId: string,
+  emails: string[],
+  role: 'reader' | 'writer' = 'writer',
+): Promise<void> {
+  const unique = [...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))]
+  if (unique.length === 0) return
+  await Promise.allSettled(unique.map((email) => shareDriveFolderWithEmail(drive, folderId, email, role)))
+}

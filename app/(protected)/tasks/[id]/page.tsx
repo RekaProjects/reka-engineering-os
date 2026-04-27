@@ -8,6 +8,8 @@ import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { TaskStatusBadge } from '@/components/modules/tasks/TaskStatusBadge'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { getTaskById } from '@/lib/tasks/queries'
+import { getTaskComments } from '@/lib/comments/queries'
+import { CommentSection } from '@/components/modules/comments/CommentSection'
 import { formatDate } from '@/lib/utils/formatters'
 import {
   Pencil,
@@ -32,6 +34,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
 
   await requireTaskView(profile, task)
   const showEditTask = await userCanEditTask(profile, task)
+  const comments = await getTaskComments(id)
 
   const isBlocked = task.status === 'blocked'
 
@@ -178,6 +181,8 @@ export default async function TaskDetailPage({ params }: PageProps) {
           </SectionCard>
         </div>
       </div>
+
+      <CommentSection comments={comments} taskId={id} currentUserId={profile.id} />
     </div>
   )
 }

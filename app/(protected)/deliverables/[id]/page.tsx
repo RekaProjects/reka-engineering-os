@@ -7,6 +7,8 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { EntityStatusStrip } from '@/components/shared/EntityStatusStrip'
 import { DeliverableStatusBadge } from '@/components/modules/deliverables/DeliverableStatusBadge'
 import { getDeliverableById } from '@/lib/deliverables/queries'
+import { getDeliverableComments } from '@/lib/comments/queries'
+import { CommentSection } from '@/components/modules/comments/CommentSection'
 import { formatDate } from '@/lib/utils/formatters'
 import {
   Pencil,
@@ -43,6 +45,7 @@ export default async function DeliverableDetailPage({ params }: PageProps) {
 
   await requireDeliverableView(profile, d)
   const showEditDeliverable = await userCanEditDeliverable(profile, d)
+  const comments = await getDeliverableComments(id)
 
   const isRevisionRequested = d.status === 'revision_requested'
 
@@ -208,6 +211,8 @@ export default async function DeliverableDetailPage({ params }: PageProps) {
           </SectionCard>
         </div>
       </div>
+
+      <CommentSection comments={comments} deliverableId={id} currentUserId={profile.id} />
     </div>
   )
 }

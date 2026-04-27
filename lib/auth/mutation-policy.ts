@@ -25,9 +25,11 @@ import {
   userCanViewDeliverable,
   userCanViewFile,
   userCanViewProject,
+  userCanViewTask,
 } from '@/lib/auth/access-surface'
 import { getProjectById, type ProjectWithRelations } from '@/lib/projects/queries'
-import type { DeliverableWithRelations } from '@/lib/deliverables/queries'
+import { getDeliverableById, type DeliverableWithRelations } from '@/lib/deliverables/queries'
+import { getTaskById, type TaskWithRelations } from '@/lib/tasks/queries'
 import type { FileWithRelations } from '@/lib/files/queries'
 
 export const MUTATION_FORBIDDEN = 'You do not have permission to perform this action.'
@@ -170,4 +172,32 @@ export async function ensureProjectTeamMutation(
   if (!(await userCanViewProject(profile, project))) return { error: MUTATION_FORBIDDEN }
   if (!(await userCanEditProjectMetadata(profile, project))) return { error: MUTATION_FORBIDDEN }
   return { project }
+}
+
+/** User may read/write comments on this task if they can view the task. */
+export async function ensureCommentOnTask(
+  profile: SessionProfile,
+  taskId: string,
+): Promise<{ error: string } | { task: TaskWithRelations }> {
+  const task = await getTaskById(taskId)
+  if (!task) return { error: 'Task not found.' }
+  if (!(await userCanViewTask(profile, task))) return { error: MUTATION_FORBIDDEN }
+  return { task }
+}
+
+/** User may read/write comments on this deliverable if they can view it. */
+export async function ensureCommentOnDeliverable(
+  profile: SessionProfile,
+  deliverableId: string,
+): Promise<{ error: string } | { d: DeliverableWithRelations }> {
+  const d = await getDeliverableById(deliverableId)
+  if (!d) return { error: 'Deliverable not found.' }
+  if (!(await userCanViewDeliverable(profile, d))) return { error: MUTATION_FORBIDDEN }
+  return { d }
+}
+
+/** Direktur-only mutations (API keys, webhooks, etc.). */
+export function ensureDirekturMutation(profile: SessionProfile): string | null {
+  if (!isDirektur(profile.system_role)) return MUTATION_FORBIDDEN
+  return null
 }

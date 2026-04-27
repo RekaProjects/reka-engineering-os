@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap');
+@import "../node_modules/frappe-gantt/dist/frappe-gantt.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -420,4 +421,22 @@ textarea:focus {
 }
 .animate-fade-in {
   animation: fade-in 200ms ease forwards;
+}
+
+/* frappe-gantt (Phase 02) — library CSS imported from GanttChart.tsx */
+.gantt-os-root .gantt .bar {
+  fill: var(--color-primary);
+}
+.gantt-os-root .gantt .bar-progress {
+  fill: var(--color-primary);
+  opacity: 0.55;
+}
+.gantt-os-root .gantt .bar-label {
+  fill: var(--color-text-primary);
+}
+.gantt-os-root .gantt .grid-header {
+  fill: var(--color-surface-muted);
+}
+.gantt-os-root .gantt .tick {
+  stroke: var(--color-border);
 }

@@ -7,9 +7,10 @@ import type { SessionProfile } from '@/lib/auth/session'
 import { userCanEditProjectMetadata, userCanViewProject } from '@/lib/auth/access-surface'
 import { getProjectById, getProjects, type ProjectWithRelations } from '@/lib/projects/queries'
 import {
+  getProjectMemberUsers,
   getUsersForCoordinatorProjectPortfolio,
-  getUsersForProjectAssignment,
   getUsersForSelect,
+  type ProjectMemberUserRow,
   type UserSelectRow,
 } from '@/lib/users/queries'
 
@@ -47,23 +48,19 @@ export async function projectOptionsForMutationForms(
 }
 
 /**
- * Profiles for task/deliverable assignment dropdowns (lead, reviewer, team on a project).
- * - Management: all active profiles
- * - Manajer (edit, known project): roster for that project only
- * - Manajer (create or no project yet): union across assigned portfolio
- * - Other roles: full list (only management/manajer reach assignment pickers in practice)
+ * Profiles for task/deliverable assignment dropdowns.
+ * When `lockedProjectId` is set, only that project’s roster (team + lead + reviewer).
+ * Otherwise: management sees all users; manajer sees portfolio union; others see all users.
  */
 export async function usersForAssignmentPickers(
   profile: SessionProfile,
   opts: { mode: 'create' | 'edit'; lockedProjectId: string | null },
-): Promise<UserSelectRow[]> {
+): Promise<UserSelectRow[] | ProjectMemberUserRow[]> {
   const r = effectiveRole(profile.system_role)
-  if (isManagement(profile.system_role)) return getUsersForSelect()
-  if (isManajer(r)) {
-    if (opts.mode === 'edit' && opts.lockedProjectId) {
-      return getUsersForProjectAssignment(opts.lockedProjectId)
-    }
-    return getUsersForCoordinatorProjectPortfolio(profile.id)
+  if (opts.lockedProjectId) {
+    return getProjectMemberUsers(opts.lockedProjectId)
   }
+  if (isManagement(profile.system_role)) return getUsersForSelect()
+  if (isManajer(r)) return getUsersForCoordinatorProjectPortfolio(profile.id)
   return getUsersForSelect()
 }

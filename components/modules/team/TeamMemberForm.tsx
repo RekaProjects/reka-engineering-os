@@ -130,6 +130,18 @@ export function TeamMemberForm({ mode, member, functionalRoleOptions, discipline
                 )}
               </Field>
             </div>
+            <Field label="Google Email (untuk Drive)">
+              <input
+                style={inputStyle}
+                name="google_email"
+                type="email"
+                defaultValue={v?.google_email ?? ''}
+                placeholder="Kosongkan kalau sama dengan email login"
+              />
+              <p style={{ marginTop: '4px', fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
+                Diisi kalau email Google Drive kamu berbeda dengan email login ReKa OS.
+              </p>
+            </Field>
             <div style={twoColGrid}>
               <Field label="Phone / WhatsApp">
                 <input

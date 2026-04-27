@@ -40,13 +40,14 @@ export type TeamMember = {
   skill_tags:           string[]
   profile_completed_at: string | null
   photo_url:            string | null
+  google_email:         string | null
   is_active:            boolean
   created_at:           string
   updated_at:           string
 }
 
 const TEAM_SELECT = `
-  id, full_name, email, phone,
+  id, full_name, email, google_email, phone,
   system_role, functional_role, discipline, worker_type,
   active_status, availability_status, joined_date,
   expected_rate, approved_rate, rate_type, currency_code,

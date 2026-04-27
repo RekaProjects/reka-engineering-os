@@ -11,12 +11,21 @@ import { ProgressBar, type ProgressBarTone } from '@/components/shared/ProgressB
 import { TeamMemberList } from '@/components/modules/projects/TeamMemberList'
 import { AddTeamMemberForm } from '@/components/modules/projects/AddTeamMemberForm'
 import { ProjectTasksTable } from '@/components/modules/projects/ProjectTasksTable'
+import { ProjectGantt } from '@/components/modules/projects/ProjectGantt'
+import { PhaseBoard } from '@/components/modules/projects/PhaseBoard'
+import { ProjectNotes } from '@/components/modules/projects/ProjectNotes'
+import { ClientPortalManager } from '@/components/modules/projects/ClientPortalManager'
+import { BurndownChart } from '@/components/modules/projects/BurndownChart'
 import { DeliverableStatusBadge } from '@/components/modules/deliverables/DeliverableStatusBadge'
 import { getProjectById } from '@/lib/projects/queries'
 import { getTerminsByProject } from '@/lib/termins/queries'
 import { TerminTable } from '@/components/modules/projects/TerminTable'
 import { getTeamByProjectId } from '@/lib/projects/team-queries'
 import { getProjectTopLevelTaskProgressCounts, getTasksByProjectId } from '@/lib/tasks/queries'
+import { getProjectPhases } from '@/lib/phases/queries'
+import { getProjectNotes } from '@/lib/project-notes/queries'
+import { getPortalTokensForProject } from '@/lib/portal/queries'
+import { getProjectBurndown, type BurndownPoint } from '@/lib/projects/burndown-queries'
 import { getDeliverablesByProjectId, type DeliverableWithRelations } from '@/lib/deliverables/queries'
 import { getFilesByProjectId, type FileWithRelations } from '@/lib/files/queries'
 import { getUsersForSelect } from '@/lib/users/queries'
@@ -46,6 +55,11 @@ import {
   Activity,
   Plus,
   Banknote,
+  CalendarRange,
+  Layers,
+  StickyNote,
+  BarChart2,
+  Link2,
 } from 'lucide-react'
 
 interface PageProps {
@@ -94,7 +108,35 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
   const [teamMembers, users] =
     activeTab === 'team' ? await Promise.all([getTeamByProjectId(id), getUsersForSelect()]) : [[], []]
 
-  const projectTasks = activeTab === 'tasks' ? await getTasksByProjectId(id) : []
+  const needsProjectTasks = activeTab === 'tasks' || activeTab === 'timeline' || activeTab === 'phases'
+  const projectTasks = needsProjectTasks ? await getTasksByProjectId(id) : []
+
+  const projectPhases = activeTab === 'phases' ? await getProjectPhases(id) : []
+
+  const projectNotes = activeTab === 'notes' ? await getProjectNotes(id) : []
+
+  const portalTokens =
+    activeTab === 'portal'
+      ? await getPortalTokensForProject(id).catch(() => [])
+      : []
+
+  let burndownPoints: BurndownPoint[] = []
+  let burndownTotal = 0
+  if (activeTab === 'analytics') {
+    const bd = await getProjectBurndown(id, project.start_date, project.target_due_date).catch(() => ({
+      points: [] as BurndownPoint[],
+      totalTasks: 0,
+    }))
+    burndownPoints = bd.points
+    burndownTotal = bd.totalTasks
+  }
+
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL ?? ''
+
+  const canManageClientPortal =
+    (isTD(profile.system_role) || isDirektur(profile.system_role) || isManajer(profile.system_role)) &&
+    allowOps &&
+    canEditProjectMeta
 
   const projectDeliverables = activeTab === 'deliverables' ? await getDeliverablesByProjectId(id) : []
 
@@ -111,6 +153,7 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
 
   const isManajerLead = isManajer(profile.system_role) && project.project_lead_user_id === profile.id
   const isTDOrDirektur = isTD(profile.system_role) || isDirektur(profile.system_role)
+  const canDeleteProjectPhase = isTDOrDirektur
   const isFinanceUser = isFinance(profile.system_role)
   const canAddConstructionAdmin =
     allowOps &&
@@ -126,8 +169,13 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
       ? [{ key: 'termin' as const, label: 'Termin', icon: <Banknote size={13} /> }]
       : []),
     { key: 'tasks', label: 'Tasks', icon: <CheckSquare size={13} /> },
+    { key: 'timeline', label: 'Timeline', icon: <CalendarRange size={13} /> },
+    { key: 'phases', label: 'Phases', icon: <Layers size={13} /> },
     { key: 'deliverables', label: 'Deliverables & Files', icon: <FileText size={13} /> },
     { key: 'activity', label: 'Activity', icon: <Activity size={13} /> },
+    { key: 'notes', label: 'Notes', icon: <StickyNote size={13} /> },
+    { key: 'analytics', label: 'Analytics', icon: <BarChart2 size={13} /> },
+    { key: 'portal', label: 'Client portal', icon: <Link2 size={13} /> },
   ]
 
   const discParts = normalizeProjectDisciplines(project).map(
@@ -289,6 +337,7 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
           projectId={project.id}
           teamMembers={teamMembers}
           users={users}
+          projectDisciplines={normalizeProjectDisciplines(project)}
           leadName={leadName}
           reviewerName={reviewerName}
           canManageTeam={allowOps && canEditProjectMeta}
@@ -303,6 +352,24 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
           markTaskProblematic={markTaskProblematic}
         />
       )}
+      {activeTab === 'timeline' && (
+        <section className="space-y-4">
+          <SectionHeader title="Timeline proyek" />
+          <ProjectGantt tasks={projectTasks} projectId={project.id} />
+        </section>
+      )}
+      {activeTab === 'phases' && (
+        <section className="space-y-4">
+          <SectionHeader title="Phase & sprint" />
+          <PhaseBoard
+            phases={projectPhases}
+            tasks={projectTasks}
+            projectId={project.id}
+            canManage={allowOps && canEditProjectMeta}
+            canDeletePhase={canDeleteProjectPhase}
+          />
+        </section>
+      )}
       {activeTab === 'deliverables' && (
         <DeliverablesTab
           projectId={project.id}
@@ -315,6 +382,35 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
         />
       )}
       {activeTab === 'activity' && <ActivityTab logs={projectActivity} />}
+      {activeTab === 'notes' && (
+        <section className="space-y-4">
+          <SectionHeader title="Project notes" />
+          <ProjectNotes
+            notes={projectNotes}
+            projectId={id}
+            canUseNotes={allowOps}
+            canDeleteNote={isTDOrDirektur}
+          />
+        </section>
+      )}
+      {activeTab === 'analytics' && (
+        <section className="space-y-4">
+          <SectionHeader title="Burndown" />
+          <BurndownChart data={burndownPoints} totalTasks={burndownTotal} />
+        </section>
+      )}
+      {activeTab === 'portal' && (
+        <section className="space-y-4">
+          <SectionHeader title="Client portal" />
+          {canManageClientPortal ? (
+            <ClientPortalManager projectId={id} tokens={portalTokens} appOrigin={appOrigin} />
+          ) : (
+            <p className="text-[0.875rem] text-[var(--color-text-muted)]">
+              Hanya Direktur, Technical Director, atau Manajer yang dapat mengelola link portal untuk proyek ini.
+            </p>
+          )}
+        </section>
+      )}
     </div>
   )
 }
@@ -605,6 +701,7 @@ function TeamTab({
   projectId,
   teamMembers,
   users,
+  projectDisciplines,
   leadName,
   reviewerName,
   canManageTeam,
@@ -612,6 +709,7 @@ function TeamTab({
   projectId: string
   teamMembers: Awaited<ReturnType<typeof getTeamByProjectId>>
   users: Awaited<ReturnType<typeof getUsersForSelect>>
+  projectDisciplines: string[]
   leadName: string
   reviewerName: string | null
   canManageTeam: boolean
@@ -638,7 +736,12 @@ function TeamTab({
         {canManageTeam && (
           <Card className="p-6">
             <SectionHeader title="Add team member" />
-            <AddTeamMemberForm projectId={projectId} users={users} assignedUserIds={assignedUserIds} />
+            <AddTeamMemberForm
+              projectId={projectId}
+              users={users}
+              assignedUserIds={assignedUserIds}
+              projectDisciplines={projectDisciplines}
+            />
           </Card>
         )}
       </div>

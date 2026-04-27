@@ -8,6 +8,8 @@ interface AddTeamMemberFormProps {
   projectId: string
   users: { id: string; full_name: string; email: string; discipline: string | null }[]
   assignedUserIds: string[]
+  /** Discipline values on this project (for per-member assignment scope). */
+  projectDisciplines: string[]
 }
 
 const inputStyle: React.CSSProperties = {
@@ -20,7 +22,12 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 }
 
-export function AddTeamMemberForm({ projectId, users, assignedUserIds }: AddTeamMemberFormProps) {
+function formatDisciplineLabel(d: string): string {
+  if (!d) return d
+  return d.charAt(0).toUpperCase() + d.slice(1).replace(/_/g, ' ')
+}
+
+export function AddTeamMemberForm({ projectId, users, assignedUserIds, projectDisciplines }: AddTeamMemberFormProps) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -100,6 +107,30 @@ export function AddTeamMemberForm({ projectId, users, assignedUserIds }: AddTeam
             {TEAM_ROLES.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ flex: '0 0 160px' }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              color: 'var(--color-text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginBottom: '4px',
+            }}
+          >
+            Discipline
+          </label>
+          <select name="discipline" style={{ ...inputStyle, width: '100%' }}>
+            <option value="">Semua disiplin</option>
+            {projectDisciplines.map((d) => (
+              <option key={d} value={d}>
+                {formatDisciplineLabel(d)}
               </option>
             ))}
           </select>

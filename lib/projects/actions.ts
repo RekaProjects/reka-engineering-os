@@ -16,10 +16,15 @@ import { userCanEditProjectMetadata, userCanViewProject } from '@/lib/auth/acces
 import { getProjectById, isUserAssignedToProject } from '@/lib/projects/queries'
 import { ensureDefaultTerminsForProject } from '@/lib/termins/ensure-default-termins'
 import { parseContractFromForm } from '@/lib/projects/contract-from-form'
-import { tryCreateProjectDriveFolderAfterInsert, addConstructionAdminFoldersUnderProject } from '@/lib/files/drive-project-folder'
+import {
+  tryCreateProjectDriveFolderAfterInsert,
+  addConstructionAdminFoldersUnderProject,
+  collectProjectMemberShareEmails,
+} from '@/lib/files/drive-project-folder'
 import { extractGoogleDriveFolderIdFromUrl } from '@/lib/files/drive-service'
 import type { ProjectDriveMode } from '@/types/database'
 import { normalizeProjectDisciplines } from '@/lib/projects/helpers'
+import { dispatchWebhook } from '@/lib/webhooks/dispatch'
 
 function parseDisciplinesFromForm(formData: FormData): string[] {
   const raw = formData.getAll('disciplines')
@@ -179,6 +184,18 @@ export async function createProject(formData: FormData) {
   if (error) return { error: error.message }
 
   const inserted = data as { id: string; project_code: string }
+  const reviewerUserIdForShare = (formData.get('reviewer_user_id') as string)?.trim() || null
+  let memberEmails: string[] = []
+  try {
+    memberEmails = await collectProjectMemberShareEmails(supabase, {
+      projectId: inserted.id,
+      leadUserId,
+      reviewerUserId: reviewerUserIdForShare,
+    })
+  } catch (e) {
+    console.error('[Drive] collect member emails (non-fatal):', e)
+  }
+
   try {
     await tryCreateProjectDriveFolderAfterInsert(supabase, {
       projectId: inserted.id,
@@ -188,6 +205,7 @@ export async function createProject(formData: FormData) {
       source: (formData.get('source') as string) || 'direct',
       disciplines,
       driveMode,
+      memberEmails,
     })
   } catch (e) {
     console.error('Google Drive folder (non-fatal):', e)
@@ -213,6 +231,14 @@ export async function createProject(formData: FormData) {
     action_type: 'created',
     user_id: user.id,
     note: isByDirektur ? `Project '${name}' created` : `Project '${name}' submitted for approval`,
+  })
+
+  void dispatchWebhook('project.created', {
+    project_id: inserted.id,
+    project_code: inserted.project_code,
+    name,
+    client_id: clientId,
+    status: initialStatus,
   })
 
   revalidatePath('/projects')
@@ -509,13 +535,96 @@ export async function updateProjectStatus(id: string, status: string) {
   const gate = await ensureProjectOperationalMutation(profile, id)
   if ('error' in gate) throw new Error(gate.error)
 
+  const oldStatus = project.status
+
   const { error } = await supabase.from('projects').update({ status }).eq('id', id)
   if (error) throw new Error(error.message)
+
+  void dispatchWebhook('project.status_changed', {
+    project_id: id,
+    old_status: oldStatus,
+    new_status: status,
+  })
+  if (status === 'closed') {
+    void dispatchWebhook('project.completed', { project_id: id })
+  }
+
+  // Saat project ditutup: kirim ke EngDocs archive inbox (fire & forget, tidak block close)
+  if (status === 'closed') {
+    void pushProjectToArchiveInbox(supabase, id, project).catch((err) =>
+      console.error('[archive-inbox] push failed (non-blocking):', err),
+    )
+  }
 
   revalidatePath('/projects')
   revalidatePath(`/projects/${id}`)
   revalidateTag('dashboard')
   revalidateTag('projects')
+}
+
+async function pushProjectToArchiveInbox(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  projectId: string,
+  project: NonNullable<Awaited<ReturnType<typeof getProjectById>>>,
+): Promise<void> {
+  const appUrl = process.env.ENGDOCS_APP_URL?.replace(/\/$/, '')
+  const secret = process.env.ENGDOCS_INTERNAL_SECRET
+  if (!appUrl || !secret) return // env belum dikonfigurasi, skip diam-diam
+
+  // Hanya ambil file yang tersimpan di R2 (bukan Google Drive / manual link)
+  const { data: r2Files } = await supabase
+    .from('project_files')
+    .select('file_name, r2_key, file_size_bytes, mime_type')
+    .eq('project_id', projectId)
+    .eq('provider', 'r2')
+    .not('r2_key', 'is', null)
+
+  if (!r2Files || r2Files.length === 0) return // tidak ada file R2, tidak perlu archive
+
+  // Ambil nama & kode client
+  const { data: clientRow } = await supabase
+    .from('clients')
+    .select('client_name, client_code')
+    .eq('id', project.client_id)
+    .maybeSingle()
+
+  const projectYear = project.actual_completion_date
+    ? new Date(project.actual_completion_date).getFullYear()
+    : new Date(project.target_due_date ?? project.start_date).getFullYear()
+
+  const disciplines = project.disciplines?.length
+    ? project.disciplines
+    : project.discipline
+      ? [project.discipline]
+      : []
+
+  await fetch(`${appUrl}/api/archive/notify-inbox`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-secret': secret,
+    },
+    body: JSON.stringify({
+      source_project_id: project.id,
+      source_project_code: project.project_code,
+      source_payload: {
+        project_name: project.name,
+        client_display_name: clientRow?.client_name ?? 'Unknown Client',
+        client_code: clientRow?.client_code ?? null,
+        client_id: project.client_id,
+        project_year: projectYear,
+        disciplines,
+        contract_value_idr:
+          project.contract_currency === 'IDR' ? (project.contract_value ?? null) : null,
+      },
+      source_files: r2Files.map((f) => ({
+        r2_key: f.r2_key as string,
+        filename: f.file_name,
+        size_bytes: f.file_size_bytes ?? 0,
+        mime_type: f.mime_type ?? 'application/octet-stream',
+      })),
+    }),
+  })
 }
 
 // ─── Mark project problematic (admin / coordinator on project) ─

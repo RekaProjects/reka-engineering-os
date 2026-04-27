@@ -1,7 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { SOURCE_PLATFORMS } from '@/lib/constants/options'
 import { buildRekaDriveFolderName } from '@/lib/files/drive-service'
-import { findOrCreateFolder, getWorkspaceDrive } from '@/lib/google/workspace-drive'
+import {
+  findOrCreateFolder,
+  getWorkspaceDrive,
+  shareDriveFolderWithEmails,
+} from '@/lib/google/workspace-drive'
 import { getDriveRootFolderName, getSettingOptions } from '@/lib/settings/queries'
 import type { ProjectSourceType } from '@/types/database'
 
@@ -79,6 +83,45 @@ export async function createProjectFolderHierarchy(params: {
 /**
  * Best-effort: create Google Drive hierarchy for a new project when OAuth is configured and drive_mode is auto.
  */
+/** Resolve emails (google_email ?? email) for project lead, reviewer, and team rows. */
+export async function collectProjectMemberShareEmails(
+  supabase: SupabaseClient,
+  opts: {
+    projectId: string
+    leadUserId: string
+    reviewerUserId: string | null
+  },
+): Promise<string[]> {
+  const ids = new Set<string>()
+  ids.add(opts.leadUserId)
+  if (opts.reviewerUserId) ids.add(opts.reviewerUserId)
+
+  const { data: assigns } = await supabase
+    .from('project_team_assignments')
+    .select('user_id')
+    .eq('project_id', opts.projectId)
+
+  for (const row of assigns ?? []) {
+    if (row.user_id) ids.add(row.user_id)
+  }
+
+  if (ids.size === 0) return []
+
+  const { data: profs } = await supabase
+    .from('profiles')
+    .select('email, google_email')
+    .in('id', [...ids])
+
+  const emails: string[] = []
+  for (const p of profs ?? []) {
+    const g = (p.google_email as string | null | undefined)?.trim()
+    const e = (p.email as string | undefined)?.trim()
+    const pick = g || e
+    if (pick) emails.push(pick)
+  }
+  return emails
+}
+
 export async function tryCreateProjectDriveFolderAfterInsert(
   supabase: SupabaseClient,
   params: {
@@ -89,6 +132,7 @@ export async function tryCreateProjectDriveFolderAfterInsert(
     source: string
     disciplines: string[]
     driveMode: 'auto' | 'manual' | 'none'
+    memberEmails?: string[]
   },
 ): Promise<void> {
   if (params.driveMode !== 'auto') return
@@ -122,6 +166,13 @@ export async function tryCreateProjectDriveFolderAfterInsert(
         google_drive_folder_link: link,
       })
       .eq('id', params.projectId)
+
+    if (params.memberEmails && params.memberEmails.length > 0) {
+      const ws = await getWorkspaceDrive(supabase)
+      if (ws) {
+        await shareDriveFolderWithEmails(ws.drive, projectFolderId, params.memberEmails)
+      }
+    }
   } catch (err) {
     console.error('[Google Drive] Failed to create folder hierarchy:', err)
   }

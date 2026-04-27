@@ -5,6 +5,9 @@ import { getAssignedProjectIdsForUser } from '@/lib/projects/queries'
 
 export type UserSelectRow = { id: string; full_name: string; email: string; discipline: string | null }
 
+/** Project roster row for task assignee/reviewer pickers (includes synthetic roles for lead/reviewer). */
+export type ProjectMemberUserRow = UserSelectRow & { team_role: string }
+
 export async function getUsersForSelect(): Promise<UserSelectRow[]> {
   const supabase = await createServerClient()
 
@@ -94,4 +97,68 @@ export async function getUsersForCoordinatorProjectPortfolio(coordinatorUserId: 
 /** Alias — semua active users, dipakai di admin/coordinator pages */
 export async function getAllUsers(): Promise<UserSelectRow[]> {
   return getUsersForSelect()
+}
+
+/**
+ * Users who may receive tasks on this project: team assignments plus project lead and reviewer
+ * when they are not already in the assignment list (synthetic roles `project_lead` / `reviewer`).
+ */
+export async function getProjectMemberUsers(projectId: string): Promise<ProjectMemberUserRow[]> {
+  const supabase = await createServerClient()
+
+  const { data: assignments, error: aErr } = await supabase
+    .from('project_team_assignments')
+    .select('team_role, user_id, profiles(id, full_name, email, discipline)')
+    .eq('project_id', projectId)
+
+  if (aErr) return []
+
+  const byUser = new Map<string, ProjectMemberUserRow>()
+
+  for (const row of assignments ?? []) {
+    const rawProf = row.profiles as unknown
+    const prof = (Array.isArray(rawProf) ? rawProf[0] : rawProf) as {
+      id: string
+      full_name: string
+      email: string
+      discipline: string | null
+    } | null
+    if (!prof?.id) continue
+    byUser.set(prof.id, {
+      id: prof.id,
+      full_name: prof.full_name,
+      email: prof.email,
+      discipline: prof.discipline,
+      team_role: String(row.team_role ?? 'engineer'),
+    })
+  }
+
+  const { data: project } = await supabase
+    .from('projects')
+    .select('project_lead_user_id, reviewer_user_id')
+    .eq('id', projectId)
+    .maybeSingle()
+
+  async function addIfMissing(userId: string | null, teamRole: string) {
+    if (!userId || byUser.has(userId)) return
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, discipline')
+      .eq('id', userId)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (!prof) return
+    byUser.set(userId, {
+      id: prof.id,
+      full_name: prof.full_name,
+      email: prof.email,
+      discipline: prof.discipline,
+      team_role: teamRole,
+    })
+  }
+
+  await addIfMissing(project?.project_lead_user_id ?? null, 'project_lead')
+  await addIfMissing(project?.reviewer_user_id ?? null, 'reviewer')
+
+  return [...byUser.values()].sort((a, b) => a.full_name.localeCompare(b.full_name))
 }

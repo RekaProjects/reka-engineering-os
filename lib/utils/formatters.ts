@@ -14,6 +14,22 @@ export function formatDate(date: string | Date | null | undefined): string {
   return dateFormatter.format(new Date(date))
 }
 
+/** Short relative time for activity feeds and comments, e.g. "12m ago", "3h ago". */
+export function formatRelativeTime(date: string | Date | null | undefined): string {
+  if (!date) return '—'
+  const diffMs = Date.now() - new Date(date).getTime()
+  if (diffMs < 0) return 'just now'
+  const sec = Math.floor(diffMs / 1000)
+  const min = Math.floor(sec / 60)
+  const hr = Math.floor(min / 60)
+  const day = Math.floor(hr / 24)
+  if (sec < 45) return 'just now'
+  if (min < 60) return `${min}m ago`
+  if (hr < 24) return `${hr}h ago`
+  if (day < 7) return `${day}d ago`
+  return formatDate(date)
+}
+
 /** Format a date relative to now, e.g. "3 days ago" */
 export function formatRelativeDate(date: string | Date | null | undefined): string {
   if (!date) return '—'

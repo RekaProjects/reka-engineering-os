@@ -4,8 +4,10 @@ export function buildProfilePayload(formData: FormData) {
     return isNaN(n) || v.trim() === '' ? null : n
   }
 
+  const googleEmailRaw = (formData.get('google_email') as string)?.trim()
   return {
     full_name:           (formData.get('full_name') as string).trim(),
+    google_email:        googleEmailRaw || null,
     phone:               (formData.get('phone') as string)?.trim()            || null,
     system_role:         (formData.get('system_role') as string)              || null,
     functional_role:     (formData.get('functional_role') as string)?.trim()  || null,
