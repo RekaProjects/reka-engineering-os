@@ -12,6 +12,7 @@ import {
   isFinance,
   isFreelancer,
   isManagement,
+  isOwner,
   isManajer,
   isMember,
   isOpsLead,
@@ -22,6 +23,7 @@ import {
 
 describe('permissions predicates', () => {
   it('isManagement', () => {
+    expect(isManagement('owner')).toBe(true)
     expect(isManagement('direktur')).toBe(true)
     expect(isManagement('technical_director')).toBe(true)
     expect(isManagement('finance')).toBe(true)
@@ -29,6 +31,7 @@ describe('permissions predicates', () => {
   })
 
   it('isManajer', () => {
+    expect(isOwner('owner')).toBe(true)
     expect(isManajer('manajer')).toBe(true)
     expect(isManajer('technical_director')).toBe(false)
   })

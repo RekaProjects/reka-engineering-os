@@ -6,6 +6,8 @@ import { createInvite } from '@/lib/invites/actions'
 import { SYSTEM_ROLES, WORKER_TYPES } from '@/lib/constants/options'
 import { FormSection } from '@/components/shared/FormSection'
 
+const ASSIGNABLE_SYSTEM_ROLES = SYSTEM_ROLES.filter((r) => r.value !== 'owner')
+
 const inputStyle: CSSProperties = {
   width:           '100%',
   padding:         '8px 11px',
@@ -83,7 +85,7 @@ export function InviteForm({ workerTypeOptions }: { workerTypeOptions?: OptionPa
             <Field label="System Role">
               <select style={inputStyle} name="system_role" defaultValue="member">
                 <option value="">— Select —</option>
-                {SYSTEM_ROLES.map((r) => (
+                {ASSIGNABLE_SYSTEM_ROLES.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </select>

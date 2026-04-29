@@ -24,6 +24,7 @@ export {
   isAdminOrCoordinator,
   getNavPermissions,
   isDirektur,
+  isOwner,
   isTD,
   isFinance,
   isManajer,
@@ -120,6 +121,7 @@ export function requireRole(
   role: SystemRole | null | undefined,
   allowed: SystemRole[],
 ): void {
+  if (_effectiveRole(role) === 'owner') return
   if (!allowed.includes(_effectiveRole(role))) {
     redirect('/access-denied')
   }

@@ -3,6 +3,7 @@
 export type UserRole = 'admin' | 'staff'
 
 export type SystemRole =
+  | 'owner'
   | 'direktur'
   | 'technical_director'
   | 'finance'

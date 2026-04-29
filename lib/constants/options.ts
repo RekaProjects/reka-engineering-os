@@ -107,6 +107,7 @@ export const USER_ROLES = [
 // ── V2 Team / Freelancer options ──────────────────────────────
 
 export const SYSTEM_ROLES = [
+  { value: 'owner', label: 'Owner' },
   { value: 'direktur', label: 'Direktur' },
   { value: 'technical_director', label: 'Technical Director' },
   { value: 'finance', label: 'Finance' },
@@ -119,6 +120,7 @@ export const SYSTEM_ROLES = [
 
 /** Display labels for system_role badges */
 export const SYSTEM_ROLE_LABELS: Record<string, string> = {
+  owner: 'Owner',
   direktur: 'Direktur',
   technical_director: 'Technical Director',
   finance: 'Finance',

@@ -15,12 +15,13 @@ export function effectiveRole(role: SystemRole | null | undefined): SystemRole {
 
 // ── Single-role predicates ───────────────────────────────────
 
-export const isDirektur = (r?: SystemRole | null) => effectiveRole(r) === 'direktur'
-export const isTD = (r?: SystemRole | null) => effectiveRole(r) === 'technical_director'
-export const isFinance = (r?: SystemRole | null) => effectiveRole(r) === 'finance'
-export const isManajer = (r?: SystemRole | null) => effectiveRole(r) === 'manajer'
-export const isBD = (r?: SystemRole | null) => effectiveRole(r) === 'bd'
-export const isSenior = (r?: SystemRole | null) => effectiveRole(r) === 'senior'
+export const isOwner = (r?: SystemRole | null) => effectiveRole(r) === 'owner'
+export const isDirektur = (r?: SystemRole | null) => isOwner(r) || effectiveRole(r) === 'direktur'
+export const isTD = (r?: SystemRole | null) => isOwner(r) || effectiveRole(r) === 'technical_director'
+export const isFinance = (r?: SystemRole | null) => isOwner(r) || effectiveRole(r) === 'finance'
+export const isManajer = (r?: SystemRole | null) => isOwner(r) || effectiveRole(r) === 'manajer'
+export const isBD = (r?: SystemRole | null) => isOwner(r) || effectiveRole(r) === 'bd'
+export const isSenior = (r?: SystemRole | null) => isOwner(r) || effectiveRole(r) === 'senior'
 export const isMember = (r?: SystemRole | null) => effectiveRole(r) === 'member'
 export const isFreelancer = (r?: SystemRole | null) => effectiveRole(r) === 'freelancer'
 
@@ -28,26 +29,26 @@ export const isFreelancer = (r?: SystemRole | null) => effectiveRole(r) === 'fre
 
 /** Direktur + TD + Finance */
 export const isManagement = (r?: SystemRole | null) =>
-  ['direktur', 'technical_director', 'finance'].includes(effectiveRole(r))
+  isOwner(r) || ['direktur', 'technical_director', 'finance'].includes(effectiveRole(r))
 
 /** TD + Manajer — create & operate projects */
 export const isOpsLead = (r?: SystemRole | null) =>
-  ['technical_director', 'manajer'].includes(effectiveRole(r))
+  isOwner(r) || ['technical_director', 'manajer'].includes(effectiveRole(r))
 
 /** Direktur + TD — BAST / termin verification */
 export const isBastSigner = (r?: SystemRole | null) =>
-  ['direktur', 'technical_director'].includes(effectiveRole(r))
+  isOwner(r) || ['direktur', 'technical_director'].includes(effectiveRole(r))
 
 /** TD + Manajer — propose compensation */
 export const canProposeCompensation = (r?: SystemRole | null) =>
-  ['technical_director', 'manajer'].includes(effectiveRole(r))
+  isOwner(r) || ['technical_director', 'manajer'].includes(effectiveRole(r))
 
 /** Finance — operate finance modules */
-export const canOperateFinance = (r?: SystemRole | null) => effectiveRole(r) === 'finance'
+export const canOperateFinance = (r?: SystemRole | null) => isOwner(r) || effectiveRole(r) === 'finance'
 
 /** Direktur + Finance — approve void invoice / final payslip */
 export const canApproveFinanceDocs = (r?: SystemRole | null) =>
-  ['direktur', 'finance'].includes(effectiveRole(r))
+  isOwner(r) || ['direktur', 'finance'].includes(effectiveRole(r))
 
 /** Member + Freelancer + Senior */
 export const isPersonalOnly = (r?: SystemRole | null) =>
@@ -60,22 +61,22 @@ export const isIsolated = (r?: SystemRole | null) => effectiveRole(r) === 'freel
 export const canAccessInvoices = (r?: SystemRole | null) => isDirektur(r) || isFinance(r)
 export const canAccessPayslips = (r?: SystemRole | null) => isDirektur(r) || isFinance(r)
 export const canAccessCompensation = (r?: SystemRole | null) =>
-  ['direktur', 'technical_director', 'finance', 'manajer'].includes(effectiveRole(r))
+  isOwner(r) || ['direktur', 'technical_director', 'finance', 'manajer'].includes(effectiveRole(r))
 export const canAccessTeam = (r?: SystemRole | null) =>
-  ['direktur', 'technical_director', 'finance'].includes(effectiveRole(r))
+  isOwner(r) || ['direktur', 'technical_director', 'finance'].includes(effectiveRole(r))
 
 /** Manajer — can see team member availability only (no rates, no banking) */
 export const canViewTeamAvailability = (r?: SystemRole | null) =>
-  effectiveRole(r) === 'manajer'
+  isOwner(r) || effectiveRole(r) === 'manajer'
 export const canAccessSettings = (r?: SystemRole | null) =>
   isTD(r) || isDirektur(r)
 export const canAccessClients = (r?: SystemRole | null) =>
   !['senior', 'member', 'freelancer'].includes(effectiveRole(r))
 export const canAccessIntakes = (r?: SystemRole | null) =>
-  ['direktur', 'technical_director', 'manajer', 'bd'].includes(effectiveRole(r))
-export const canAccessOutreach = (r?: SystemRole | null) => isBD(r)
+  isOwner(r) || ['direktur', 'technical_director', 'manajer', 'bd'].includes(effectiveRole(r))
+export const canAccessOutreach = (r?: SystemRole | null) => isOwner(r) || isBD(r)
 export const canAccessOutreachReadOnly = (r?: SystemRole | null) =>
-  ['direktur', 'technical_director'].includes(effectiveRole(r))
+  isOwner(r) || ['direktur', 'technical_director'].includes(effectiveRole(r))
 export const canAccessFxRates = (r?: SystemRole | null) => isDirektur(r) || isFinance(r)
 export const canAccessPaymentAccounts = (r?: SystemRole | null) => isDirektur(r) || isFinance(r)
 
@@ -86,14 +87,14 @@ export const canAccessWorkLogs = (r?: SystemRole | null) =>
 /** Internal roles (exclude isolated freelancer) — project expenses. */
 export const canAccessExpenses = (r?: SystemRole | null) => !isFreelancer(r)
 export const canAccessLeads = (r?: SystemRole | null) =>
-  ['direktur', 'technical_director', 'manajer', 'bd'].includes(effectiveRole(r))
+  isOwner(r) || ['direktur', 'technical_director', 'manajer', 'bd'].includes(effectiveRole(r))
 
 // ── Project-level permissions ────────────────────────────────
 
 export const canCreateProject = (r?: SystemRole | null) => isOpsLead(r)
 export const canApproveProject = (r?: SystemRole | null) => isDirektur(r)
 export const canViewAllProjects = (r?: SystemRole | null) =>
-  ['direktur', 'technical_director', 'finance', 'manajer', 'bd'].includes(effectiveRole(r))
+  isOwner(r) || ['direktur', 'technical_director', 'finance', 'manajer', 'bd'].includes(effectiveRole(r))
 
 // ── Route helpers (used by client + server) ─────────────────
 
@@ -112,7 +113,7 @@ export function canShowFilesAddButton(role: SystemRole | null | undefined): bool
 // ── Team visibility ─────────────────────────────────────────
 
 export const canViewTeamRates = (r?: SystemRole | null) =>
-  ['direktur', 'technical_director', 'finance'].includes(effectiveRole(r))
+  isOwner(r) || ['direktur', 'technical_director', 'finance'].includes(effectiveRole(r))
 
 export const canInviteTeam = (r?: SystemRole | null) => isTD(r)
 

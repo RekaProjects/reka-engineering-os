@@ -15,6 +15,8 @@ import {
 import type { TeamMember } from '@/lib/team/queries'
 import { FormSection } from '@/components/shared/FormSection'
 
+const ASSIGNABLE_SYSTEM_ROLES = SYSTEM_ROLES.filter((r) => r.value !== 'owner')
+
 type OptionPair = { value: string; label: string }
 
 interface TeamMemberFormProps {
@@ -180,7 +182,7 @@ export function TeamMemberForm({ mode, member, functionalRoleOptions, discipline
                 <Field label="System Role">
                   <select style={inputStyle} name="system_role" defaultValue={v?.system_role ?? ''}>
                     <option value="">— Select —</option>
-                    {SYSTEM_ROLES.map((r) => (
+                    {ASSIGNABLE_SYSTEM_ROLES.map((r) => (
                       <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>

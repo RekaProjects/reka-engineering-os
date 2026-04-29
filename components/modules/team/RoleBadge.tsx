@@ -1,6 +1,7 @@
 import { SYSTEM_ROLE_LABELS } from '@/lib/constants/options'
 
 const ROLE_COLORS: Record<string, string> = {
+  owner: 'bg-rose-100 text-rose-800',
   direktur: 'bg-blue-100 text-blue-800',
   technical_director: 'bg-purple-100 text-purple-800',
   finance: 'bg-green-100 text-green-800',
